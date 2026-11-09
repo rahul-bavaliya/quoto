@@ -18,7 +18,7 @@ enum LineKind {
 }
 
 impl LineKind {
-    fn get_line_kind(&self) -> &str {
+    fn label(&self) -> &str {
         match self {
             LineKind::Labour => "LABOUR",
             LineKind::Part => "PART",
@@ -75,7 +75,7 @@ fn main() {
     for item in &items {
         println!(
             "[{}] {}: {} x ${:.2} = ${:.2}",
-            LineKind::get_line_kind(&item.kind),
+            item.kind.label(),
             item.description,
             item.quantity,
             item.unit_price,
