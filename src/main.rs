@@ -35,33 +35,22 @@ fn main() {
         unit_price: 8.50,
     };
 
-    println!(
-        "{}: {} x ${:.2} = ${:.2}",
-        oil_change_item.description,
-        oil_change_item.quantity,
-        oil_change_item.unit_price,
-        oil_change_item.line_total()
-    );
+    let items = vec![oil_filter_item, oil_change_item, engine_oil_item];
+    let mut subtotal = 0.0;
 
-    println!(
-        "{}: {} x ${:.2} = ${:.2}",
-        oil_filter_item.description,
-        oil_filter_item.quantity,
-        oil_filter_item.unit_price,
-        oil_filter_item.line_total()
-    );
+    for item in &items {
+        println!(
+            "{}: {} x ${:.2} = ${:.2}",
+            item.description,
+            item.quantity,
+            item.unit_price,
+            item.line_total()
+        );
 
-    println!(
-        "{}: {} x ${:.2} = ${:.2}",
-        engine_oil_item.description,
-        engine_oil_item.quantity,
-        engine_oil_item.unit_price,
-        engine_oil_item.line_total()
-    );
+        subtotal += item.line_total();
+    }
 
     println!("{}", "-".repeat(30));
-    let subtotal =
-        oil_filter_item.line_total() + oil_change_item.line_total() + engine_oil_item.line_total();
     println!("Subtotal: ${:.2}", subtotal);
     let gst_amount = calculate_tax(subtotal, sk_gst_rate);
     let pst_amount = calculate_tax(subtotal, sk_pst_rate);
