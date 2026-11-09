@@ -27,13 +27,83 @@ impl LineKind {
     }
 }
 
+enum Province {
+    Saskatchewan,
+    Alberta,
+}
+
+impl Province {
+    fn label(&self) -> &str {
+        match self {
+            Province::Saskatchewan => "Saskatchewan",
+            Province::Alberta => "Alberta",
+        }
+    }
+
+    fn gst_rate(&self) -> f64 {
+        5.0
+    }
+
+    fn pst_rate(&self) -> Option<f64> {
+        match self {
+            Province::Saskatchewan => Some(6.0),
+            Province::Alberta => None,
+        }
+    }
+}
+
+fn print_quote(province: Province, items: &[LineItem]) {
+    let mut parts_total = 0.0;
+    let mut labour_total = 0.0;
+    let mut fee_total = 0.0;
+
+    println!(
+        "\n{} Quote: {} {}",
+        "=".repeat(5),
+        province.label(),
+        "=".repeat(5)
+    );
+    for item in items {
+        println!(
+            "[{}] {}: {} x ${:.2} = ${:.2}",
+            item.kind.label(),
+            item.description,
+            item.quantity,
+            item.unit_price,
+            item.line_total()
+        );
+
+        match item.kind {
+            LineKind::Labour => labour_total += item.line_total(),
+            LineKind::Part => parts_total += item.line_total(),
+            LineKind::Fee => fee_total += item.line_total(),
+        }
+    }
+
+    let subtotal = parts_total + labour_total + fee_total;
+    let gst_amount = calculate_tax(subtotal, province.gst_rate());
+    let pst_amount = if let Some(pst_rate) = province.pst_rate() {
+        calculate_tax(subtotal, pst_rate)
+    } else {
+        0.0
+    };
+    let total = calculate_total(subtotal, gst_amount + pst_amount);
+    println!("\nLabour Total: ${:.2}", labour_total);
+    println!("Parts Total: ${:.2}", parts_total);
+    println!("Fees Total: ${:.2}", fee_total);
+    println!("\nSubtotal: ${:.2}", subtotal);
+
+    println!("GST {}%: ${:.2}", province.gst_rate(), gst_amount);
+    if let Some(pst_rate) = province.pst_rate() {
+        println!("PST {}%: ${:.2}", pst_rate, pst_amount);
+    }
+    println!("Total: ${:.2}", total);
+}
+
 mod utils;
 use utils::{calculate_tax, calculate_total};
 
 fn main() {
-    let sk_gst_rate = 5.00;
-    let sk_pst_rate = 6.00;
-
     let mut items = vec![
         LineItem {
             description: String::from("Oil Filter"),
@@ -68,39 +138,6 @@ fn main() {
         kind: LineKind::Part,
     });
 
-    let mut parts_total = 0.0;
-    let mut labour_total = 0.0;
-    let mut fee_total = 0.0;
-
-    for item in &items {
-        println!(
-            "[{}] {}: {} x ${:.2} = ${:.2}",
-            item.kind.label(),
-            item.description,
-            item.quantity,
-            item.unit_price,
-            item.line_total()
-        );
-
-        match item.kind {
-            LineKind::Labour => labour_total += item.line_total(),
-            LineKind::Part => parts_total += item.line_total(),
-            LineKind::Fee => fee_total += item.line_total(),
-        }
-    }
-
-    println!("{}", "-".repeat(30));
-    println!("Labour Total: ${:.2}", labour_total);
-    println!("Parts Total: ${:.2}", parts_total);
-    println!("Fee Total: ${:.2}", fee_total);
-    let subtotal = labour_total + parts_total + fee_total;
-    println!("Subtotal: ${:.2}", subtotal);
-    let gst_amount = calculate_tax(subtotal, sk_gst_rate);
-    let pst_amount = calculate_tax(subtotal, sk_pst_rate);
-    println!("GST {:.2}%: ${:.2}", sk_gst_rate, gst_amount);
-    println!("PST {:.2}%: ${:.2}", sk_pst_rate, pst_amount);
-    println!(
-        "Total: ${:.2}",
-        calculate_total(subtotal, gst_amount + pst_amount)
-    );
+    print_quote(Province::Saskatchewan, &items);
+    print_quote(Province::Alberta, &items);
 }
