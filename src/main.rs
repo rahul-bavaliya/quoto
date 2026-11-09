@@ -17,19 +17,19 @@ fn main() {
     let sk_gst_rate = 5.00;
     let sk_pst_rate = 6.00;
 
-    let oilfilter_item = LineItem {
+    let oil_filter_item = LineItem {
         description: String::from("Oil Filter"),
         quantity: 1.0,
         unit_price: 25.0,
     };
 
-    let oilchange_item = LineItem {
+    let oil_change_item = LineItem {
         description: String::from("Oil Change Labour"),
         quantity: 0.5,
         unit_price: 160.0,
     };
 
-    let engineoil_item = LineItem {
+    let engine_oil_item = LineItem {
         description: String::from("Engine Oil"),
         quantity: 6.0,
         unit_price: 8.50,
@@ -37,39 +37,39 @@ fn main() {
 
     println!(
         "{}: {} x ${:.2} = ${:.2}",
-        oilchange_item.description,
-        oilchange_item.quantity,
-        oilchange_item.unit_price,
-        oilchange_item.line_total()
+        oil_change_item.description,
+        oil_change_item.quantity,
+        oil_change_item.unit_price,
+        oil_change_item.line_total()
     );
 
     println!(
         "{}: {} x ${:.2} = ${:.2}",
-        oilfilter_item.description,
-        oilfilter_item.quantity,
-        oilfilter_item.unit_price,
-        oilfilter_item.line_total()
+        oil_filter_item.description,
+        oil_filter_item.quantity,
+        oil_filter_item.unit_price,
+        oil_filter_item.line_total()
     );
 
     println!(
         "{}: {} x ${:.2} = ${:.2}",
-        engineoil_item.description,
-        engineoil_item.quantity,
-        engineoil_item.unit_price,
-        engineoil_item.line_total()
+        engine_oil_item.description,
+        engine_oil_item.quantity,
+        engine_oil_item.unit_price,
+        engine_oil_item.line_total()
     );
 
     println!("{}", "-".repeat(30));
     println!(
         "Subtotal: ${:.2}",
-        oilfilter_item.line_total() + oilchange_item.line_total() + engineoil_item.line_total()
+        oil_filter_item.line_total() + oil_change_item.line_total() + engine_oil_item.line_total()
     );
     let gst_amount = calculate_tax(
-        oilfilter_item.line_total() + oilchange_item.line_total() + engineoil_item.line_total(),
+        oil_filter_item.line_total() + oil_change_item.line_total() + engine_oil_item.line_total(),
         sk_gst_rate,
     );
     let pst_amount = calculate_tax(
-        oilfilter_item.line_total() + oilchange_item.line_total() + engineoil_item.line_total(),
+        oil_filter_item.line_total() + oil_change_item.line_total() + engine_oil_item.line_total(),
         sk_pst_rate,
     );
     println!("GST {:.2}%: ${:.2}", sk_gst_rate, gst_amount);
@@ -77,7 +77,9 @@ fn main() {
     println!(
         "Total: ${:.2}",
         calculate_total(
-            oilfilter_item.line_total() + oilchange_item.line_total() + engineoil_item.line_total(),
+            oil_filter_item.line_total()
+                + oil_change_item.line_total()
+                + engine_oil_item.line_total(),
             gst_amount + pst_amount
         )
     );
