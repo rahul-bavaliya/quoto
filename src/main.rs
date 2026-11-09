@@ -1,47 +1,74 @@
+struct LineItem {
+    description: String,
+    quantity: f64,
+    unit_price: f64,
+}
+
+impl LineItem {
+    fn line_total(&self) -> f64 {
+        self.quantity * self.unit_price
+    }
+}
+
 mod utils;
 use utils::{calculate_tax, calculate_total};
 
 fn main() {
-    // Saskatchewan has two taxes: GST goes to Ottawa, PST goes to Regina
-    let sask_gst_rate: f64 = 5.0;
-    let sask_pst_rate: f64 = 6.0;
+    let sk_gst_rate = 5.00;
+    let sk_pst_rate = 6.00;
 
-    // Alberta has GST only (no PST)
-    let alberta_gst_rate: f64 = 5.0;
-    let repair_labor: f64 = 80.0;
+    let oil_filter_item = LineItem {
+        description: String::from("Oil Filter"),
+        quantity: 1.0,
+        unit_price: 25.0,
+    };
 
-    println!("----- Quoto System -----");
+    let oil_change_item = LineItem {
+        description: String::from("Oil Change Labour"),
+        quantity: 0.5,
+        unit_price: 160.0,
+    };
 
-    // ---------- Saskatchewan ----------
-    println!("----- Saskatchewan -----");
-    let sk_gst_amount = calculate_tax(repair_labor, sask_gst_rate);
-    let sk_pst_amount = calculate_tax(repair_labor, sask_pst_rate);
+    let engine_oil_item = LineItem {
+        description: String::from("Engine Oil"),
+        quantity: 6.0,
+        unit_price: 8.50,
+    };
 
-    println!("Sub Total: ${:.2}", repair_labor);
     println!(
-        "GST Rate: {}% | GST $ Amount: ${:.2}",
-        sask_gst_rate, sk_gst_amount
+        "{}: {} x ${:.2} = ${:.2}",
+        oil_change_item.description,
+        oil_change_item.quantity,
+        oil_change_item.unit_price,
+        oil_change_item.line_total()
     );
+
     println!(
-        "PST Rate: {}% | PST $ Amount: ${:.2}",
-        sask_pst_rate, sk_pst_amount
-    );
-    println!(
-        "Total Payable: ${:.2}",
-        calculate_total(repair_labor, sk_gst_amount + sk_pst_amount)
+        "{}: {} x ${:.2} = ${:.2}",
+        oil_filter_item.description,
+        oil_filter_item.quantity,
+        oil_filter_item.unit_price,
+        oil_filter_item.line_total()
     );
 
-    // ---------- Alberta ----------
-    println!("----- Alberta -----");
-    let ab_gst_amount = calculate_tax(repair_labor, alberta_gst_rate);
-
-    println!("Sub Total: ${:.2}", repair_labor);
     println!(
-        "GST Rate: {}% | GST $ Amount: ${:.2}",
-        alberta_gst_rate, ab_gst_amount
+        "{}: {} x ${:.2} = ${:.2}",
+        engine_oil_item.description,
+        engine_oil_item.quantity,
+        engine_oil_item.unit_price,
+        engine_oil_item.line_total()
     );
+
+    println!("{}", "-".repeat(30));
+    let subtotal =
+        oil_filter_item.line_total() + oil_change_item.line_total() + engine_oil_item.line_total();
+    println!("Subtotal: ${:.2}", subtotal);
+    let gst_amount = calculate_tax(subtotal, sk_gst_rate);
+    let pst_amount = calculate_tax(subtotal, sk_pst_rate);
+    println!("GST {:.2}%: ${:.2}", sk_gst_rate, gst_amount);
+    println!("PST {:.2}%: ${:.2}", sk_pst_rate, pst_amount);
     println!(
-        "Total Payable: ${:.2}",
-        calculate_total(repair_labor, ab_gst_amount)
+        "Total: ${:.2}",
+        calculate_total(subtotal, gst_amount + pst_amount)
     );
 }
