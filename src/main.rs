@@ -2,34 +2,46 @@ mod utils;
 use utils::{calculate_tax, calculate_total};
 
 fn main() {
-    let sask_tax_rate: f64 = 11.0; // Total tax rate for Saskatchewan (5% GST + 6% PST)
+    // Saskatchewan has two taxes: GST goes to Ottawa, PST goes to Regina
+    let sask_gst_rate: f64 = 5.0;
+    let sask_pst_rate: f64 = 6.0;
 
-    let alberta_tax_rate: f64 = 5.0; // Total tax rate for Alberta (5% GST + 0% PST)
+    // Alberta has GST only (no PST)
+    let alberta_gst_rate: f64 = 5.0;
+    let repair_labor: f64 = 80.0;
 
-    let repair_labor: f64 = 80.0; // Repair labor billed is $80.00
+    println!("----- Quoto System -----");
 
-    println!("----- Quoto System -----"); // Display the title of the program
-    println!("----- Saskatchewan -----"); // Display the title for Saskatchewan
-    let sk_tax_amount = calculate_tax(repair_labor, sask_tax_rate); // Calculate the total tax amount for Saskatchewan
+    // ---------- Saskatchewan ----------
+    println!("----- Saskatchewan -----");
+    let sk_gst_amount = calculate_tax(repair_labor, sask_gst_rate);
+    let sk_pst_amount = calculate_tax(repair_labor, sask_pst_rate);
+
+    println!("Sub Total: ${:.2}", repair_labor);
     println!(
-        "Tax Rate: {}% | Tax $ Amount: ${:.2}",
-        sask_tax_rate, sk_tax_amount
-    ); // Display the tax rate and the calculated tax amount
-    println!("Sub Total: ${:.2}", repair_labor); // Display the subtotal amount
+        "GST Rate: {}% | GST $ Amount: ${:.2}",
+        sask_gst_rate, sk_gst_amount
+    );
     println!(
-        "Total Payable: ${:.2}",
-        calculate_total(repair_labor, sk_tax_amount)
-    ); // Display the total payable amount
-
-    println!("----- Alberta -----"); // Display the title for Alberta
-    let ab_tax_amount = calculate_tax(repair_labor, alberta_tax_rate);
-    println!(
-        "Tax Rate: {}% | Tax $ Amount: ${:.2}",
-        alberta_tax_rate, ab_tax_amount
-    ); // Display the tax rate and the calculated tax amount for Alberta
-    println!("Sub Total: ${:.2}", repair_labor); // Display the subtotal amount
+        "PST Rate: {}% | PST $ Amount: ${:.2}",
+        sask_pst_rate, sk_pst_amount
+    );
     println!(
         "Total Payable: ${:.2}",
-        calculate_total(repair_labor, ab_tax_amount)
-    ); // Display the total payable amount
+        calculate_total(repair_labor, sk_gst_amount + sk_pst_amount)
+    );
+
+    // ---------- Alberta ----------
+    println!("----- Alberta -----");
+    let ab_gst_amount = calculate_tax(repair_labor, alberta_gst_rate);
+
+    println!("Sub Total: ${:.2}", repair_labor);
+    println!(
+        "GST Rate: {}% | GST $ Amount: ${:.2}",
+        alberta_gst_rate, ab_gst_amount
+    );
+    println!(
+        "Total Payable: ${:.2}",
+        calculate_total(repair_labor, ab_gst_amount)
+    );
 }
