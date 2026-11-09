@@ -73,7 +73,7 @@ fn print_quote(province: Province, items: &[LineItem]) {
             item.line_total()
         );
 
-        match item.kind {
+        match &item.kind {
             LineKind::Labour => labour_total += item.line_total(),
             LineKind::Part => parts_total += item.line_total(),
             LineKind::Fee => fee_total += item.line_total(),
