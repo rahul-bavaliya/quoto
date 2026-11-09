@@ -14,12 +14,16 @@ impl LineItem {
 enum LineKind {
     Labour,
     Part,
+    Fee,
 }
 
-fn get_line_kind(kind: &LineKind) -> &'static str {
-    match kind {
-        LineKind::Labour => "LABOUR",
-        LineKind::Part => "PART",
+impl LineKind {
+    fn get_line_kind(kind: &LineKind) -> &'static str {
+        match kind {
+            LineKind::Labour => "LABOUR",
+            LineKind::Part => "PART",
+            LineKind::Fee => "FEE",
+        }
     }
 }
 
@@ -59,29 +63,32 @@ fn main() {
     });
 
     let mut subtotal = 0.0;
-    let mut labour_total = 0.0;
     let mut parts_total = 0.0;
+    let mut labour_total = 0.0;
+    let mut fee_total = 0.0;
 
     for item in &items {
         println!(
             "[{}] {}: {} x ${:.2} = ${:.2}",
-            get_line_kind(&item.kind),
+            LineKind::get_line_kind(&item.kind),
             item.description,
             item.quantity,
             item.unit_price,
             item.line_total()
         );
 
-        subtotal += item.line_total();
         match item.kind {
             LineKind::Labour => labour_total += item.line_total(),
             LineKind::Part => parts_total += item.line_total(),
+            LineKind::Fee => fee_total += item.line_total(),
         }
     }
 
     println!("{}", "-".repeat(30));
     println!("Labour Total: ${:.2}", labour_total);
     println!("Parts Total: ${:.2}", parts_total);
+    println!("Fee Total: ${:.2}", fee_total);
+    let subtotal = labour_total + parts_total + fee_total;
     println!("Subtotal: ${:.2}", subtotal);
     let gst_amount = calculate_tax(subtotal, sk_gst_rate);
     let pst_amount = calculate_tax(subtotal, sk_pst_rate);
