@@ -1,19 +1,35 @@
 mod utils;
-use utils::{calculate_gst_pst,  calculate_total};
+use utils::{calculate_tax, calculate_total};
 
 fn main() {
-    let gst_rate: f64 = 5.0; // GST rate is 5%
-    let pst_rate: f64 = 6.0; // PST rate is 6%
+    let sask_tax_rate: f64 = 11.0; // Total tax rate for Saskatchewan (5% GST + 6% PST)
 
-    let repair_labor_billed: f64 = 80.0; // Repair labor billed is $80.00
+    let alberta_tax_rate: f64 = 5.0; // Total tax rate for Alberta (5% GST + 0% PST)
+
+    let repair_labor: f64 = 80.0; // Repair labor billed is $80.00
 
     println!("----- Quoto System -----"); // Display the title of the program
-    let (gst_amount, pst_amount) = calculate_gst_pst(repair_labor_billed, gst_rate, pst_rate);
-    println!("GST Rate: {}% | GST $ Amount: ${:.2}", gst_rate, gst_amount); // Display the GST rate and the calculated GST amount
-    println!("PST Rate: {}% | PST $ Amount: ${:.2}", pst_rate, pst_amount); // Display the PST rate and the calculated PST amount
-    println!("Sub Total: ${:.2}", repair_labor_billed); // Display the subtotal amount
+    println!("----- Saskatchewan -----"); // Display the title for Saskatchewan
+    let tax_amount = calculate_tax(repair_labor, sask_tax_rate); // Calculate the total tax amount for Saskatchewan
+    println!(
+        "Tax Rate: {}% | Tax $ Amount: ${:.2}",
+        sask_tax_rate, tax_amount
+    ); // Display the tax rate and the calculated tax amount
+    println!("Sub Total: ${:.2}", repair_labor); // Display the subtotal amount
     println!(
         "Total Payable: ${:.2}",
-        calculate_total(repair_labor_billed, gst_amount, pst_amount)
+        calculate_total(repair_labor, tax_amount)
+    ); // Display the total payable amount
+
+    println!("----- Alberta -----"); // Display the title for Alberta
+    let tax_amount = calculate_tax(repair_labor, alberta_tax_rate);
+    println!(
+        "Tax Rate: {}% | Tax $ Amount: ${:.2}",
+        alberta_tax_rate, tax_amount
+    ); // Display the tax rate and the calculated tax amount for Alberta
+    println!("Sub Total: ${:.2}", repair_labor); // Display the subtotal amount
+    println!(
+        "Total Payable: ${:.2}",
+        calculate_total(repair_labor, tax_amount)
     ); // Display the total payable amount
 }
