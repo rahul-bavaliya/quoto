@@ -60,27 +60,15 @@ fn main() {
     );
 
     println!("{}", "-".repeat(30));
-    println!(
-        "Subtotal: ${:.2}",
-        oil_filter_item.line_total() + oil_change_item.line_total() + engine_oil_item.line_total()
-    );
-    let gst_amount = calculate_tax(
-        oil_filter_item.line_total() + oil_change_item.line_total() + engine_oil_item.line_total(),
-        sk_gst_rate,
-    );
-    let pst_amount = calculate_tax(
-        oil_filter_item.line_total() + oil_change_item.line_total() + engine_oil_item.line_total(),
-        sk_pst_rate,
-    );
+    let subtotal =
+        oil_filter_item.line_total() + oil_change_item.line_total() + engine_oil_item.line_total();
+    println!("Subtotal: ${:.2}", subtotal);
+    let gst_amount = calculate_tax(subtotal, sk_gst_rate);
+    let pst_amount = calculate_tax(subtotal, sk_pst_rate);
     println!("GST {:.2}%: ${:.2}", sk_gst_rate, gst_amount);
     println!("PST {:.2}%: ${:.2}", sk_pst_rate, pst_amount);
     println!(
         "Total: ${:.2}",
-        calculate_total(
-            oil_filter_item.line_total()
-                + oil_change_item.line_total()
-                + engine_oil_item.line_total(),
-            gst_amount + pst_amount
-        )
+        calculate_total(subtotal, gst_amount + pst_amount)
     );
 }
