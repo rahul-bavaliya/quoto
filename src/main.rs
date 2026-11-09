@@ -58,7 +58,7 @@ fn print_quote(province: Province, items: &[LineItem]) {
     let mut fee_total = 0.0;
 
     println!(
-        "{} Quote: {} {}",
+        "\n{} Quote: {} {}",
         "=".repeat(5),
         province.label(),
         "=".repeat(5)
