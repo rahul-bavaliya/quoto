@@ -17,38 +17,32 @@ fn main() {
     let sk_gst_rate = 5.00;
     let sk_pst_rate = 6.00;
 
-    let oil_filter_item = LineItem {
-        description: String::from("Oil Filter"),
-        quantity: 1.0,
-        unit_price: 25.0,
-    };
-
-    let oil_change_item = LineItem {
-        description: String::from("Oil Change Labour"),
-        quantity: 0.5,
-        unit_price: 160.0,
-    };
-
-    let engine_oil_item = LineItem {
-        description: String::from("Engine Oil"),
-        quantity: 6.0,
-        unit_price: 8.50,
-    };
-    let air_filter_item = LineItem {
-        description: String::from("Air Filter"),
-        quantity: 1.0,
-        unit_price: 32.0,
-    };
-
     let items = vec![
-        oil_filter_item,
-        oil_change_item,
-        engine_oil_item,
-        air_filter_item,
+        LineItem {
+            description: String::from("Oil Filter"),
+            quantity: 1.0,
+            unit_price: 25.0,
+        },
+        LineItem {
+            description: String::from("Oil Change Labour"),
+            quantity: 0.5,
+            unit_price: 160.0,
+        },
+        LineItem {
+            description: String::from("Engine Oil"),
+            quantity: 6.0,
+            unit_price: 8.50,
+        },
+        LineItem {
+            description: String::from("Air Filter"),
+            quantity: 1.0,
+            unit_price: 32.0,
+        },
     ];
     let mut subtotal = 0.0;
 
-    for item in &items {
+    for i in 0..items.len() {
+        let item = &items[i];
         println!(
             "{}: {} x ${:.2} = ${:.2}",
             item.description,
