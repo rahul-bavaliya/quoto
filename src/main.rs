@@ -34,8 +34,18 @@ fn main() {
         quantity: 6.0,
         unit_price: 8.50,
     };
+    let air_filter_item = LineItem {
+        description: String::from("Air Filter"),
+        quantity: 1.0,
+        unit_price: 32.0,
+    };
 
-    let items = vec![oil_filter_item, oil_change_item, engine_oil_item];
+    let items = vec![
+        oil_filter_item,
+        oil_change_item,
+        engine_oil_item,
+        air_filter_item,
+    ];
     let mut subtotal = 0.0;
 
     for item in &items {
