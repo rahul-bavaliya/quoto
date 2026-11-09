@@ -27,13 +27,36 @@ impl LineKind {
     }
 }
 
+enum Province {
+    Saskatchewan,
+    Alberta,
+}
+
+impl Province {
+
+    fn label(&self) -> &str {
+        match self {
+            Province::Saskatchewan => "Saskatchewan",
+            Province::Alberta => "Alberta",
+        }
+    }
+
+    fn gst_rate(&self) -> f64 {
+        5.0
+    }
+
+    fn pst_rate(&self) -> Option<f64> {
+        match self {
+            Province::Saskatchewan => Some(6.0),
+            Province::Alberta => None,
+        }
+    }
+}
+
 mod utils;
 use utils::{calculate_tax, calculate_total};
 
 fn main() {
-    let sk_gst_rate = 5.00;
-    let sk_pst_rate = 6.00;
-
     let mut items = vec![
         LineItem {
             description: String::from("Oil Filter"),
@@ -95,12 +118,18 @@ fn main() {
     println!("Fee Total: ${:.2}", fee_total);
     let subtotal = labour_total + parts_total + fee_total;
     println!("Subtotal: ${:.2}", subtotal);
-    let gst_amount = calculate_tax(subtotal, sk_gst_rate);
-    let pst_amount = calculate_tax(subtotal, sk_pst_rate);
-    println!("GST {:.2}%: ${:.2}", sk_gst_rate, gst_amount);
-    println!("PST {:.2}%: ${:.2}", sk_pst_rate, pst_amount);
-    println!(
-        "Total: ${:.2}",
-        calculate_total(subtotal, gst_amount + pst_amount)
-    );
+
+    for province in [Province::Saskatchewan, Province::Alberta] {
+        let gst_amount = calculate_tax(subtotal, province.gst_rate());
+        let pst_amount = calculate_tax(subtotal, province.pst_rate().unwrap_or(0.0));
+
+        println!(
+            "{} | Subtotal: ${} | GST: ${} | PST: ${}, Total: ${}",
+            province.label(),
+            subtotal,
+            gst_amount,
+            pst_amount,
+            calculate_total(subtotal, gst_amount + pst_amount)
+        );
+    }
 }
