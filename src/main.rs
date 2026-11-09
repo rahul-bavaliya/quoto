@@ -17,51 +17,45 @@ fn main() {
     let sk_gst_rate = 5.00;
     let sk_pst_rate = 6.00;
 
-    let oil_filter_item = LineItem {
-        description: String::from("Oil Filter"),
+    let mut items = vec![
+        LineItem {
+            description: String::from("Oil Filter"),
+            quantity: 1.0,
+            unit_price: 25.0,
+        },
+        LineItem {
+            description: String::from("Oil Change Labour"),
+            quantity: 0.5,
+            unit_price: 160.0,
+        },
+        LineItem {
+            description: String::from("Engine Oil"),
+            quantity: 6.0,
+            unit_price: 8.50,
+        },
+    ];
+
+    items.push(LineItem {
+        description: String::from("Air Filter"),
         quantity: 1.0,
-        unit_price: 25.0,
-    };
+        unit_price: 32.0,
+    });
 
-    let oil_change_item = LineItem {
-        description: String::from("Oil Change Labour"),
-        quantity: 0.5,
-        unit_price: 160.0,
-    };
+    let mut subtotal = 0.0;
 
-    let engine_oil_item = LineItem {
-        description: String::from("Engine Oil"),
-        quantity: 6.0,
-        unit_price: 8.50,
-    };
+    for item in &items {
+        println!(
+            "{}: {} x ${:.2} = ${:.2}",
+            item.description,
+            item.quantity,
+            item.unit_price,
+            item.line_total()
+        );
 
-    println!(
-        "{}: {} x ${:.2} = ${:.2}",
-        oil_change_item.description,
-        oil_change_item.quantity,
-        oil_change_item.unit_price,
-        oil_change_item.line_total()
-    );
-
-    println!(
-        "{}: {} x ${:.2} = ${:.2}",
-        oil_filter_item.description,
-        oil_filter_item.quantity,
-        oil_filter_item.unit_price,
-        oil_filter_item.line_total()
-    );
-
-    println!(
-        "{}: {} x ${:.2} = ${:.2}",
-        engine_oil_item.description,
-        engine_oil_item.quantity,
-        engine_oil_item.unit_price,
-        engine_oil_item.line_total()
-    );
+        subtotal += item.line_total();
+    }
 
     println!("{}", "-".repeat(30));
-    let subtotal =
-        oil_filter_item.line_total() + oil_change_item.line_total() + engine_oil_item.line_total();
     println!("Subtotal: ${:.2}", subtotal);
     let gst_amount = calculate_tax(subtotal, sk_gst_rate);
     let pst_amount = calculate_tax(subtotal, sk_pst_rate);
