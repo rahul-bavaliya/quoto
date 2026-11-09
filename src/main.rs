@@ -88,7 +88,10 @@ fn print_quote(province: Province, items: &[LineItem]) {
         0.0
     };
     let total = calculate_total(subtotal, gst_amount + pst_amount);
-    println!("Subtotal: ${:.2}", subtotal);
+    println!("\nLabour Total: ${:.2}", labour_total);
+    println!("Parts Total: ${:.2}", parts_total);
+    println!("Fees Total: ${:.2}", fee_total);
+    println!("\nSubtotal: ${:.2}", subtotal);
 
     println!("GST {}%: ${:.2}", province.gst_rate(), gst_amount);
     if let Some(pst_rate) = province.pst_rate() {
