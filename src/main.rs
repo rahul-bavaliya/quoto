@@ -100,6 +100,32 @@ fn print_quote(province: Province, items: &[LineItem]) {
     println!("Total: ${:.2}", total);
 }
 
+struct Quote {
+    province: Province,
+    items: Vec<LineItem>,
+}
+
+impl Quote {
+    fn new(province: Province) -> Self {
+        Quote {
+            province,
+            items: Vec::new(),
+        }
+    }
+
+    fn add_item(&mut self, item: LineItem) {
+        self.items.push(item);
+    }
+
+    fn print(&self) {
+        println!(
+            "{} quote has {} lines",
+            self.province.label(),
+            self.items.len()
+        );
+    }
+}
+
 mod utils;
 use utils::{calculate_tax, calculate_total};
 
@@ -137,6 +163,39 @@ fn main() {
         unit_price: 32.0,
         kind: LineKind::Part,
     });
+
+    let mut sk_quote = Quote::new(Province::Saskatchewan);
+    sk_quote.add_item(LineItem {
+        description: String::from("Oil Filter"),
+        quantity: 1.0,
+        unit_price: 25.0,
+        kind: LineKind::Part,
+    });
+    sk_quote.add_item(LineItem {
+        description: String::from("Oil Change Labour"),
+        quantity: 0.5,
+        unit_price: 160.0,
+        kind: LineKind::Labour,
+    });
+    sk_quote.add_item(LineItem {
+        description: String::from("Engine Oil"),
+        quantity: 6.0,
+        unit_price: 8.50,
+        kind: LineKind::Part,
+    });
+    sk_quote.add_item(LineItem {
+        description: String::from("Shop Supplies"),
+        quantity: 1.0,
+        unit_price: 10.0,
+        kind: LineKind::Fee,
+    });
+    sk_quote.add_item(LineItem {
+        description: String::from("Air Filter"),
+        quantity: 1.0,
+        unit_price: 32.0,
+        kind: LineKind::Part,
+    });
+    sk_quote.print();
 
     print_quote(Province::Saskatchewan, &items);
     print_quote(Province::Alberta, &items);
