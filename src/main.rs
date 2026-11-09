@@ -10,26 +10,26 @@ fn main() {
 
     println!("----- Quoto System -----"); // Display the title of the program
     println!("----- Saskatchewan -----"); // Display the title for Saskatchewan
-    let tax_amount = calculate_tax(repair_labor, sask_tax_rate); // Calculate the total tax amount for Saskatchewan
+    let sk_tax_amount = calculate_tax(repair_labor, sask_tax_rate); // Calculate the total tax amount for Saskatchewan
     println!(
         "Tax Rate: {}% | Tax $ Amount: ${:.2}",
-        sask_tax_rate, tax_amount
+        sask_tax_rate, sk_tax_amount
     ); // Display the tax rate and the calculated tax amount
     println!("Sub Total: ${:.2}", repair_labor); // Display the subtotal amount
     println!(
         "Total Payable: ${:.2}",
-        calculate_total(repair_labor, tax_amount)
+        calculate_total(repair_labor, sk_tax_amount)
     ); // Display the total payable amount
 
     println!("----- Alberta -----"); // Display the title for Alberta
-    let tax_amount = calculate_tax(repair_labor, alberta_tax_rate);
+    let ab_tax_amount = calculate_tax(repair_labor, alberta_tax_rate);
     println!(
         "Tax Rate: {}% | Tax $ Amount: ${:.2}",
-        alberta_tax_rate, tax_amount
+        alberta_tax_rate, ab_tax_amount
     ); // Display the tax rate and the calculated tax amount for Alberta
     println!("Sub Total: ${:.2}", repair_labor); // Display the subtotal amount
     println!(
         "Total Payable: ${:.2}",
-        calculate_total(repair_labor, tax_amount)
+        calculate_total(repair_labor, ab_tax_amount)
     ); // Display the total payable amount
 }
