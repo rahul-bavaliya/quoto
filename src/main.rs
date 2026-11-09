@@ -17,7 +17,7 @@ fn main() {
     let sk_gst_rate = 5.00;
     let sk_pst_rate = 6.00;
 
-    let items = vec![
+    let mut items = vec![
         LineItem {
             description: String::from("Oil Filter"),
             quantity: 1.0,
@@ -33,16 +33,17 @@ fn main() {
             quantity: 6.0,
             unit_price: 8.50,
         },
-        LineItem {
-            description: String::from("Air Filter"),
-            quantity: 1.0,
-            unit_price: 32.0,
-        },
     ];
+
+    items.push(LineItem {
+        description: String::from("Air Filter"),
+        quantity: 1.0,
+        unit_price: 32.0,
+    });
+
     let mut subtotal = 0.0;
 
-    for i in 0..items.len() {
-        let item = &items[i];
+    for item in &items {
         println!(
             "{}: {} x ${:.2} = ${:.2}",
             item.description,
