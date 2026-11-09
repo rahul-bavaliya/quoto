@@ -18,8 +18,8 @@ enum LineKind {
 }
 
 impl LineKind {
-    fn get_line_kind(kind: &LineKind) -> &'static str {
-        match kind {
+    fn get_line_kind(&self) -> &str {
+        match self {
             LineKind::Labour => "LABOUR",
             LineKind::Part => "PART",
             LineKind::Fee => "FEE",
@@ -53,6 +53,12 @@ fn main() {
             unit_price: 8.50,
             kind: LineKind::Part,
         },
+        LineItem {
+            description: String::from("Shop Supplies"),
+            quantity: 1.0,
+            unit_price: 10.0,
+            kind: LineKind::Fee,
+        },
     ];
 
     items.push(LineItem {
@@ -62,7 +68,6 @@ fn main() {
         kind: LineKind::Part,
     });
 
-    let mut subtotal = 0.0;
     let mut parts_total = 0.0;
     let mut labour_total = 0.0;
     let mut fee_total = 0.0;
