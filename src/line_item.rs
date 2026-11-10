@@ -14,7 +14,7 @@ impl LineItem {
         unit_price_cents: i64,
         kind: LineKind,
     ) -> Result<Self, String> {
-        if quantity < 0.0 {
+        if quantity <= 0.0 {
             return Err(format!(
                 "{} quantity must be greater than zero.",
                 description
@@ -80,7 +80,6 @@ mod line_item_tests {
     }
 
     #[test]
-    // #[ignore = "f64 can't store $0.10 exactly - fixed in Day 9 (safe money)"]
     fn three_washers_cost_30_cents() {
         let washers: LineItem =
             LineItem::new(String::from("Washer"), 3.0, 10, LineKind::Part).unwrap();
@@ -90,7 +89,7 @@ mod line_item_tests {
     #[test]
     fn line_item_cent_test() {
         let line_item: LineItem =
-            LineItem::new(String::from("Test Item"), 1.5, 100, LineKind::Part).unwrap();
-        assert_eq!(line_item.line_total(), 150);
+            LineItem::new(String::from("Test Item"), 1.5, 833, LineKind::Part).unwrap();
+        assert_eq!(line_item.line_total(), 1250);
     }
 }
