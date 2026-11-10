@@ -22,7 +22,6 @@ fn sample_items() -> Vec<LineItem> {
         LineItem::new(String::from("Shop Supplies"), 1.0, 10.0, LineKind::Fee),
         LineItem::new(String::from("Air Filter"), 1.0, 32.0, LineKind::Part),
     ]
-    
 }
 
 fn main() {

@@ -32,7 +32,7 @@ impl LineItem {
     pub fn unit_price(&self) -> f64 {
         self.unit_price
     }
-    
+
     pub fn kind(&self) -> &LineKind {
         &self.kind
     }
