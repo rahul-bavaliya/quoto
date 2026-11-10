@@ -8,13 +8,27 @@ pub struct LineItem {
 }
 
 impl LineItem {
-    pub fn new(description: String, quantity: f64, unit_price_cents: i64, kind: LineKind) -> Self {
-        LineItem {
+    pub fn new(
+        description: String,
+        quantity: f64,
+        unit_price_cents: i64,
+        kind: LineKind,
+    ) -> Result<Self, String> {
+        if quantity < 0.0 {
+            return Err(format!(
+                "{} quantity must be greater than zero.",
+                description
+            ));
+        } else if unit_price_cents < 0 {
+            return Err(format!("{} unit price can't be negative.", description));
+        }
+
+        Ok(LineItem {
             description,
             quantity,
             unit_price_cents,
             kind,
-        }
+        })
     }
 
     pub fn line_total(&self) -> i64 {
@@ -61,14 +75,15 @@ mod line_item_tests {
     #[test]
     fn labour_line_total_is_hours_times_rate() {
         let labour_item: LineItem =
-            LineItem::new(String::from("Oil Change Labour"), 2.0, 50, LineKind::Labour);
+            LineItem::new(String::from("Oil Change Labour"), 2.0, 50, LineKind::Labour).unwrap();
         assert_eq!(labour_item.line_total(), 100);
     }
 
     #[test]
     // #[ignore = "f64 can't store $0.10 exactly - fixed in Day 9 (safe money)"]
     fn three_washers_cost_30_cents() {
-        let washers: LineItem = LineItem::new(String::from("Washer"), 3.0, 10, LineKind::Part);
+        let washers: LineItem =
+            LineItem::new(String::from("Washer"), 3.0, 10, LineKind::Part).unwrap();
         assert_eq!(washers.line_total(), 30);
     }
 

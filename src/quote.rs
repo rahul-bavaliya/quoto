@@ -111,7 +111,7 @@ mod quote_tests {
         // 5 add_item calls
         quote.add_item(LineItem::new(
             String::from("Oil Filter"),
-            1.0,
+            -2.0,
             2500,
             LineKind::Part,
         ));
