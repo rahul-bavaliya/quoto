@@ -3,22 +3,22 @@
 pub struct LineItem {
     description: String,
     quantity: f64,
-    unit_price: i64,
+    unit_price_cents: i64,
     kind: LineKind,
 }
 
 impl LineItem {
-    pub fn new(description: String, quantity: f64, unit_price: i64, kind: LineKind) -> Self {
+    pub fn new(description: String, quantity: f64, unit_price_cents: i64, kind: LineKind) -> Self {
         LineItem {
             description,
             quantity,
-            unit_price,
+            unit_price_cents,
             kind,
         }
     }
 
     pub fn line_total(&self) -> i64 {
-        (self.quantity * self.unit_price as f64).round() as i64
+        (self.quantity * self.unit_price_cents as f64).round() as i64
     }
 
     pub fn description(&self) -> &str {
@@ -29,8 +29,8 @@ impl LineItem {
         self.quantity
     }
 
-    pub fn unit_price(&self) -> i64 {
-        self.unit_price
+    pub fn unit_price_cents(&self) -> i64 {
+        self.unit_price_cents
     }
 
     pub fn kind(&self) -> &LineKind {
@@ -70,5 +70,11 @@ mod line_item_tests {
     fn three_washers_cost_30_cents() {
         let washers: LineItem = LineItem::new(String::from("Washer"), 3.0, 10, LineKind::Part);
         assert_eq!(washers.line_total(), 30);
+    }
+
+    #[test]
+    fn line_item_cent_test() {
+        let line_item: LineItem = LineItem::new(String::from("Test Item"), 1.5, 100, LineKind::Part);
+        assert_eq!(line_item.line_total(), 150);
     }
 }

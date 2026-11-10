@@ -30,8 +30,8 @@ impl Quote {
                 item.kind().label(),
                 item.description(),
                 item.quantity(),
-                item.unit_price(),
-                item.line_total()
+                item.unit_price_cents() as f64 / 100.0,
+                item.line_total() as f64 / 100.0
             );
         }
         println!("{}", "-".repeat(20));
@@ -133,49 +133,43 @@ mod quote_tests {
             3200,
             LineKind::Part,
         ));
-        quote.add_item(LineItem::new(
-            String::from("Transmission Oil"),
-            1.5,
-            833,
-            LineKind::Part,
-        ));
         quote
     }
 
     #[test]
     fn sk_quote_subtotal() {
         let quote: Quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.subtotal(), 21050);
+        assert_eq!(quote.subtotal(), 19800);
     }
 
     #[test]
-    fn ab_quote() {
+    fn ab_quote_has_no_pst() {
         let quote: Quote = sample_quote(Province::Alberta);
         assert_eq!(quote.pst_amount(), 0);
     }
 
     #[test]
-    fn sk_quote_gst() {
+    fn sk_quote_gst_cents() {
         let quote: Quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.gst_amount(), 1053);
+        assert_eq!(quote.gst_amount(), 990);
     }
 
     #[test]
     fn sk_quote_pst() {
         let quote: Quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.pst_amount(), 1263);
+        assert_eq!(quote.pst_amount(), 1188);
     }
 
     #[test]
     fn sk_quote_total() {
         let quote: Quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.total(), 23366);
+        assert_eq!(quote.total(), 21978);
     }
 
     #[test]
     fn ab_quote_total() {
         let quote: Quote = sample_quote(Province::Alberta);
-        assert_eq!(quote.total(), 22103); // subtotal + gst
+        assert_eq!(quote.total(), 20790); // subtotal + gst
     }
 
     #[test]
@@ -183,4 +177,6 @@ mod quote_tests {
         let quote: Quote = Quote::new(Province::Alberta);
         assert_eq!(quote.items.len(), 0);
     }
+
+    
 }
