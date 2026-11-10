@@ -109,36 +109,26 @@ mod quote_tests {
     fn sample_quote(province: Province) -> Quote {
         let mut quote: Quote = Quote::new(province);
         // 5 add_item calls
-        quote.add_item(LineItem::new(
-            String::from("Oil Filter"),
-            1.0,
-            2500,
-            LineKind::Part,
-        ));
-        quote.add_item(LineItem::new(
-            String::from("Oil Change Labour"),
-            0.5,
-            16000,
-            LineKind::Labour,
-        ));
-        quote.add_item(LineItem::new(
-            String::from("Engine Oil"),
-            6.0,
-            850,
-            LineKind::Part,
-        ));
-        quote.add_item(LineItem::new(
-            String::from("Shop Supplies"),
-            1.0,
-            1000,
-            LineKind::Fee,
-        ));
-        quote.add_item(LineItem::new(
-            String::from("Air Filter"),
-            1.0,
-            3200,
-            LineKind::Part,
-        ));
+        quote.add_item(
+            LineItem::new(String::from("Oil Filter"), 1.0, 2500, LineKind::Part).unwrap(),
+        );
+        quote.add_item(
+            LineItem::new(
+                String::from("Oil Change Labour"),
+                0.5,
+                16000,
+                LineKind::Labour,
+            )
+            .unwrap(),
+        );
+        quote
+            .add_item(LineItem::new(String::from("Engine Oil"), 6.0, 850, LineKind::Part).unwrap());
+        quote.add_item(
+            LineItem::new(String::from("Shop Supplies"), 1.0, 1000, LineKind::Fee).unwrap(),
+        );
+        quote.add_item(
+            LineItem::new(String::from("Air Filter"), 1.0, 3200, LineKind::Part).unwrap(),
+        );
         quote
     }
 
