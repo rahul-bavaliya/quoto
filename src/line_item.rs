@@ -59,7 +59,7 @@ mod line_item_tests {
     use super::*; // bring in everything from the file above
 
     #[test]
-    fn engine_oil_item_has_correct_line_total() {
+    fn test_item_line_total() {
         let engine_oil_item: LineItem = LineItem::new(
             String::from("Engine Oil"),
             0.5,
