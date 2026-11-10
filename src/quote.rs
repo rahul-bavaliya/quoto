@@ -97,50 +97,49 @@ impl Quote {
     }
 }
 
-fn sample_quote(province: Province) -> Quote {
-    let mut quote: Quote = Quote::new(province);
-    // 5 add_item calls
-    quote.add_item(LineItem::new(
-        String::from("Oil Filter"),
-        1.0,
-        25.0,
-        LineKind::Part,
-    ));
-    quote.add_item(LineItem::new(
-        String::from("Oil Change Labour"),
-        0.5,
-        160.0,
-        LineKind::Labour,
-    ));
-    quote.add_item(LineItem::new(
-        String::from("Engine Oil"),
-        6.0,
-        8.50,
-        LineKind::Part,
-    ));
-    quote.add_item(LineItem::new(
-        String::from("Shop Supplies"),
-        1.0,
-        10.0,
-        LineKind::Fee,
-    ));
-    quote.add_item(LineItem::new(
-        String::from("Air Filter"),
-        1.0,
-        32.0,
-        LineKind::Part,
-    ));
-    quote
-}
-
 #[cfg(test)] // only build this room when running `cargo test`
 mod quote_tests {
     use super::*; // bring in everything from the file above
+    fn sample_quote(province: Province) -> Quote {
+        let mut quote: Quote = Quote::new(province);
+        // 5 add_item calls
+        quote.add_item(LineItem::new(
+            String::from("Oil Filter"),
+            1.0,
+            25.0,
+            LineKind::Part,
+        ));
+        quote.add_item(LineItem::new(
+            String::from("Oil Change Labour"),
+            0.5,
+            160.0,
+            LineKind::Labour,
+        ));
+        quote.add_item(LineItem::new(
+            String::from("Engine Oil"),
+            6.0,
+            8.50,
+            LineKind::Part,
+        ));
+        quote.add_item(LineItem::new(
+            String::from("Shop Supplies"),
+            1.0,
+            10.0,
+            LineKind::Fee,
+        ));
+        quote.add_item(LineItem::new(
+            String::from("Air Filter"),
+            1.0,
+            32.0,
+            LineKind::Part,
+        ));
+        quote
+    }
 
     #[test]
     fn saskatchewan_quote_has_correct_amounts() {
         let mut sk_quote: Quote = Quote::new(Province::Saskatchewan);
-        sk_quote = sample_quote(Province::Saskatchewan);
+        sk_quote = sample_quote(sk_quote.province);
 
         assert_eq!(sk_quote.subtotal(), 198.0);
         assert_eq!(sk_quote.gst_amount(), 9.90);
