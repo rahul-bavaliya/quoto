@@ -82,8 +82,16 @@ impl Quote {
             .sum()
     }
 
+    pub fn credit_total(&self) -> i64 {
+        self.items
+            .iter()
+            .filter(|item| matches!(item.kind(), LineKind::Credit))
+            .map(|item| item.line_total())
+            .sum()
+    }
+
     pub fn subtotal(&self) -> i64 {
-        self.labour_total() + self.parts_total() + self.fees_total()
+        self.labour_total() + self.parts_total() + self.fees_total() + self.credit_total()
     }
 
     pub fn gst_amount(&self) -> i64 {
@@ -110,7 +118,7 @@ mod quote_tests {
         let mut quote: Quote = Quote::new(province);
         // 5 add_item calls
         quote.add_item(
-            LineItem::new(String::from("Oil Filter"), 1.0, 2500, LineKind::Part).unwrap(),
+            LineItem::new(String::from("Oil Filter"), 1.0, 2500, LineKind::Part, None).unwrap(),
         );
         quote.add_item(
             LineItem::new(
@@ -118,16 +126,35 @@ mod quote_tests {
                 0.5,
                 16000,
                 LineKind::Labour,
+                None,
             )
             .unwrap(),
         );
-        quote
-            .add_item(LineItem::new(String::from("Engine Oil"), 6.0, 850, LineKind::Part).unwrap());
         quote.add_item(
-            LineItem::new(String::from("Shop Supplies"), 1.0, 1000, LineKind::Fee).unwrap(),
+            LineItem::new(String::from("Engine Oil"), 6.0, 850, LineKind::Part, None).unwrap(),
         );
         quote.add_item(
-            LineItem::new(String::from("Air Filter"), 1.0, 3200, LineKind::Part).unwrap(),
+            LineItem::new(
+                String::from("Shop Supplies"),
+                1.0,
+                1000,
+                LineKind::Fee,
+                None,
+            )
+            .unwrap(),
+        );
+        quote.add_item(
+            LineItem::new(String::from("Air Filter"), 1.0, 3200, LineKind::Part, None).unwrap(),
+        );
+        quote.add_item(
+            LineItem::new(
+                String::from("DISCOUNT"),
+                1.0,
+                0,
+                LineKind::Credit,
+                Some(5000),
+            )
+            .unwrap(),
         );
         quote
     }
@@ -172,5 +199,11 @@ mod quote_tests {
     fn new_quote_is_empty() {
         let quote: Quote = Quote::new(Province::Alberta);
         assert_eq!(quote.items.len(), 0);
+    }
+
+    #[test]
+    fn sk_quote_credit_total() {
+        let quote: Quote = sample_quote(Province::Saskatchewan);
+        assert_eq!(quote.total(), 21978);
     }
 }
