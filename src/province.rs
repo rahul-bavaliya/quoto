@@ -9,7 +9,7 @@ impl Province {
     pub fn label(&self) -> &str {
         match self {
             Province::Saskatchewan => "Saskatchewan",
-            Province::Alberta => "Alberta",``
+            Province::Alberta => "Alberta",
         }
     }
 
