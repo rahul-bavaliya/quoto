@@ -7,7 +7,7 @@ pub struct LineItem {
     kind: LineKind,
 }
 
-pub impl LineItem {
+impl LineItem {
     pub fn new(description: String, quantity: f64, unit_price: f64, kind: LineKind) -> Self {
         LineItem {
             description,
@@ -28,7 +28,7 @@ pub enum LineKind {
     Fee,
 }
 
-pub impl LineKind {
+impl LineKind {
     pub fn label(&self) -> &str {
         match self {
             LineKind::Labour => "LABOUR",

@@ -9,7 +9,7 @@ pub struct Quote {
     items: Vec<LineItem>,
 }
 
-pub impl Quote {
+impl Quote {
     pub fn new(province: Province) -> Self {
         Quote {
             province,
