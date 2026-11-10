@@ -20,6 +20,18 @@ impl LineItem {
     pub fn line_total(&self) -> f64 {
         self.quantity * self.unit_price
     }
+    pub fn description(&self) -> &str {
+        &self.description
+    }
+    pub fn quantity(&self) -> f64 {
+        self.quantity
+    }
+    pub fn unit_price(&self) -> f64 {
+        self.unit_price
+    }
+    pub fn kind(&self) -> &LineKind {
+        &self.kind
+    }
 }
 
 pub enum LineKind {

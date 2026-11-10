@@ -27,10 +27,10 @@ impl Quote {
         for item in &self.items {
             println!(
                 "[{}] {}: {} x ${:.2} = ${:.2}",
-                item.kind.label(),
-                item.description,
-                item.quantity,
-                item.unit_price,
+                item.kind().label(),
+                item.description(),
+                item.quantity(),
+                item.unit_price(),
                 item.line_total()
             );
         }
@@ -55,7 +55,7 @@ impl Quote {
     pub fn labour_total(&self) -> f64 {
         self.items
             .iter()
-            .filter(|item| matches!(item.kind, LineKind::Labour))
+            .filter(|item| matches!(item.kind(), LineKind::Labour))
             .map(|item| item.line_total())
             .sum()
     }
@@ -63,7 +63,7 @@ impl Quote {
     pub fn parts_total(&self) -> f64 {
         self.items
             .iter()
-            .filter(|item| matches!(item.kind, LineKind::Part))
+            .filter(|item| matches!(item.kind(), LineKind::Part))
             .map(|item| item.line_total())
             .sum()
     }
@@ -71,7 +71,7 @@ impl Quote {
     pub fn fees_total(&self) -> f64 {
         self.items
             .iter()
-            .filter(|item| matches!(item.kind, LineKind::Fee))
+            .filter(|item| matches!(item.kind(), LineKind::Fee))
             .map(|item| item.line_total())
             .sum()
     }
