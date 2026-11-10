@@ -1,9 +1,9 @@
 // src/tax.rs
 
-pub fn calculate_tax(amount: f64, rate: f64) -> f64 {
-    amount * rate / 100.0
+pub fn calculate_tax(amount: i64, rate: f64) -> i64 {
+    (amount as f64 * rate / 100.0) as i64
 }
 
-pub fn calculate_total(amount: f64, tax_amount: f64) -> f64 {
+pub fn calculate_total(amount: i64, tax_amount: i64) -> i64 {
     amount + tax_amount
 }

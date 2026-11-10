@@ -11,16 +11,16 @@ use quote::Quote;
 
 fn sample_items() -> Vec<LineItem> {
     vec![
-        LineItem::new(String::from("Oil Filter"), 1.0, 25.0, LineKind::Part),
+        LineItem::new(String::from("Oil Filter"), 1.0, 2500, LineKind::Part),
         LineItem::new(
             String::from("Oil Change Labour"),
             0.5,
-            160.0,
+            16000,
             LineKind::Labour,
         ),
-        LineItem::new(String::from("Engine Oil"), 6.0, 8.50, LineKind::Part),
-        LineItem::new(String::from("Shop Supplies"), 1.0, 10.0, LineKind::Fee),
-        LineItem::new(String::from("Air Filter"), 1.0, 32.0, LineKind::Part),
+        LineItem::new(String::from("Engine Oil"), 6.0, 850, LineKind::Part),
+        LineItem::new(String::from("Shop Supplies"), 1.0, 1000, LineKind::Fee),
+        LineItem::new(String::from("Air Filter"), 1.0, 3200, LineKind::Part),
     ]
 }
 
