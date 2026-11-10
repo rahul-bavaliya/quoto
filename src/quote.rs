@@ -139,7 +139,7 @@ mod quote_tests {
 
     #[test]
     fn saskatchewan_quote_has_correct_amounts() {
-        let mut sk_quote:Quote = Quote::new(Province::Saskatchewan);
+        let mut sk_quote: Quote = Quote::new(Province::Saskatchewan);
         sk_quote = sample_quote(Province::Saskatchewan);
 
         assert_eq!(sk_quote.subtotal(), 198.0);
