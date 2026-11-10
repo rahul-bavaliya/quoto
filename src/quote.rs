@@ -133,13 +133,19 @@ mod quote_tests {
             3200,
             LineKind::Part,
         ));
+        quote.add_item(LineItem::new(
+            String::from("Transmission Oil"),
+            1.5,
+            833,
+            LineKind::Part,
+        ));
         quote
     }
 
     #[test]
     fn sk_quote_subtotal_is_198() {
         let quote: Quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.subtotal(), 19800);
+        assert_eq!(quote.subtotal(), 21049);
     }
 
     #[test]
@@ -151,25 +157,25 @@ mod quote_tests {
     #[test]
     fn sk_quote_gst_is_9_90() {
         let quote: Quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.gst_amount(), 990);
+        assert_eq!(quote.gst_amount(), 1052);
     }
 
     #[test]
     fn sk_quote_pst_is_11_88() {
         let quote: Quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.pst_amount(), 1188);
+        assert_eq!(quote.pst_amount(), 1263);
     }
 
     #[test]
     fn sk_quote_total_is_219_78() {
         let quote: Quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.total(), 21978);
+        assert_eq!(quote.total(), 23364);
     }
 
     #[test]
     fn ab_quote_total_is_207_90() {
         let quote: Quote = sample_quote(Province::Alberta);
-        assert_eq!(quote.total(), 20790);
+        assert_eq!(quote.total(), 22101); // subtotal + gst
     }
 
     #[test]
