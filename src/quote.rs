@@ -18,8 +18,8 @@ impl Quote {
         }
     }
 
-    pub fn add_item(&mut self, item: Result<LineItem, String>) {
-        self.items.push(item.unwrap());
+    pub fn add_item(&mut self, item: LineItem) {
+        self.items.push(item);
     }
 
     pub fn print(&self) {
@@ -114,31 +114,31 @@ mod quote_tests {
             1.0,
             2500,
             LineKind::Part,
-        ));
+        ).unwrap());
         quote.add_item(LineItem::new(
             String::from("Oil Change Labour"),
             0.5,
             16000,
             LineKind::Labour,
-        ));
+        ).unwrap());
         quote.add_item(LineItem::new(
             String::from("Engine Oil"),
             6.0,
             850,
             LineKind::Part,
-        ));
+        ).unwrap());
         quote.add_item(LineItem::new(
             String::from("Shop Supplies"),
             1.0,
             1000,
             LineKind::Fee,
-        ));
+        ).unwrap());
         quote.add_item(LineItem::new(
             String::from("Air Filter"),
             1.0,
             3200,
             LineKind::Part,
-        ));
+        ).unwrap());
         quote
     }
 
