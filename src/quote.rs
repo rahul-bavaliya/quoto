@@ -138,13 +138,43 @@ mod quote_tests {
 
     #[test]
     fn sk_quote_subtotal_is_198() {
-        let quote = sample_quote(Province::Saskatchewan);
+        let quote:Quote = sample_quote(Province::Saskatchewan);
         assert_eq!(quote.subtotal(), 198.0);
     }
 
     #[test]
     fn ab_quote_has_no_pst() {
-        let quote = sample_quote(Province::Alberta);
+        let quote:Quote = sample_quote(Province::Alberta);
         assert_eq!(quote.pst_amount(), 0.0);
+    }
+
+    #[test]
+    fn sk_quote_gst_is_9_90() {
+        let quote:Quote = sample_quote(Province::Saskatchewan);
+        assert_eq!(quote.gst_amount(), 9.90);
+    }
+
+    #[test]
+    fn sk_quote_pst_is_11_88() {
+        let quote:Quote = sample_quote(Province::Saskatchewan);
+        assert_eq!(quote.pst_amount(), 11.88);
+    }
+
+    #[test]
+    fn sk_quote_total_is_219_78() {
+        let quote:Quote = sample_quote(Province::Saskatchewan);
+        assert_eq!(quote.total(), 219.78);
+    }
+
+    #[test]
+    fn ab_quote_total_is_207_90() {
+        let quote:Quote = sample_quote(Province::Alberta);
+        assert_eq!(quote.total(), 207.90);
+    }
+
+    #[test]
+    fn new_quote_is_empty() {
+        let quote:Quote = Quote::new(Province::Alberta);
+        assert_eq!(quote.items.len(), 0);
     }
 }
