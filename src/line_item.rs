@@ -92,4 +92,28 @@ mod line_item_tests {
             LineItem::new(String::from("Test Item"), 1.5, 833, LineKind::Part).unwrap();
         assert_eq!(line_item.line_total(), 1250);
     }
+
+    #[test]
+    fn negative_quantity_is_refused() {
+        let result = LineItem::new(String::from("Oil Filter"), -2.0, 2500, LineKind::Part);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn negative_price_is_refused() {
+        let result = LineItem::new(String::from("Oil Filter"), 2.0, -2500, LineKind::Part);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn zero_price_is_allowed() {
+        let result = LineItem::new(String::from("Free Warranty Part"), 2.0, 0, LineKind::Part);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn zero_quantity_is_refused() {
+        let result = LineItem::new(String::from("Oil Filter"), 0.0, 2500, LineKind::Part);
+        assert!(result.is_err());
+    }
 }
