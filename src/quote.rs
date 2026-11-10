@@ -1,6 +1,7 @@
 // src/quote.rs
 
 use crate::line_item::{LineItem, LineKind};
+use crate::money::format_money;
 use crate::province::Province;
 use crate::tax::{calculate_tax, calculate_total};
 
@@ -22,7 +23,12 @@ impl Quote {
     }
 
     pub fn print(&self) {
-        println!("\n{} Quote: {}", "=".repeat(5), self.province.label());
+        println!(
+            "\n{} Quote: {} {}",
+            "=".repeat(5),
+            self.province.label(),
+            "=".repeat(5)
+        );
 
         for item in &self.items {
             println!(
@@ -30,29 +36,29 @@ impl Quote {
                 item.kind().label(),
                 item.description(),
                 item.quantity(),
-                item.unit_price(),
-                item.line_total()
+                item.unit_price_cents() as f64 / 100.0,
+                item.line_total() as f64 / 100.0
             );
         }
         println!("{}", "-".repeat(20));
-        println!("Labour Total: ${:.2}", self.labour_total());
-        println!("Parts Total: ${:.2}", self.parts_total());
-        println!("Fees Total: ${:.2}", self.fees_total());
+        println!("Labour Total: {}", format_money(self.labour_total()));
+        println!("Parts Total: {}", format_money(self.parts_total()));
+        println!("Fees Total: {}", format_money(self.fees_total()));
         println!("{}", "-".repeat(20));
-        println!("Subtotal: ${:.2}", self.subtotal());
+        println!("Subtotal: {}", format_money(self.subtotal()));
         println!("{}", "-".repeat(20));
         println!(
-            "GST {}%: ${:.2}",
+            "GST {}%: {}",
             self.province.gst_rate(),
-            self.gst_amount()
+            format_money(self.gst_amount())
         );
         if let Some(pst_rate) = self.province.pst_rate() {
-            println!("PST {}%: ${:.2}", pst_rate, self.pst_amount());
+            println!("PST {}%: {}", pst_rate, format_money(self.pst_amount()));
         }
-        println!("Total: ${:.2}", self.total());
+        println!("Total: {}", format_money(self.total()));
     }
 
-    pub fn labour_total(&self) -> f64 {
+    pub fn labour_total(&self) -> i64 {
         self.items
             .iter()
             .filter(|item| matches!(item.kind(), LineKind::Labour))
@@ -60,7 +66,7 @@ impl Quote {
             .sum()
     }
 
-    pub fn parts_total(&self) -> f64 {
+    pub fn parts_total(&self) -> i64 {
         self.items
             .iter()
             .filter(|item| matches!(item.kind(), LineKind::Part))
@@ -68,7 +74,7 @@ impl Quote {
             .sum()
     }
 
-    pub fn fees_total(&self) -> f64 {
+    pub fn fees_total(&self) -> i64 {
         self.items
             .iter()
             .filter(|item| matches!(item.kind(), LineKind::Fee))
@@ -76,23 +82,23 @@ impl Quote {
             .sum()
     }
 
-    pub fn subtotal(&self) -> f64 {
+    pub fn subtotal(&self) -> i64 {
         self.labour_total() + self.parts_total() + self.fees_total()
     }
 
-    pub fn gst_amount(&self) -> f64 {
+    pub fn gst_amount(&self) -> i64 {
         calculate_tax(self.subtotal(), self.province.gst_rate())
     }
 
-    pub fn pst_amount(&self) -> f64 {
+    pub fn pst_amount(&self) -> i64 {
         if let Some(pst_rate) = self.province.pst_rate() {
             calculate_tax(self.subtotal(), pst_rate)
         } else {
-            0.0
+            0
         }
     }
 
-    pub fn total(&self) -> f64 {
+    pub fn total(&self) -> i64 {
         calculate_total(self.subtotal(), self.gst_amount() + self.pst_amount())
     }
 }
@@ -106,70 +112,70 @@ mod quote_tests {
         quote.add_item(LineItem::new(
             String::from("Oil Filter"),
             1.0,
-            25.0,
+            2500,
             LineKind::Part,
         ));
         quote.add_item(LineItem::new(
             String::from("Oil Change Labour"),
             0.5,
-            160.0,
+            16000,
             LineKind::Labour,
         ));
         quote.add_item(LineItem::new(
             String::from("Engine Oil"),
             6.0,
-            8.50,
+            850,
             LineKind::Part,
         ));
         quote.add_item(LineItem::new(
             String::from("Shop Supplies"),
             1.0,
-            10.0,
+            1000,
             LineKind::Fee,
         ));
         quote.add_item(LineItem::new(
             String::from("Air Filter"),
             1.0,
-            32.0,
+            3200,
             LineKind::Part,
         ));
         quote
     }
 
     #[test]
-    fn sk_quote_subtotal_is_198() {
+    fn sk_quote_subtotal() {
         let quote: Quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.subtotal(), 198.0);
+        assert_eq!(quote.subtotal(), 19800);
     }
 
     #[test]
     fn ab_quote_has_no_pst() {
         let quote: Quote = sample_quote(Province::Alberta);
-        assert_eq!(quote.pst_amount(), 0.0);
+        assert_eq!(quote.pst_amount(), 0);
     }
 
     #[test]
-    fn sk_quote_gst_is_9_90() {
+    fn sk_quote_gst_cents() {
         let quote: Quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.gst_amount(), 9.90);
+        assert_eq!(quote.gst_amount(), 990);
     }
 
     #[test]
-    fn sk_quote_pst_is_11_88() {
+    fn sk_quote_pst() {
         let quote: Quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.pst_amount(), 11.88);
+        assert_eq!(quote.pst_amount(), 1188);
     }
 
     #[test]
-    fn sk_quote_total_is_219_78() {
+    fn sk_quote_total() {
         let quote: Quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.total(), 219.78);
+        assert_eq!(quote.total(), 21978);
     }
 
     #[test]
-    fn ab_quote_total_is_207_90() {
+    fn ab_quote_total() {
         let quote: Quote = sample_quote(Province::Alberta);
-        assert_eq!(quote.total(), 207.90);
+        assert_eq!(quote.total(), 20790); // subtotal + gst
     }
 
     #[test]
