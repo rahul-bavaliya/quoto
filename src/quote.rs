@@ -1,6 +1,7 @@
 // src/quote.rs
 
 use crate::line_item::{LineItem, LineKind};
+use crate::money::format_money;
 use crate::province::Province;
 use crate::tax::{calculate_tax, calculate_total};
 
@@ -22,7 +23,12 @@ impl Quote {
     }
 
     pub fn print(&self) {
-        println!("\n{} Quote: {}", "=".repeat(5), self.province.label());
+        println!(
+            "\n{} Quote: {} {}",
+            "=".repeat(5),
+            self.province.label(),
+            "=".repeat(5)
+        );
 
         for item in &self.items {
             println!(
@@ -35,21 +41,21 @@ impl Quote {
             );
         }
         println!("{}", "-".repeat(20));
-        println!("Labour Total: ${:.2}", self.labour_total());
-        println!("Parts Total: ${:.2}", self.parts_total());
-        println!("Fees Total: ${:.2}", self.fees_total());
+        println!("Labour Total: {}", format_money(self.labour_total()));
+        println!("Parts Total: {}", format_money(self.parts_total()));
+        println!("Fees Total: {}", format_money(self.fees_total()));
         println!("{}", "-".repeat(20));
-        println!("Subtotal: ${:.2}", self.subtotal());
+        println!("Subtotal: {}", format_money(self.subtotal()));
         println!("{}", "-".repeat(20));
         println!(
-            "GST {}%: ${:.2}",
+            "GST {}%: {}",
             self.province.gst_rate(),
-            self.gst_amount()
+            format_money(self.gst_amount())
         );
         if let Some(pst_rate) = self.province.pst_rate() {
-            println!("PST {}%: ${:.2}", pst_rate, self.pst_amount());
+            println!("PST {}%: {}", pst_rate, format_money(self.pst_amount()));
         }
-        println!("Total: ${:.2}", self.total());
+        println!("Total: {}", format_money(self.total()));
     }
 
     pub fn labour_total(&self) -> i64 {
@@ -177,6 +183,4 @@ mod quote_tests {
         let quote: Quote = Quote::new(Province::Alberta);
         assert_eq!(quote.items.len(), 0);
     }
-
-    
 }

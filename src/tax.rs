@@ -5,12 +5,11 @@ pub fn calculate_tax(amount: i64, rate: f64) -> i64 {
 }
 
 pub fn calculate_total(amount: i64, tax_amount: i64) -> i64 {
-    amount + tax_amount   
+    amount + tax_amount
 }
 
-
 #[cfg(test)] // only build this room when running `cargo test`
-mod line_item_tests {
+mod tax_tests {
     use super::*; // bring in everything from the file above
 
     #[test]
@@ -18,6 +17,4 @@ mod line_item_tests {
         assert_eq!(calculate_tax(100, 10.0), 10);
         assert_eq!(calculate_tax(100, 5.5), 6);
     }
-
-  
 }

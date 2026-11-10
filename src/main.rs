@@ -1,6 +1,7 @@
 // src/main.rs
 
 mod line_item;
+mod money;
 mod province;
 mod quote;
 mod tax;
