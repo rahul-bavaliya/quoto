@@ -1,13 +1,8 @@
 // Turns whole cents into a dollar string: 21978 → "$219.78"
 pub fn format_money(cents: i64) -> String {
-    let dollars: i64 = cents / 100; // full dollars: 21978 / 100 = 219
-    let pennies: i64 = cents % 100; // leftover cents: 21978 % 100 = 78
-    if pennies < 0 {
-        // Handle negative cents correctly
-        let pennies: i64 = -pennies;
-        return format!("${}.{:02}", dollars, pennies);
-    }
-    format!("${}.{:02}", dollars, pennies)
+    let sign = if cents < 0 { "-" } else { "" }; // remember the minus
+    let positive = cents.abs(); // -150 → 150
+    format!("{}${}.{:02}", sign, positive / 100, positive % 100)
 }
 
 #[cfg(test)]
