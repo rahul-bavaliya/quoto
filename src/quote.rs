@@ -143,39 +143,39 @@ mod quote_tests {
     }
 
     #[test]
-    fn sk_quote_subtotal_is_198() {
+    fn sk_quote_subtotal() {
         let quote: Quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.subtotal(), 21049);
+        assert_eq!(quote.subtotal(), 21050);
     }
 
     #[test]
-    fn ab_quote_has_no_pst() {
+    fn ab_quote() {
         let quote: Quote = sample_quote(Province::Alberta);
         assert_eq!(quote.pst_amount(), 0);
     }
 
     #[test]
-    fn sk_quote_gst_is_9_90() {
+    fn sk_quote_gst() {
         let quote: Quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.gst_amount(), 1052);
+        assert_eq!(quote.gst_amount(), 1053);
     }
 
     #[test]
-    fn sk_quote_pst_is_11_88() {
+    fn sk_quote_pst() {
         let quote: Quote = sample_quote(Province::Saskatchewan);
         assert_eq!(quote.pst_amount(), 1263);
     }
 
     #[test]
-    fn sk_quote_total_is_219_78() {
+    fn sk_quote_total() {
         let quote: Quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.total(), 23364);
+        assert_eq!(quote.total(), 23366);
     }
 
     #[test]
-    fn ab_quote_total_is_207_90() {
+    fn ab_quote_total() {
         let quote: Quote = sample_quote(Province::Alberta);
-        assert_eq!(quote.total(), 22101); // subtotal + gst
+        assert_eq!(quote.total(), 22103); // subtotal + gst
     }
 
     #[test]

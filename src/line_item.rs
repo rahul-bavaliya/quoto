@@ -18,7 +18,7 @@ impl LineItem {
     }
 
     pub fn line_total(&self) -> i64 {
-        (self.quantity * self.unit_price as f64) as i64
+        (self.quantity * self.unit_price as f64).round() as i64
     }
 
     pub fn description(&self) -> &str {
