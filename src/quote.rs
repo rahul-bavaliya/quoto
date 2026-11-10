@@ -96,3 +96,52 @@ impl Quote {
         calculate_total(self.subtotal(), self.gst_amount() + self.pst_amount())
     }
 }
+
+#[cfg(test)] // only build this room when running `cargo test`
+mod quote_tests {
+    use super::*; // bring in everything from the file above
+
+    #[test]
+    fn saskatchewan_quote_has_correct_amounts() {
+        let mut sk_quote = Quote::new(Province::Saskatchewan);
+        sk_quote.add_item(LineItem::new(
+            String::from("Oil Filter"),
+            1.0,
+            25.0,
+            LineKind::Part,
+        ));
+        sk_quote.add_item(LineItem::new(
+            String::from("Oil Change Labour"),
+            0.5,
+            160.0,
+            LineKind::Labour,
+        ));
+        sk_quote.add_item(LineItem::new(
+            String::from("Engine Oil"),
+            6.0,
+            8.50,
+            LineKind::Part,
+        ));
+        sk_quote.add_item(LineItem::new(
+            String::from("Shop Supplies"),
+            1.0,
+            10.0,
+            LineKind::Fee,
+        ));
+        sk_quote.add_item(LineItem::new(
+            String::from("Air Filter"),
+            1.0,
+            32.0,
+            LineKind::Part,
+        ));
+        assert_eq!(sk_quote.subtotal(), 25.0 + 80.0 + 51.0 + 10.0 + 32.0);
+        assert_eq!(sk_quote.gst_amount(), 0.05 * sk_quote.subtotal());
+        assert_eq!(sk_quote.pst_amount(), 0.06 * sk_quote.subtotal());
+        assert_eq!(
+            sk_quote.total(),
+            sk_quote.subtotal() + sk_quote.gst_amount() + sk_quote.pst_amount()
+        );
+        assert_eq!(sk_quote.province.gst_rate(), 5.0);
+        assert_eq!(sk_quote.province.pst_rate(), Some(6.0));
+    }
+}

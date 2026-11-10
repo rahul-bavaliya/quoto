@@ -53,3 +53,19 @@ impl LineKind {
         }
     }
 }
+
+#[cfg(test)] // only build this room when running `cargo test`
+mod line_item_tests {
+    use super::*; // bring in everything from the file above
+
+    #[test]
+    fn engine_oil_item_has_correct_line_total() {
+        let engine_oil_item: LineItem = LineItem::new(
+            String::from("Engine Oil"),
+            0.5,
+            160.0,
+            LineKind::Part
+        );
+        assert_eq!(engine_oil_item.line_total(), 80.0);
+    }
+}

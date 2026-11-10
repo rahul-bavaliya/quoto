@@ -1,0 +1,3 @@
+{
+    "rust-analyzer.runnables.command": "/home/codespace/.cargo/bin/cargo"
+}
