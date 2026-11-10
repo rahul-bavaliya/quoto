@@ -90,7 +90,7 @@ mod line_item_tests {
     #[test]
     fn line_item_cent_test() {
         let line_item: LineItem =
-            LineItem::new(String::from("Test Item"), 1.5, 100, LineKind::Part);
+            LineItem::new(String::from("Test Item"), 1.5, 100, LineKind::Part).unwrap();
         assert_eq!(line_item.line_total(), 150);
     }
 }

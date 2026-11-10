@@ -29,13 +29,13 @@ fn sample_items() -> Vec<LineItem> {
 fn main() {
     let mut sk_quote: Quote = Quote::new(Province::Saskatchewan);
     for item in sample_items() {
-        sk_quote.add_item(item);
+        sk_quote.add_item(Ok(item));
     }
     sk_quote.print();
 
     let mut ab_quote: Quote = Quote::new(Province::Alberta);
     for item in sample_items() {
-        ab_quote.add_item(item);
+        ab_quote.add_item(Ok(item));
     }
     ab_quote.print();
 }

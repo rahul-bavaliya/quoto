@@ -18,8 +18,8 @@ impl Quote {
         }
     }
 
-    pub fn add_item(&mut self, item: LineItem) {
-        self.items.push(item);
+    pub fn add_item(&mut self, item: Result<LineItem, String>) {
+        self.items.push(item.unwrap());
     }
 
     pub fn print(&self) {
@@ -111,7 +111,7 @@ mod quote_tests {
         // 5 add_item calls
         quote.add_item(LineItem::new(
             String::from("Oil Filter"),
-            -2.0,
+            1.0,
             2500,
             LineKind::Part,
         ));
