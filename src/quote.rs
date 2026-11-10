@@ -134,12 +134,12 @@ mod quote_tests {
             32.0,
             LineKind::Part,
         ));
-        assert_eq!(sk_quote.subtotal(), 25.0 + 80.0 + 51.0 + 10.0 + 32.0);
-        assert_eq!(sk_quote.gst_amount(), 0.05 * sk_quote.subtotal());
-        assert_eq!(sk_quote.pst_amount(), 0.06 * sk_quote.subtotal());
+        assert_eq!(sk_quote.subtotal(), 198.0);
+        assert_eq!(sk_quote.gst_amount(), 9.90);
+        assert_eq!(sk_quote.pst_amount(), 11.88);
         assert_eq!(
             sk_quote.total(),
-            sk_quote.subtotal() + sk_quote.gst_amount() + sk_quote.pst_amount()
+            219.78
         );
         assert_eq!(sk_quote.province.gst_rate(), 5.0);
         assert_eq!(sk_quote.province.pst_rate(), Some(6.0));
