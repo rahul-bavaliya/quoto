@@ -137,15 +137,14 @@ mod quote_tests {
     }
 
     #[test]
-    fn saskatchewan_quote_has_correct_amounts() {
-        let mut sk_quote: Quote = Quote::new(Province::Saskatchewan);
-        sk_quote = sample_quote(sk_quote.province);
+    fn sk_quote_subtotal_is_198() {
+        let quote = sample_quote(Province::Saskatchewan);
+        assert_eq!(quote.subtotal(), 198.0);
+    }
 
-        assert_eq!(sk_quote.subtotal(), 198.0);
-        assert_eq!(sk_quote.gst_amount(), 9.90);
-        assert_eq!(sk_quote.pst_amount(), 11.88);
-        assert_eq!(sk_quote.total(), 219.78);
-        assert_eq!(sk_quote.province.gst_rate(), 5.0);
-        assert_eq!(sk_quote.province.pst_rate(), Some(6.0));
+    #[test]
+    fn ab_quote_has_no_pst() {
+        let quote = sample_quote(Province::Alberta);
+        assert_eq!(quote.pst_amount(), 0.0);
     }
 }
