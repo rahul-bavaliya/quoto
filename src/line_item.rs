@@ -53,3 +53,26 @@ impl LineKind {
         }
     }
 }
+
+#[cfg(test)] // only build this room when running `cargo test`
+mod line_item_tests {
+    use super::*; // bring in everything from the file above
+
+    #[test]
+    fn labour_line_total_is_hours_times_rate() {
+        let labour_item: LineItem = LineItem::new(
+            String::from("Oil Change Labour"),
+            2.0,
+            50.0,
+            LineKind::Labour,
+        );
+        assert_eq!(labour_item.line_total(), 100.0);
+    }
+
+    #[test]
+    #[ignore = "f64 can't store $0.10 exactly - fixed in Day 9 (safe money)"]
+    fn three_washers_cost_30_cents() {
+        let washers: LineItem = LineItem::new(String::from("Washer"), 3.0, 0.10, LineKind::Part);
+        assert_eq!(washers.line_total(), 0.3);
+    }
+}
