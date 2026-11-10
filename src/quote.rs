@@ -137,10 +137,7 @@ mod quote_tests {
         assert_eq!(sk_quote.subtotal(), 198.0);
         assert_eq!(sk_quote.gst_amount(), 9.90);
         assert_eq!(sk_quote.pst_amount(), 11.88);
-        assert_eq!(
-            sk_quote.total(),
-            219.78
-        );
+        assert_eq!(sk_quote.total(), 219.78);
         assert_eq!(sk_quote.province.gst_rate(), 5.0);
         assert_eq!(sk_quote.province.pst_rate(), Some(6.0));
     }

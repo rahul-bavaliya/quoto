@@ -59,13 +59,13 @@ mod line_item_tests {
     use super::*; // bring in everything from the file above
 
     #[test]
-    fn test_item_line_total() {
-        let engine_oil_item: LineItem = LineItem::new(
-            String::from("Engine Oil"),
-            0.5,
-            160.0,
-            LineKind::Part
+    fn labour_line_total_is_hours_times_rate() {
+        let labour_item: LineItem = LineItem::new(
+            String::from("Oil Change Labour"),
+            2.0,
+            50.0,
+            LineKind::Labour,
         );
-        assert_eq!(engine_oil_item.line_total(), 80.0);
+        assert_eq!(labour_item.line_total(), 100.0);
     }
 }
