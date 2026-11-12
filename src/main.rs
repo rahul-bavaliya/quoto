@@ -1,16 +1,9 @@
-// src/main.rs
+// src/main.rs: a small demo program that uses the Quoto library
 
-mod errors;
-mod line_item;
-mod money;
-mod province;
-mod quote;
-mod tax;
-
-use errors::QuoteError;
-use line_item::{LineItem, LineKind};
-use province::Province;
-use quote::Quote;
+use quoto::errors::QuoteError;
+use quoto::line_item::{LineItem, LineKind};
+use quoto::province::Province;
+use quoto::quote::Quote;
 
 fn sample_items() -> Result<Vec<LineItem>, QuoteError> {
     Ok(vec![
