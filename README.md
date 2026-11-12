@@ -43,8 +43,7 @@ GitHub Actions runs the same checks automatically on every push and pull request
 src/
 ├── main.rs              demo program (uses the quoto library)
 ├── lib.rs               the library's front door
-├── <feature>/mod.rs     the feature's code
-├── <feature>/tests.rs   its unit tests
+├── <feature>.rs         the feature's code + its unit tests at the bottom
 tests/
 └── quote_scenarios.rs   whole-quote scenarios through the public API
 ```
