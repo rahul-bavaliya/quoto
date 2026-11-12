@@ -1,5 +1,7 @@
 // src/line_item.rs
 
+use crate::errors::QuoteError;
+
 pub struct LineItem {
     description: String,
     quantity: f64,
@@ -21,14 +23,12 @@ impl LineItem {
         quantity: f64,
         unit_price_cents: i64,
         kind: LineKind,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, QuoteError> {
         if quantity <= 0.0 {
-            return Err(format!(
-                "{} quantity must be greater than zero.",
-                description
-            ));
-        } else if unit_price_cents < 0 {
-            return Err(format!("{} unit price can't be negative.", description));
+            return Err(QuoteError::BadQuantity { description });
+        }
+        if unit_price_cents < 0 {
+            return Err(QuoteError::NegativePrice { description });
         }
 
         Ok(LineItem {
@@ -105,13 +105,13 @@ mod line_item_tests {
     #[test]
     fn negative_quantity_is_refused() {
         let result = LineItem::new(String::from("Oil Filter"), -2.0, 2500, LineKind::Part);
-        assert!(result.is_err());
+        assert!(matches!(result, Err(QuoteError::BadQuantity { .. })));
     }
 
     #[test]
     fn negative_price_is_refused() {
         let result = LineItem::new(String::from("Oil Filter"), 2.0, -2500, LineKind::Part);
-        assert!(result.is_err());
+        assert!(matches!(result, Err(QuoteError::NegativePrice { .. })));
     }
 
     #[test]
@@ -123,7 +123,7 @@ mod line_item_tests {
     #[test]
     fn zero_quantity_is_refused() {
         let result = LineItem::new(String::from("Oil Filter"), 0.0, 2500, LineKind::Part);
-        assert!(result.is_err());
+        assert!(matches!(result, Err(QuoteError::BadQuantity { .. })));
     }
 
     #[test]
