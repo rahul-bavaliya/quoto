@@ -1,16 +1,18 @@
 // src/main.rs
 
+mod errors;
 mod line_item;
 mod money;
 mod province;
 mod quote;
 mod tax;
 
+use errors::QuoteError;
 use line_item::{LineItem, LineKind};
 use province::Province;
 use quote::Quote;
 
-fn sample_items() -> Result<Vec<LineItem>, String> {
+fn sample_items() -> Result<Vec<LineItem>, QuoteError> {
     Ok(vec![
         LineItem::new(String::from("Oil Filter"), 1.0, 2500, LineKind::Part)?,
         LineItem::new(
@@ -31,13 +33,13 @@ fn sample_items() -> Result<Vec<LineItem>, String> {
         LineItem::new(
             String::from("Goodwill - 3 day wait"),
             1.0,
-            5000,
+            500000,
             LineKind::Credit,
         )?,
     ])
 }
 
-fn main() -> Result<(), String> {
+fn main() -> Result<(), QuoteError> {
     let mut sk_quote: Quote = Quote::new(Province::Saskatchewan);
     for item in sample_items()? {
         sk_quote.add_item(item);

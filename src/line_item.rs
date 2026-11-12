@@ -1,5 +1,7 @@
 // src/line_item.rs
 
+use crate::errors::QuoteError;
+
 pub struct LineItem {
     description: String,
     quantity: f64,
@@ -21,14 +23,11 @@ impl LineItem {
         quantity: f64,
         unit_price_cents: i64,
         kind: LineKind,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, QuoteError> {
         if quantity <= 0.0 {
-            return Err(format!(
-                "{} quantity must be greater than zero.",
-                description
-            ));
+            return Err(QuoteError::BadQuantity { description });
         } else if unit_price_cents < 0 {
-            return Err(format!("{} unit price can't be negative.", description));
+            return Err(QuoteError::NegativePrice { description });
         }
 
         Ok(LineItem {

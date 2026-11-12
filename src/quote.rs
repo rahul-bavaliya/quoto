@@ -1,5 +1,6 @@
 // src/quote.rs
 
+use crate::errors::QuoteError;
 use crate::line_item::{LineItem, LineKind};
 use crate::money::format_money;
 use crate::province::Province;
@@ -18,8 +19,16 @@ impl Quote {
         }
     }
 
-    pub fn add_item(&mut self, item: LineItem) {
+    pub fn add_item(&mut self, item: LineItem) -> Result<(), QuoteError> {
+        if matches!(item.kind(), LineKind::Credit) && item.line_total() < 0 {
+            return Err(QuoteError::CreditTooLarge {
+                credit_cents: item.signed_unit_price_cents(),
+                subtotal_cents: item.line_total(),
+            });
+        }
+
         self.items.push(item);
+        Ok(())
     }
 
     pub fn print(&self) {
@@ -118,7 +127,7 @@ mod quote_tests {
     use super::*; // bring in everything from the file above
 
     // The 5 standard lines. No credits here: credit robots add their own.
-    fn sample_quote(province: Province) -> Quote {
+    fn sample_quote(province: Province) -> Result<Quote, QuoteError> {
         let mut quote = Quote::new(province);
         quote.add_item(
             LineItem::new(String::from("Oil Filter"), 1.0, 2500, LineKind::Part).unwrap(),
@@ -140,7 +149,7 @@ mod quote_tests {
         quote.add_item(
             LineItem::new(String::from("Air Filter"), 1.0, 3200, LineKind::Part).unwrap(),
         );
-        quote
+        Ok(quote)
     }
 
     // A $50 goodwill credit, for the credit robots
