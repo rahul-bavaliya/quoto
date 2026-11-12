@@ -3,10 +3,7 @@
 // These robots use Quoto exactly like a real program would: only through
 // the `pub` front door in `src/lib.rs`. They can't see private fields.
 
-use quoto::errors::QuoteError;
-use quoto::line_item::{LineItem, LineKind};
-use quoto::province::Province;
-use quoto::quote::Quote;
+use quoto::{LineItem, LineKind, Province, Quote, QuoteError};
 
 /// The standard 5-line oil-change job ($198.00 before tax).
 fn oil_change_quote(province: Province) -> Quote {
@@ -80,4 +77,20 @@ fn credit_equal_to_the_job_makes_it_free() {
 fn a_bad_line_never_reaches_the_quote() {
     let result = LineItem::new(String::from("Oil Filter"), 0.0, 2500, LineKind::Part);
     assert!(matches!(result, Err(QuoteError::BadQuantity { .. })));
+}
+
+#[test]
+fn printed_quote_shows_taxes_and_total() {
+    let text = oil_change_quote(Province::Saskatchewan).to_string();
+    assert!(text.contains("Quote: Saskatchewan"));
+    assert!(text.contains("GST 5%: $9.90"));
+    assert!(text.contains("PST 6%: $11.88"));
+    assert!(text.ends_with("Total: $219.78"));
+}
+
+#[test]
+fn printed_alberta_quote_has_no_pst_line() {
+    let text = oil_change_quote(Province::Alberta).to_string();
+    assert!(!text.contains("PST"));
+    assert!(text.ends_with("Total: $207.90"));
 }

@@ -80,3 +80,12 @@ fn credit_comes_off_before_tax() {
     assert_eq!(quote.subtotal(), 14800); // 198.00 - 50.00
     assert_eq!(quote.gst_amount(), 740); // 5% of 148.00, not of 198.00
 }
+
+#[test]
+fn total_for_adds_only_that_kind() {
+    let quote = sample_quote(Province::Saskatchewan);
+    assert_eq!(quote.total_for(&LineKind::Part), 10800); // 25.00 + 51.00 + 32.00
+    assert_eq!(quote.total_for(&LineKind::Labour), 8000);
+    assert_eq!(quote.total_for(&LineKind::Fee), 1000);
+    assert_eq!(quote.total_for(&LineKind::Credit), 0);
+}

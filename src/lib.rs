@@ -11,3 +11,10 @@ pub mod money;
 pub mod province;
 pub mod quote;
 pub mod tax;
+
+// The short front door: `use quoto::{Quote, LineItem, ...};`
+pub use errors::QuoteError;
+pub use line_item::{LineItem, LineKind};
+pub use money::format_money;
+pub use province::Province;
+pub use quote::Quote;
