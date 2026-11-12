@@ -8,6 +8,14 @@ pub struct LineItem {
 }
 
 impl LineItem {
+    // +1 for normal lines, -1 for credits (the ONE place the sign is decided)
+    fn sign(&self) -> i64 {
+        match self.kind {
+            LineKind::Credit => -1,
+            _ => 1,
+        }
+    }
+
     pub fn new(
         description: String,
         quantity: f64,
@@ -32,19 +40,18 @@ impl LineItem {
     }
 
     pub fn line_total(&self) -> i64 {
-        (self.quantity * self.unit_price_cents as f64).round() as i64
+        let amount: i64 = (self.quantity * self.unit_price_cents as f64).round() as i64;
+        amount * self.sign()
     }
-
+    pub fn signed_unit_price_cents(&self) -> i64 {
+        self.unit_price_cents * self.sign()
+    }
     pub fn description(&self) -> &str {
         &self.description
     }
 
     pub fn quantity(&self) -> f64 {
         self.quantity
-    }
-
-    pub fn unit_price_cents(&self) -> i64 {
-        self.unit_price_cents
     }
 
     pub fn kind(&self) -> &LineKind {
@@ -56,6 +63,7 @@ pub enum LineKind {
     Labour,
     Part,
     Fee,
+    Credit,
 }
 
 impl LineKind {
@@ -64,6 +72,7 @@ impl LineKind {
             LineKind::Labour => "LABOUR",
             LineKind::Part => "PART",
             LineKind::Fee => "FEE",
+            LineKind::Credit => "CREDIT",
         }
     }
 }
@@ -115,5 +124,11 @@ mod line_item_tests {
     fn zero_quantity_is_refused() {
         let result = LineItem::new(String::from("Oil Filter"), 0.0, 2500, LineKind::Part);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn credit_line_total_is_negative() {
+        let credit = LineItem::new(String::from("Goodwill"), 1.0, 5000, LineKind::Credit).unwrap();
+        assert_eq!(credit.line_total(), -5000);
     }
 }

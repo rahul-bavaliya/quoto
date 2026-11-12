@@ -1,8 +1,8 @@
 // Turns whole cents into a dollar string: 21978 → "$219.78"
 pub fn format_money(cents: i64) -> String {
-    let dollars = cents / 100; // full dollars: 21978 / 100 = 219
-    let pennies = cents % 100; // leftover cents: 21978 % 100 = 78
-    format!("${}.{:02}", dollars, pennies)
+    let sign = if cents < 0 { "-" } else { "" }; // remember the minus
+    let positive = cents.abs(); // -150 → 150
+    format!("{}${}.{:02}", sign, positive / 100, positive % 100)
 }
 
 #[cfg(test)]
@@ -22,5 +22,15 @@ mod money_tests {
     #[test]
     fn formats_zero() {
         assert_eq!(format_money(0), "$0.00");
+    }
+
+    #[test]
+    fn negative_amounts() {
+        assert_eq!(format_money(-150), "-$1.50");
+    }
+
+    #[test]
+    fn tiny_negative_keeps_its_minus() {
+        assert_eq!(format_money(-5), "-$0.05");
     }
 }

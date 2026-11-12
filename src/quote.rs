@@ -32,18 +32,20 @@ impl Quote {
 
         for item in &self.items {
             println!(
-                "[{}] {}: {} x ${:.2} = ${:.2}",
+                "[{}] {}: {} x {} = {}",
                 item.kind().label(),
                 item.description(),
                 item.quantity(),
-                item.unit_price_cents() as f64 / 100.0,
-                item.line_total() as f64 / 100.0
+                format_money(item.signed_unit_price_cents()),
+                format_money(item.line_total())
             );
         }
         println!("{}", "-".repeat(20));
         println!("Labour Total: {}", format_money(self.labour_total()));
         println!("Parts Total: {}", format_money(self.parts_total()));
         println!("Fees Total: {}", format_money(self.fees_total()));
+        println!("Credit Total: {}", format_money(self.credit_total()));
+
         println!("{}", "-".repeat(20));
         println!("Subtotal: {}", format_money(self.subtotal()));
         println!("{}", "-".repeat(20));
@@ -82,8 +84,16 @@ impl Quote {
             .sum()
     }
 
+    pub fn credit_total(&self) -> i64 {
+        self.items
+            .iter()
+            .filter(|item| matches!(item.kind(), LineKind::Credit))
+            .map(|item| item.line_total())
+            .sum()
+    }
+
     pub fn subtotal(&self) -> i64 {
-        self.labour_total() + self.parts_total() + self.fees_total()
+        self.labour_total() + self.parts_total() + self.fees_total() + self.credit_total()
     }
 
     pub fn gst_amount(&self) -> i64 {
@@ -106,9 +116,10 @@ impl Quote {
 #[cfg(test)] // only build this room when running `cargo test`
 mod quote_tests {
     use super::*; // bring in everything from the file above
+
+    // The 5 standard lines. No credits here: credit robots add their own.
     fn sample_quote(province: Province) -> Quote {
-        let mut quote: Quote = Quote::new(province);
-        // 5 add_item calls
+        let mut quote = Quote::new(province);
         quote.add_item(
             LineItem::new(String::from("Oil Filter"), 1.0, 2500, LineKind::Part).unwrap(),
         );
@@ -132,45 +143,79 @@ mod quote_tests {
         quote
     }
 
+    // A $50 goodwill credit, for the credit robots
+    fn goodwill_50() -> LineItem {
+        LineItem::new(String::from("Goodwill"), 1.0, 5000, LineKind::Credit).unwrap()
+    }
+
     #[test]
     fn sk_quote_subtotal() {
-        let quote: Quote = sample_quote(Province::Saskatchewan);
+        let quote = sample_quote(Province::Saskatchewan);
         assert_eq!(quote.subtotal(), 19800);
     }
 
     #[test]
     fn ab_quote_has_no_pst() {
-        let quote: Quote = sample_quote(Province::Alberta);
+        let quote = sample_quote(Province::Alberta);
         assert_eq!(quote.pst_amount(), 0);
     }
 
     #[test]
     fn sk_quote_gst_cents() {
-        let quote: Quote = sample_quote(Province::Saskatchewan);
+        let quote = sample_quote(Province::Saskatchewan);
         assert_eq!(quote.gst_amount(), 990);
     }
 
     #[test]
     fn sk_quote_pst() {
-        let quote: Quote = sample_quote(Province::Saskatchewan);
+        let quote = sample_quote(Province::Saskatchewan);
         assert_eq!(quote.pst_amount(), 1188);
     }
 
     #[test]
     fn sk_quote_total() {
-        let quote: Quote = sample_quote(Province::Saskatchewan);
+        let quote = sample_quote(Province::Saskatchewan);
         assert_eq!(quote.total(), 21978);
     }
 
     #[test]
     fn ab_quote_total() {
-        let quote: Quote = sample_quote(Province::Alberta);
+        let quote = sample_quote(Province::Alberta);
         assert_eq!(quote.total(), 20790); // subtotal + gst
     }
 
     #[test]
     fn new_quote_is_empty() {
-        let quote: Quote = Quote::new(Province::Alberta);
-        assert_eq!(quote.items.len(), 0);
+        let quote = Quote::new(Province::Alberta);
+        assert!(quote.items.is_empty());
+    }
+
+    #[test]
+    fn plain_quote_has_no_credits() {
+        let quote = sample_quote(Province::Saskatchewan);
+        assert_eq!(quote.credit_total(), 0);
+    }
+
+    #[test]
+    fn credit_comes_off_before_tax() {
+        let mut quote = sample_quote(Province::Saskatchewan);
+        quote.add_item(goodwill_50());
+        assert_eq!(quote.credit_total(), -5000);
+        assert_eq!(quote.subtotal(), 14800); // 198.00 - 50.00
+        assert_eq!(quote.gst_amount(), 740); // 5% of 148.00, not of 198.00
+    }
+
+    #[test]
+    fn sk_quote_with_50_credit() {
+        let mut quote = sample_quote(Province::Saskatchewan);
+        quote.add_item(goodwill_50());
+        assert_eq!(quote.total(), 16428); // 148.00 + 7.40 + 8.88
+    }
+
+    #[test]
+    fn ab_quote_with_50_credit() {
+        let mut quote = sample_quote(Province::Alberta);
+        quote.add_item(goodwill_50());
+        assert_eq!(quote.total(), 15540); // 148.00 + 7.40
     }
 }
