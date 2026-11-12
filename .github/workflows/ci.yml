@@ -1,0 +1,33 @@
+# CI: GitHub runs the same checks we run before every push, automatically,
+# on every push and every pull request. A red ❌ on a PR means "don't merge yet".
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: fmt + clippy + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Formatting (cargo fmt)
+        run: cargo fmt --check
+
+      - name: Lints (cargo clippy) - warnings count as failures
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Tests (cargo test)
+        run: cargo test
+
+      - name: Demo runs (cargo run)
+        run: cargo run
