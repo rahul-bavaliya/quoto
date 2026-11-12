@@ -219,4 +219,3 @@ mod quote_tests {
         assert_eq!(quote.total(), 15540); // 148.00 + 7.40
     }
 }
-
