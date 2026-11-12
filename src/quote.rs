@@ -1,5 +1,6 @@
 // src/quote.rs
 
+use crate::customer::Customer;
 use crate::errors::QuoteError;
 use crate::line_item::{LineItem, LineKind};
 use crate::money::format_money;
@@ -8,14 +9,14 @@ use crate::tax::calculate_tax;
 use std::fmt;
 
 pub struct Quote {
-    province: Province,
+    customer: Customer,
     items: Vec<LineItem>,
 }
 
 impl Quote {
-    pub fn new(province: Province) -> Self {
+    pub fn new(customer: Customer) -> Self {
         Quote {
-            province,
+            customer,
             items: Vec::new(),
         }
     }
@@ -33,6 +34,15 @@ impl Quote {
 
         self.items.push(item);
         Ok(())
+    }
+
+    pub fn customer(&self) -> &Customer {
+        &self.customer
+    }
+
+    /// The customer's province decides the taxes (one source of truth).
+    fn province(&self) -> &Province {
+        self.customer.province()
     }
 
     /// Adds up every line of one kind (e.g. all the parts).
@@ -66,11 +76,11 @@ impl Quote {
     }
 
     pub fn gst_amount(&self) -> i64 {
-        calculate_tax(self.subtotal(), self.province.gst_rate())
+        calculate_tax(self.subtotal(), self.province().gst_rate())
     }
 
     pub fn pst_amount(&self) -> i64 {
-        if let Some(pst_rate) = self.province.pst_rate() {
+        if let Some(pst_rate) = self.province().pst_rate() {
             calculate_tax(self.subtotal(), pst_rate)
         } else {
             0
@@ -92,9 +102,10 @@ impl fmt::Display for Quote {
             f,
             "{} Quote: {} {}",
             "=".repeat(5),
-            self.province.label(),
+            self.province().label(),
             "=".repeat(5)
         )?;
+        writeln!(f, "Customer: {}", self.customer)?;
         for item in &self.items {
             writeln!(
                 f,
@@ -117,10 +128,10 @@ impl fmt::Display for Quote {
         writeln!(
             f,
             "GST {}%: {}",
-            self.province.gst_rate(),
+            self.province().gst_rate(),
             format_money(self.gst_amount())
         )?;
-        if let Some(pst_rate) = self.province.pst_rate() {
+        if let Some(pst_rate) = self.province().pst_rate() {
             writeln!(f, "PST {}%: {}", pst_rate, format_money(self.pst_amount()))?;
         }
         write!(f, "Total: {}", format_money(self.total()))
@@ -130,35 +141,42 @@ impl fmt::Display for Quote {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::address::{Address, PostalCode};
+    use crate::contact::{Contact, PhoneNumber};
+
+    /// A customer who lives in the given province.
+    fn sample_customer(province: Province) -> Customer {
+        let (city, postal_code) = match province {
+            Province::Saskatchewan => ("Regina", "S4P 3Y2"),
+            Province::Alberta => ("Calgary", "T2P 1J9"),
+        };
+        let contact = Contact::new(PhoneNumber::parse("306-555-0142").unwrap(), None, None);
+        let address = Address::new(
+            String::from("123 Main St"),
+            None,
+            String::from(city),
+            PostalCode::parse(postal_code).unwrap(),
+            province,
+        )
+        .unwrap();
+        Customer::new(String::from("Jane Smith"), None, None, contact, address).unwrap()
+    }
 
     // The 5 standard lines. No credits here: credit robots add their own.
     fn sample_quote(province: Province) -> Quote {
-        let mut quote = Quote::new(province);
-        quote
-            .add_item(LineItem::new(String::from("Oil Filter"), 1.0, 2500, LineKind::Part).unwrap())
-            .unwrap();
-        quote
-            .add_item(
-                LineItem::new(
-                    String::from("Oil Change Labour"),
-                    0.5,
-                    16000,
-                    LineKind::Labour,
-                )
-                .unwrap(),
-            )
-            .unwrap();
-        quote
-            .add_item(LineItem::new(String::from("Engine Oil"), 6.0, 850, LineKind::Part).unwrap())
-            .unwrap();
-        quote
-            .add_item(
-                LineItem::new(String::from("Shop Supplies"), 1.0, 1000, LineKind::Fee).unwrap(),
-            )
-            .unwrap();
-        quote
-            .add_item(LineItem::new(String::from("Air Filter"), 1.0, 3200, LineKind::Part).unwrap())
-            .unwrap();
+        let mut quote = Quote::new(sample_customer(province));
+        let lines = [
+            ("Oil Filter", 1.0, 2500, LineKind::Part),
+            ("Oil Change Labour", 0.5, 16000, LineKind::Labour),
+            ("Engine Oil", 6.0, 850, LineKind::Part),
+            ("Shop Supplies", 1.0, 1000, LineKind::Fee),
+            ("Air Filter", 1.0, 3200, LineKind::Part),
+        ];
+        for (description, quantity, price_cents, kind) in lines {
+            let item =
+                LineItem::new(String::from(description), quantity, price_cents, kind).unwrap();
+            quote.add_item(item).unwrap();
+        }
         quote
     }
 
@@ -193,8 +211,14 @@ mod tests {
 
     #[test]
     fn new_quote_is_empty() {
-        let quote = Quote::new(Province::Alberta);
+        let quote = Quote::new(sample_customer(Province::Alberta));
         assert!(quote.items.is_empty());
+    }
+
+    #[test]
+    fn quote_takes_its_province_from_the_customer() {
+        let quote = Quote::new(sample_customer(Province::Alberta));
+        assert_eq!(quote.province(), &Province::Alberta);
     }
 
     #[test]

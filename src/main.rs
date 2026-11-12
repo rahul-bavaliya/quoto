@@ -1,6 +1,9 @@
 // src/main.rs: a small demo program that uses the Quoto library
 
-use quoto::{LineItem, LineKind, Province, Quote, QuoteError};
+use quoto::{
+    Address, Contact, Customer, Email, LineItem, LineKind, PhoneNumber, PostalCode, Province,
+    Quote, QuoteError,
+};
 
 fn sample_items() -> Result<Vec<LineItem>, QuoteError> {
     Ok(vec![
@@ -29,14 +32,54 @@ fn sample_items() -> Result<Vec<LineItem>, QuoteError> {
     ])
 }
 
+fn prairie_farms() -> Result<Customer, QuoteError> {
+    let contact = Contact::new(
+        PhoneNumber::parse("306-555-0142")?,
+        None,
+        Some(Email::parse("jane@prairiefarms.ca")?),
+    );
+    let address = Address::new(
+        String::from("123 Main St"),
+        None,
+        String::from("Regina"),
+        PostalCode::parse("S4P 3Y2")?,
+        Province::Saskatchewan,
+    )?;
+    Customer::new(
+        String::from("Jane Smith"),
+        Some(String::from("Prairie Farms Ltd.")),
+        Some(String::from("Service Manager")),
+        contact,
+        address,
+    )
+}
+
+fn foothills_ranch() -> Result<Customer, QuoteError> {
+    let contact = Contact::new(PhoneNumber::parse("(403) 555 0199")?, None, None);
+    let address = Address::new(
+        String::from("RR 2"),
+        None,
+        String::from("Calgary"),
+        PostalCode::parse("T2P 1J9")?,
+        Province::Alberta,
+    )?;
+    Customer::new(
+        String::from("Bob Lee"),
+        Some(String::from("Foothills Ranch")),
+        None,
+        contact,
+        address,
+    )
+}
+
 fn main() -> Result<(), QuoteError> {
-    let mut sk_quote = Quote::new(Province::Saskatchewan);
+    let mut sk_quote = Quote::new(prairie_farms()?);
     for item in sample_items()? {
         sk_quote.add_item(item)?;
     }
     println!("{}", sk_quote);
 
-    let mut ab_quote = Quote::new(Province::Alberta);
+    let mut ab_quote = Quote::new(foothills_ranch()?);
     for item in sample_items()? {
         ab_quote.add_item(item)?;
     }
