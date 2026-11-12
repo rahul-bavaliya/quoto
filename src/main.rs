@@ -33,22 +33,22 @@ fn sample_items() -> Result<Vec<LineItem>, QuoteError> {
         LineItem::new(
             String::from("Goodwill - 3 day wait"),
             1.0,
-            500000,
+            5000,
             LineKind::Credit,
         )?,
     ])
 }
 
 fn main() -> Result<(), QuoteError> {
-    let mut sk_quote: Quote = Quote::new(Province::Saskatchewan);
+    let mut sk_quote = Quote::new(Province::Saskatchewan);
     for item in sample_items()? {
-        sk_quote.add_item(item);
+        sk_quote.add_item(item)?;
     }
     sk_quote.print();
 
-    let mut ab_quote: Quote = Quote::new(Province::Alberta);
+    let mut ab_quote = Quote::new(Province::Alberta);
     for item in sample_items()? {
-        ab_quote.add_item(item);
+        ab_quote.add_item(item)?;
     }
     ab_quote.print();
     Ok(())

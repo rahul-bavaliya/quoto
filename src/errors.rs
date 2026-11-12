@@ -1,8 +1,11 @@
-// src/error.rs
+// src/errors.rs
 
-use std::fmt; // ① at the very top (brings in Rust's formatting tools)
+use crate::money::format_money;
+use std::fmt;
 
-#[derive(Debug, PartialEq)] // ② the enum
+/// Every way Quoto can refuse something. Each kind carries the details
+/// a screen (or a person) needs to explain what went wrong.
+#[derive(Debug, PartialEq)]
 pub enum QuoteError {
     BadQuantity {
         description: String,
@@ -17,23 +20,42 @@ pub enum QuoteError {
 }
 
 impl fmt::Display for QuoteError {
-    // ③ the Display badge, below the enum
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             QuoteError::BadQuantity { description } => {
                 write!(f, "{} quantity must be greater than zero.", description)
             }
-            // 👉 you write the NegativePrice arm here
             QuoteError::NegativePrice { description } => {
-                write!(f, "{} price must be greater than zero.", description)
+                write!(f, "{} unit price can't be negative.", description)
             }
-            // 👉 you write the CreditTooLarge arm here
             QuoteError::CreditTooLarge {
                 credit_cents,
                 subtotal_cents,
             } => {
-                write!(f, "Credit is over by {}", credit_cents + subtotal_cents)
+                write!(
+                    f,
+                    "Credit of {} is larger than the subtotal of {}.",
+                    format_money(*credit_cents),
+                    format_money(*subtotal_cents)
+                )
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod errors_tests {
+    use super::*;
+
+    #[test]
+    fn credit_too_large_message_shows_dollars() {
+        let error = QuoteError::CreditTooLarge {
+            credit_cents: 30000,
+            subtotal_cents: 19800,
+        };
+        assert_eq!(
+            error.to_string(),
+            "Credit of $300.00 is larger than the subtotal of $198.00."
+        );
     }
 }
