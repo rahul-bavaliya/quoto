@@ -8,6 +8,14 @@ pub struct LineItem {
 }
 
 impl LineItem {
+    // +1 for normal lines, -1 for credits (the ONE place the sign is decided)
+    fn sign(&self) -> i64 {
+        match self.kind {
+            LineKind::Credit => -1,
+            _ => 1,
+        }
+    }
+
     pub fn new(
         description: String,
         quantity: f64,
@@ -33,22 +41,17 @@ impl LineItem {
 
     pub fn line_total(&self) -> i64 {
         let amount: i64 = (self.quantity * self.unit_price_cents as f64).round() as i64;
-        match self.kind {
-            LineKind::Credit => -amount,
-            _ => amount,
-        }
+        amount * self.sign()
     }
-
+    pub fn signed_unit_price_cents(&self) -> i64 {
+        self.unit_price_cents * self.sign()
+    }
     pub fn description(&self) -> &str {
         &self.description
     }
 
     pub fn quantity(&self) -> f64 {
         self.quantity
-    }
-
-    pub fn unit_price_cents(&self) -> i64 {
-        self.unit_price_cents
     }
 
     pub fn kind(&self) -> &LineKind {

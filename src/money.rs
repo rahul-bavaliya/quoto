@@ -26,6 +26,11 @@ mod money_tests {
 
     #[test]
     fn negative_amounts() {
-        assert_eq!(format_money(-150), "$-1.50");
+        assert_eq!(format_money(-150), "-$1.50");
+    }
+
+    #[test]
+    fn tiny_negative_keeps_its_minus() {
+        assert_eq!(format_money(-5), "-$0.05");
     }
 }
