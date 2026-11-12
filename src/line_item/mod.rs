@@ -59,6 +59,7 @@ impl LineItem {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub enum LineKind {
     Labour,
     Part,

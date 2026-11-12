@@ -16,7 +16,7 @@ fn three_washers_cost_30_cents() {
 }
 
 #[test]
-fn line_item_cent_test() {
+fn line_total_rounds_half_cent_up() {
     let line_item: LineItem =
         LineItem::new(String::from("Test Item"), 1.5, 833, LineKind::Part).unwrap();
     assert_eq!(line_item.line_total(), 1250);
