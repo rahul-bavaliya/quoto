@@ -1,7 +1,7 @@
 // src/lib.rs: the front door of the Quoto library 🚪
 //
-// Every feature lives in its own folder (`src/<feature>/mod.rs`) with its
-// unit tests next to it (`src/<feature>/tests.rs`). Anything marked `pub`
+// Every feature lives in its own file (`src/<feature>.rs`), with its unit
+// tests at the bottom in a `#[cfg(test)] mod tests`. Anything marked `pub`
 // here can be used by `main.rs`, by the scenario tests in `tests/`, and
 // later by the web API.
 

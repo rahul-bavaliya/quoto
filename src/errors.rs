@@ -1,4 +1,4 @@
-// src/errors/mod.rs
+// src/errors.rs
 
 use crate::money::format_money;
 use std::fmt;
@@ -44,4 +44,18 @@ impl fmt::Display for QuoteError {
 }
 
 #[cfg(test)]
-mod tests;
+mod tests {
+    use super::*;
+
+    #[test]
+    fn credit_too_large_message_shows_dollars() {
+        let error = QuoteError::CreditTooLarge {
+            credit_cents: 30000,
+            subtotal_cents: 19800,
+        };
+        assert_eq!(
+            error.to_string(),
+            "Credit of $300.00 is larger than the subtotal of $198.00."
+        );
+    }
+}
