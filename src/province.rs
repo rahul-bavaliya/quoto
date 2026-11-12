@@ -1,5 +1,6 @@
 // src/province.rs
 
+#[derive(Debug, PartialEq)]
 pub enum Province {
     Saskatchewan,
     Alberta,
@@ -10,6 +11,14 @@ impl Province {
         match self {
             Province::Saskatchewan => "Saskatchewan",
             Province::Alberta => "Alberta",
+        }
+    }
+
+    /// The two-letter code used on addresses, e.g. "SK".
+    pub fn code(&self) -> &str {
+        match self {
+            Province::Saskatchewan => "SK",
+            Province::Alberta => "AB",
         }
     }
 
