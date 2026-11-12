@@ -5,6 +5,9 @@
 // here can be used by `main.rs`, by the scenario tests in `tests/`, and
 // later by the web API.
 
+pub mod address;
+pub mod contact;
+pub mod customer;
 pub mod errors;
 pub mod line_item;
 pub mod money;
@@ -13,6 +16,9 @@ pub mod quote;
 pub mod tax;
 
 // The short front door: `use quoto::{Quote, LineItem, ...};`
+pub use address::{Address, PostalCode};
+pub use contact::{Contact, Email, PhoneNumber};
+pub use customer::Customer;
 pub use errors::QuoteError;
 pub use line_item::{LineItem, LineKind};
 pub use money::format_money;

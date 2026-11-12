@@ -17,6 +17,18 @@ pub enum QuoteError {
         credit_cents: i64,
         subtotal_cents: i64,
     },
+    MissingField {
+        field: &'static str,
+    },
+    InvalidPhone {
+        input: String,
+    },
+    InvalidEmail {
+        input: String,
+    },
+    InvalidPostalCode {
+        input: String,
+    },
 }
 
 impl fmt::Display for QuoteError {
@@ -37,6 +49,20 @@ impl fmt::Display for QuoteError {
                     "Credit of {} is larger than the subtotal of {}.",
                     format_money(*credit_cents),
                     format_money(*subtotal_cents)
+                )
+            }
+            QuoteError::MissingField { field } => write!(f, "{} is required.", field),
+            QuoteError::InvalidPhone { input } => {
+                write!(f, "\"{}\" is not a valid 10-digit phone number.", input)
+            }
+            QuoteError::InvalidEmail { input } => {
+                write!(f, "\"{}\" is not a valid email address.", input)
+            }
+            QuoteError::InvalidPostalCode { input } => {
+                write!(
+                    f,
+                    "\"{}\" is not a valid postal code (like S4P 3Y2).",
+                    input
                 )
             }
         }
