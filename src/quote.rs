@@ -169,9 +169,8 @@ mod tests {
         Customer::new(String::from("Jane Smith"), None, None, contact, address).unwrap()
     }
 
-    /// A customer who lives in the given province.
+    /// Sample equipment used as a test fixture.
     fn sample_equipment() -> Equipment {
-        Equipment::new(
             String::from("Toyota"),
             String::from("Corolla Cross"),
             2025,
