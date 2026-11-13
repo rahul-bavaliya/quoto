@@ -4,8 +4,8 @@
 // the `pub` front door in `src/lib.rs`. They can't see private fields.
 
 use quoto::{
-    Address, Contact, Customer, LineItem, LineKind, PhoneNumber, PostalCode, Province, Quote,
-    QuoteError,
+    Address, Contact, Customer, Equipment, LineItem, LineKind, MeterType, PhoneNumber, PostalCode,
+    Province, Quote, QuoteError,
 };
 
 /// A customer who lives in the given province (that's what decides the taxes).
@@ -26,9 +26,23 @@ fn customer_in(province: Province) -> Customer {
     Customer::new(String::from("Jane Smith"), None, None, contact, address).unwrap()
 }
 
+fn equipment_sample() -> Equipment {
+    Equipment::new(
+        String::from("Toyota"),
+        String::from("Corolla Cross"),
+        2025,
+        Some(String::from("SERIAL_NUMBER_TEST_1")),
+        28156.0,
+        None,
+        MeterType::Kilometer,
+        String::from("Car Suv AWD"),
+        String::from("RB97"),
+    )
+}
+
 /// The standard 5-line oil-change job ($198.00 before tax).
 fn oil_change_quote(province: Province) -> Quote {
-    let mut quote = Quote::new(customer_in(province));
+    let mut quote = Quote::new(customer_in(province), equipment_sample());
     let lines = [
         ("Oil Filter", 1.0, 2500, LineKind::Part),
         ("Oil Change Labour", 0.5, 16000, LineKind::Labour),
