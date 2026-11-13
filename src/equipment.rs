@@ -67,8 +67,8 @@ impl Equipment {
     pub fn meter(&self) -> &f64 {
         &self.meter
     }
-    pub fn previous_meter(&self) -> &Option<f64> {
-        &self.previous_meter
+    pub fn previous_meter(&self) -> Option<f64> {
+        self.previous_meter
     }
     pub fn meter_type(&self) -> &MeterType {
         &self.meter_type
