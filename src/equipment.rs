@@ -58,8 +58,8 @@ impl Equipment {
     pub fn model(&self) -> &str {
         &self.model
     }
-    pub fn model_year(&self) -> &i64 {
-        &self.model_year
+    pub fn model_year(&self) -> i64 {
+        self.model_year
     }
     pub fn serial_number(&self) -> &Option<String> {
         &self.serial_number
