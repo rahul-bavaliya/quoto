@@ -4,8 +4,8 @@
 // the `pub` front door in `src/lib.rs`. They can't see private fields.
 
 use quoto::{
-    Address, Contact, Customer, Equipment, LineItem, LineKind, Meter, MeterType, PhoneNumber,
-    PostalCode, Province, Quote, QuoteError,
+    Address, Contact, Customer, Equipment, EquipmentType, Identification, LineItem, LineKind,
+    Meter, MeterType, PhoneNumber, PostalCode, Province, Quote, QuoteError,
 };
 
 /// A customer who lives in the given province (that's what decides the taxes).
@@ -31,11 +31,15 @@ fn equipment_sample() -> Equipment {
         String::from("Toyota"),
         String::from("Corolla Cross"),
         Some(2025),
-        Some(String::from("SERIAL_NUMBER_TEST_1")),
+        Identification::new(
+            Some(String::from("SERIAL_NUMBER_TEST_1")),
+            Some(String::from("RB97")),
+        )
+        .unwrap(),
         Meter::new(Some(28156.0), MeterType::Kilometer),
-        String::from("Car Suv AWD"),
-        Some(String::from("RB97")),
+        EquipmentType::Car,
     )
+    .unwrap()
 }
 
 /// The standard 5-line oil-change job ($198.00 before tax).

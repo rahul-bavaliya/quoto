@@ -151,7 +151,7 @@ mod tests {
     use crate::MeterType;
     use crate::address::{Address, PostalCode};
     use crate::contact::{Contact, PhoneNumber};
-    use crate::equipment::Meter;
+    use crate::equipment::{EquipmentType, Identification, Meter};
 
     /// A customer who lives in the given province.
     fn sample_customer(province: Province) -> Customer {
@@ -177,11 +177,15 @@ mod tests {
             String::from("Toyota"),
             String::from("Corolla Cross"),
             Some(2025),
-            Some(String::from("SERIAL_NUMBER_TEST_1")),
+            Identification::new(
+                Some(String::from("SERIAL_NUMBER_TEST_1")),
+                Some(String::from("RB97")),
+            )
+            .unwrap(),
             Meter::new(Some(28156.98), MeterType::Kilometer),
-            String::from("Car Suv AWD"),
-            Some(String::from("RB97")),
+            EquipmentType::Car,
         )
+        .unwrap()
     }
 
     // The 5 standard lines. No credits here: credit robots add their own.

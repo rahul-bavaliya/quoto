@@ -1,8 +1,8 @@
 // src/main.rs: a small demo program that uses the Quoto library
 
 use quoto::{
-    Address, Contact, Customer, Email, Equipment, LineItem, LineKind, Meter, MeterType,
-    PhoneNumber, PostalCode, Province, Quote, QuoteError,
+    Address, Contact, Customer, Email, Equipment, EquipmentType, Identification, LineItem,
+    LineKind, Meter, MeterType, PhoneNumber, PostalCode, Province, Quote, QuoteError,
 };
 
 /// The same job for every demo quote: a fresh set of lines each time,
@@ -82,28 +82,32 @@ fn northern_oilfield() -> Result<Customer, QuoteError> {
 
 /// A fresh unit each time: a quote owns its equipment, so two quotes
 /// can't share one.
-fn sample_equipment() -> Equipment {
+fn sample_equipment() -> Result<Equipment, QuoteError> {
     Equipment::new(
         String::from("Toyota"),
         String::from("Corolla Cross"),
         Some(2025),
-        Some(String::from("SERIAL_NUMBER_TEST_1")),
+        Identification::new(
+            Some(String::from("SERIAL_NUMBER_TEST_1")),
+            Some(String::from("RB97")),
+        )?,
         Meter::new(Some(28156.98), MeterType::Kilometer),
-        String::from("Car Suv AWD"),
-        Some(String::from("RB97")),
+        EquipmentType::Car,
     )
 }
 
 /// Northern Oilfield's service truck.
-fn oilfield_truck() -> Equipment {
+fn oilfield_truck() -> Result<Equipment, QuoteError> {
     Equipment::new(
         String::from("Ford"),
         String::from("F-350 Super Duty"),
         Some(2022),
-        Some(String::from("1FT8W3BT0NEC12345")),
+        Identification::new(
+            Some(String::from("1FT8W3BT0NEC12345")),
+            Some(String::from("BXK 4471")),
+        )?,
         Meter::new(Some(143250.0), MeterType::Kilometer),
-        String::from("Pickup Truck 4x4"),
-        Some(String::from("BXK 4471")),
+        EquipmentType::Truck,
     )
 }
 
@@ -117,7 +121,7 @@ fn build_quote(customer: Customer, equipment: Equipment) -> Result<Quote, QuoteE
 }
 
 fn main() -> Result<(), QuoteError> {
-    println!("{}", build_quote(prairie_farms()?, sample_equipment())?);
-    println!("{}", build_quote(northern_oilfield()?, oilfield_truck())?);
+    println!("{}", build_quote(prairie_farms()?, sample_equipment()?)?);
+    println!("{}", build_quote(northern_oilfield()?, oilfield_truck()?)?);
     Ok(())
 }
