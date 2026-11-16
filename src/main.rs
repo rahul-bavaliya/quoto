@@ -1,8 +1,8 @@
 // src/main.rs: a small demo program that uses the Quoto library
 
 use quoto::{
-    Address, Contact, Customer, Email, Equipment, LineItem, LineKind, Meter, MeterType,
-    PhoneNumber, PostalCode, Province, Quote, QuoteError,
+    Address, Contact, Customer, Email, Equipment, EquipmentType, Identification, LineItem,
+    LineKind, Meter, MeterType, PhoneNumber, PostalCode, Province, Quote, QuoteError,
 };
 
 /// The same job for every demo quote: a fresh set of lines each time,
@@ -61,7 +61,7 @@ fn prairie_farms() -> Result<Customer, QuoteError> {
 fn northern_oilfield() -> Result<Customer, QuoteError> {
     let contact = Contact::new(
         PhoneNumber::parse("780-555-0188")?,
-        None,
+        Some(PhoneNumber::parse("3065558965")?),
         Some(Email::parse("mike@northernoilfield.ca")?),
     );
     let address = Address::new(
@@ -82,22 +82,38 @@ fn northern_oilfield() -> Result<Customer, QuoteError> {
 
 /// A fresh unit each time: a quote owns its equipment, so two quotes
 /// can't share one.
-fn sample_equipment() -> Equipment {
+fn sample_equipment() -> Result<Equipment, QuoteError> {
     Equipment::new(
         String::from("Toyota"),
         String::from("Corolla Cross"),
         Some(2025),
-        Some(String::from("SERIAL_NUMBER_TEST_1")),
+        Identification::new(
+            Some(String::from("SERIAL_NUMBER_TEST_1")),
+            Some(String::from("RB97")),
+        )?,
         Meter::new(Some(28156.98), MeterType::Kilometer),
-        None,
-        String::from("Car Suv AWD"),
-        Some(String::from("RB97")),
+        EquipmentType::Car,
+    )
+}
+
+/// Northern Oilfield's service truck.
+fn oilfield_truck() -> Result<Equipment, QuoteError> {
+    Equipment::new(
+        String::from("Ford"),
+        String::from("F-350 Super Duty"),
+        Some(2022),
+        Identification::new(
+            Some(String::from("1FT8W3BT0NEC12345")),
+            Some(String::from("BXK 4471")),
+        )?,
+        Meter::new(Some(143250.0), MeterType::Kilometer),
+        EquipmentType::Truck,
     )
 }
 
 /// Builds one demo quote: a customer, a unit, and the sample lines.
-fn build_quote(customer: Customer) -> Result<Quote, QuoteError> {
-    let mut quote = Quote::new(customer, sample_equipment());
+fn build_quote(customer: Customer, equipment: Equipment) -> Result<Quote, QuoteError> {
+    let mut quote = Quote::new(customer, equipment);
     for item in sample_items()? {
         quote.add_item(item)?;
     }
@@ -105,7 +121,7 @@ fn build_quote(customer: Customer) -> Result<Quote, QuoteError> {
 }
 
 fn main() -> Result<(), QuoteError> {
-    println!("{}", build_quote(prairie_farms()?)?);
-    println!("{}", build_quote(northern_oilfield()?)?);
+    println!("{}", build_quote(prairie_farms()?, sample_equipment()?)?);
+    println!("{}", build_quote(northern_oilfield()?, oilfield_truck()?)?);
     Ok(())
 }
