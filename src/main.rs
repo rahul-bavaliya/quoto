@@ -94,9 +94,22 @@ fn sample_equipment() -> Equipment {
     )
 }
 
+/// Northern Oilfield's service truck.
+fn oilfield_truck() -> Equipment {
+    Equipment::new(
+        String::from("Ford"),
+        String::from("F-350 Super Duty"),
+        Some(2022),
+        Some(String::from("1FT8W3BT0NEC12345")),
+        Meter::new(Some(143250.0), MeterType::Kilometer),
+        String::from("Pickup Truck 4x4"),
+        Some(String::from("BXK 4471")),
+    )
+}
+
 /// Builds one demo quote: a customer, a unit, and the sample lines.
-fn build_quote(customer: Customer) -> Result<Quote, QuoteError> {
-    let mut quote = Quote::new(customer, sample_equipment());
+fn build_quote(customer: Customer, equipment: Equipment) -> Result<Quote, QuoteError> {
+    let mut quote = Quote::new(customer, equipment);
     for item in sample_items()? {
         quote.add_item(item)?;
     }
@@ -104,7 +117,7 @@ fn build_quote(customer: Customer) -> Result<Quote, QuoteError> {
 }
 
 fn main() -> Result<(), QuoteError> {
-    println!("{}", build_quote(prairie_farms()?)?);
-    println!("{}", build_quote(northern_oilfield()?)?);
+    println!("{}", build_quote(prairie_farms()?, sample_equipment())?);
+    println!("{}", build_quote(northern_oilfield()?, oilfield_truck())?);
     Ok(())
 }
