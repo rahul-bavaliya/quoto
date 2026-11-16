@@ -6,26 +6,44 @@ use crate::errors::QuoteError;
 use crate::money::format_money;
 use crate::province::Province;
 use crate::tax::calculate_tax;
+use chrono::NaiveDate;
 use std::fmt;
 use tracing::debug;
 
 mod line_item;
 mod line_kind;
+mod quote_number;
 
 pub use line_item::LineItem;
 pub use line_kind::LineKind;
+pub use quote_number::QuoteNumber;
 
 pub struct Quote {
+    number: QuoteNumber,
+    date: NaiveDate,
     customer: Customer,
     equipment: Equipment,
     items: Vec<LineItem>,
 }
 
 impl Quote {
-    pub fn new(customer: Customer, equipment: Equipment) -> Self {
+    /// The number and the date are handed in, never made here: a quote doesn't
+    /// look at the clock or keep a counter (that keeps it easy to test).
+    pub fn new(
+        number: QuoteNumber,
+        date: NaiveDate,
+        customer: Customer,
+        equipment: Equipment,
+    ) -> Self {
         // Logs never include names, phones or emails: only what we need to debug.
-        debug!(province = customer.province().label(), "quote created");
+        debug!(
+            quote_number = %number,
+            province = customer.province().label(),
+            "quote created"
+        );
         Quote {
+            number,
+            date,
             customer,
             equipment,
             items: Vec::new(),
@@ -50,6 +68,14 @@ impl Quote {
         );
         self.items.push(item);
         Ok(())
+    }
+
+    pub fn number(&self) -> &QuoteNumber {
+        &self.number
+    }
+
+    pub fn date(&self) -> NaiveDate {
+        self.date
     }
 
     pub fn customer(&self) -> &Customer {
@@ -116,11 +142,13 @@ impl fmt::Display for Quote {
         writeln!(f)?;
         writeln!(
             f,
-            "{} Quote: {} {}",
+            "{} Quote {}: {} {}",
             "=".repeat(5),
+            self.number,
             self.province().label(),
             "=".repeat(5)
         )?;
+        writeln!(f, "Date: {}", self.date)?;
         writeln!(f, "Customer: {}", self.customer)?;
         writeln!(f, "Contact: {}", self.customer.contact())?;
         writeln!(f, "{}", "-".repeat(20))?;
@@ -172,6 +200,16 @@ mod tests {
         samples::corolla().unwrap()
     }
 
+    /// A new, empty quote with the sample number and date.
+    fn empty_quote(province: Province) -> Quote {
+        Quote::new(
+            samples::quote_number(),
+            samples::quote_date(),
+            sample_customer(province),
+            sample_equipment(),
+        )
+    }
+
     // The 5 standard lines. No credits here: credit robots add their own.
     fn sample_quote(province: Province) -> Quote {
         samples::oil_change_quote(province).unwrap()
@@ -208,13 +246,27 @@ mod tests {
 
     #[test]
     fn new_quote_is_empty() {
-        let quote = Quote::new(sample_customer(Province::Alberta), sample_equipment());
+        let quote = empty_quote(Province::Alberta);
         assert!(quote.items.is_empty());
     }
 
     #[test]
+    fn a_quote_knows_its_number_and_its_date() {
+        let quote = empty_quote(Province::Saskatchewan);
+        assert_eq!(quote.number().to_string(), "Q-2026-0001");
+        assert_eq!(quote.date().to_string(), "2026-11-16");
+    }
+
+    #[test]
+    fn the_printed_header_shows_the_number_and_the_date() {
+        let text = empty_quote(Province::Saskatchewan).to_string();
+        assert!(text.contains("===== Quote Q-2026-0001: Saskatchewan ====="));
+        assert!(text.contains("Date: 2026-11-16"));
+    }
+
+    #[test]
     fn quote_takes_its_province_from_the_customer() {
-        let quote = Quote::new(sample_customer(Province::Alberta), sample_equipment());
+        let quote = empty_quote(Province::Alberta);
         assert_eq!(quote.province(), &Province::Alberta);
     }
 

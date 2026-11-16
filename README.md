@@ -12,7 +12,8 @@ It's also a learning project: every feature is built one small step at a time, w
 - **Validation:** bad lines (zero quantity, negative price) are refused with a clear `QuoteError`
 
 ```
-===== Quote: Saskatchewan =====
+===== Quote Q-2026-0001: Saskatchewan =====
+Date: 2026-11-16
 [PART] Oil Filter: 1 x $25.00 = $25.00
 [LABOUR] Oil Change Labour: 0.5 x $160.00 = $80.00
 ...

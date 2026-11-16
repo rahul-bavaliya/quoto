@@ -10,7 +10,8 @@ use crate::customer::{Address, Contact, Customer, Email, PhoneNumber, PostalCode
 use crate::equipment::{Equipment, EquipmentType, Identification, Meter, MeterType};
 use crate::errors::QuoteResult;
 use crate::province::Province;
-use crate::quote::{LineItem, LineKind, Quote};
+use crate::quote::{LineItem, LineKind, Quote, QuoteNumber};
+use chrono::NaiveDate;
 
 /// A plain customer who lives in the given province (that decides the taxes).
 pub fn customer_in(province: Province) -> QuoteResult<Customer> {
@@ -142,18 +143,38 @@ pub fn demo_lines() -> QuoteResult<Vec<LineItem>> {
     Ok(lines)
 }
 
+/// The date every sample quote is written on. A fixed date (not today's),
+/// so the demo and the tests print the same text every day.
+pub fn quote_date() -> NaiveDate {
+    NaiveDate::from_ymd_opt(2026, 11, 16).expect("2026-11-16 is a real date")
+}
+
+/// The first quote number of the sample year: Q-2026-0001.
+pub fn quote_number() -> QuoteNumber {
+    QuoteNumber::first_of_year(2026).expect("2026 is a valid year")
+}
+
 /// A quote for the plain customer in `province`, with the standard oil change.
 pub fn oil_change_quote(province: Province) -> QuoteResult<Quote> {
-    let mut quote = Quote::new(customer_in(province)?, corolla()?);
+    let mut quote = Quote::new(
+        quote_number(),
+        quote_date(),
+        customer_in(province)?,
+        corolla()?,
+    );
     for item in oil_change_lines()? {
         quote.add_item(item)?;
     }
     Ok(quote)
 }
 
-/// A demo quote: the given customer and unit, with the demo lines.
-pub fn demo_quote(customer: Customer, equipment: Equipment) -> QuoteResult<Quote> {
-    let mut quote = Quote::new(customer, equipment);
+/// A demo quote: the given number, customer and unit, with the demo lines.
+pub fn demo_quote(
+    number: QuoteNumber,
+    customer: Customer,
+    equipment: Equipment,
+) -> QuoteResult<Quote> {
+    let mut quote = Quote::new(number, quote_date(), customer, equipment);
     for item in demo_lines()? {
         quote.add_item(item)?;
     }
@@ -182,8 +203,15 @@ mod tests {
 
     #[test]
     fn the_demo_quotes_total_what_the_demo_prints() {
-        let sk = demo_quote(prairie_farms().unwrap(), corolla().unwrap()).unwrap();
-        let ab = demo_quote(northern_oilfield().unwrap(), oilfield_truck().unwrap()).unwrap();
+        let first = quote_number();
+        let second = first.next().unwrap();
+        let sk = demo_quote(first, prairie_farms().unwrap(), corolla().unwrap()).unwrap();
+        let ab = demo_quote(
+            second,
+            northern_oilfield().unwrap(),
+            oilfield_truck().unwrap(),
+        )
+        .unwrap();
         assert_eq!(sk.total(), 13653);
         assert_eq!(ab.total(), 12915);
     }
