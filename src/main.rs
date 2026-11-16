@@ -72,10 +72,10 @@ fn main() -> Result<(), QuoteError> {
     }
     println!("{}", sk_quote);
 
-    // let mut ab_quote = Quote::new(foothills_ranch()?,equipment);
-    // for item in sample_items()? {
-    //     ab_quote.add_item(item)?;
-    // }
-    // println!("{}", ab_quote);
+    let mut ab_quote = Quote::new(foothills_ranch()?,equipment);
+    for item in sample_items()? {
+        ab_quote.add_item(item)?;
+    }
+    println!("{}", ab_quote);
     Ok(())
 }

@@ -61,8 +61,8 @@ impl Equipment {
     pub fn model_year(&self) -> i64 {
         self.model_year
     }
-    pub fn serial_number(&self) -> &Option<String> {
-        &self.serial_number
+    pub fn serial_number(&self) -> Option<&str> {
+        self.serial_number.as_deref()
     }
     pub fn meter(&self) -> &f64 {
         &self.meter
@@ -81,7 +81,10 @@ impl Equipment {
     }
 }
 
-/// e.g. "2025 Toyota Corolla Cross (S/N SERIAL_NUMBER_TEST_1, Plate RB97, 28156 km)"
+/// e.g. Toyota Corolla Cross (2025)"
+/// e.g. S/N: SERIAL_NUMBER_TEST_1, Plate RB97, 
+/// Meter: 28156 km
+/// Plate: RB97
 impl fmt::Display for Equipment {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, " {} {} ({})", self.make, self.model, self.model_year)?;
