@@ -1,10 +1,20 @@
 // src/customer.rs: who the quote is for
 
-use crate::address::Address;
-use crate::contact::Contact;
 use crate::errors::QuoteError;
 use crate::province::Province;
 use std::fmt;
+
+mod address;
+mod contact;
+mod email;
+mod phone_number;
+mod postal_code;
+
+pub use address::Address;
+pub use contact::Contact;
+pub use email::Email;
+pub use phone_number::PhoneNumber;
+pub use postal_code::PostalCode;
 
 /// A customer: a person, optionally at a company (e.g. "Jane Smith,
 /// Service Manager at Prairie Farms Ltd.").
@@ -81,8 +91,6 @@ impl fmt::Display for Customer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::address::PostalCode;
-    use crate::contact::{Email, PhoneNumber};
 
     fn sample_contact() -> Contact {
         Contact::new(

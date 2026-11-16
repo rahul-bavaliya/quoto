@@ -1,5 +1,6 @@
-// src/line_item.rs
+// src/quote/line_item.rs
 
+use super::LineKind;
 use crate::errors::QuoteError;
 
 pub struct LineItem {
@@ -56,25 +57,6 @@ impl LineItem {
 
     pub fn kind(&self) -> &LineKind {
         &self.kind
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum LineKind {
-    Labour,
-    Part,
-    Fee,
-    Credit,
-}
-
-impl LineKind {
-    pub fn label(&self) -> &str {
-        match self {
-            LineKind::Labour => "LABOUR",
-            LineKind::Part => "PART",
-            LineKind::Fee => "FEE",
-            LineKind::Credit => "CREDIT",
-        }
     }
 }
 

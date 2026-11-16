@@ -3,11 +3,16 @@
 use crate::customer::Customer;
 use crate::equipment::Equipment;
 use crate::errors::QuoteError;
-use crate::line_item::{LineItem, LineKind};
 use crate::money::format_money;
 use crate::province::Province;
 use crate::tax::calculate_tax;
 use std::fmt;
+
+mod line_item;
+mod line_kind;
+
+pub use line_item::LineItem;
+pub use line_kind::LineKind;
 
 pub struct Quote {
     customer: Customer,
@@ -149,8 +154,7 @@ impl fmt::Display for Quote {
 mod tests {
     use super::*;
     use crate::MeterType;
-    use crate::address::{Address, PostalCode};
-    use crate::contact::{Contact, PhoneNumber};
+    use crate::customer::{Address, Contact, PhoneNumber, PostalCode};
     use crate::equipment::{EquipmentType, Identification, Meter};
 
     /// A customer who lives in the given province.
