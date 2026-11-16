@@ -47,9 +47,9 @@ GitHub Actions runs the same checks automatically on every push and pull request
 ## Project layout
 ```
 src/
-├── main.rs              demo program (uses the quoto library)
+├── main.rs              demo program (short: it uses quoto::samples)
 ├── lib.rs               the library's front door
-├── errors.rs  logging.rs  money.rs  province.rs  tax.rs
+├── errors.rs  logging.rs  money.rs  province.rs  samples.rs  tax.rs
 ├── customer.rs          Customer, plus the pieces it is built from
 ├── customer/            address, postal_code, contact, phone_number, email
 ├── equipment.rs         Equipment, plus its pieces
