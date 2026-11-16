@@ -111,7 +111,7 @@ mod tests {
                 Some(String::from("RB97")),
             )
             .unwrap(),
-            Meter::new(Some(28156.98), MeterType::Kilometer),
+            Meter::new(Some(28156.98), MeterType::Kilometer).unwrap(),
             EquipmentType::Car,
         )
         .unwrap()
@@ -137,7 +137,7 @@ mod tests {
             String::from("8R 410"),
             None,
             Identification::new(Some(String::from("1RW8R410ABC")), None).unwrap(),
-            Meter::new(None, MeterType::Hour),
+            Meter::new(None, MeterType::Hour).unwrap(),
             EquipmentType::Tractor,
         )
         .unwrap();
@@ -156,7 +156,7 @@ mod tests {
             String::from("Corolla"),
             None,
             Identification::new(None, Some(String::from("RB97"))).unwrap(),
-            Meter::new(None, MeterType::Kilometer),
+            Meter::new(None, MeterType::Kilometer).unwrap(),
             EquipmentType::Car,
         );
         assert_eq!(result, Err(QuoteError::MissingField { field: "make" }));
@@ -169,7 +169,7 @@ mod tests {
             String::new(),
             None,
             Identification::new(None, Some(String::from("RB97"))).unwrap(),
-            Meter::new(None, MeterType::Kilometer),
+            Meter::new(None, MeterType::Kilometer).unwrap(),
             EquipmentType::Car,
         );
         assert_eq!(result, Err(QuoteError::MissingField { field: "model" }));

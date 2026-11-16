@@ -7,6 +7,7 @@ use crate::money::format_money;
 use crate::province::Province;
 use crate::tax::calculate_tax;
 use std::fmt;
+use tracing::debug;
 
 mod line_item;
 mod line_kind;
@@ -22,6 +23,8 @@ pub struct Quote {
 
 impl Quote {
     pub fn new(customer: Customer, equipment: Equipment) -> Self {
+        // Logs never include names, phones or emails: only what we need to debug.
+        debug!(province = customer.province().label(), "quote created");
         Quote {
             customer,
             equipment,
@@ -40,6 +43,11 @@ impl Quote {
             });
         }
 
+        debug!(
+            kind = item.kind().label(),
+            line_total_cents = item.line_total(),
+            "line added"
+        );
         self.items.push(item);
         Ok(())
     }
@@ -186,7 +194,7 @@ mod tests {
                 Some(String::from("RB97")),
             )
             .unwrap(),
-            Meter::new(Some(28156.98), MeterType::Kilometer),
+            Meter::new(Some(28156.98), MeterType::Kilometer).unwrap(),
             EquipmentType::Car,
         )
         .unwrap()

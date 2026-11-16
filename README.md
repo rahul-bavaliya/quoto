@@ -28,7 +28,13 @@ Total: $136.53
 ```bash
 cargo run      # print the demo quotes
 cargo test     # run all the unit and scenario tests
+RUST_LOG=debug cargo run   # same, with a detailed log on stderr
 ```
+
+## Logging and errors
+- **Logging** uses [`tracing`](https://docs.rs/tracing). `quoto::logging::init()` starts it once in `main`. Logs go to **stderr** (the quote text stays on stdout), the level comes from `RUST_LOG` (default `info`), and logs never contain customer details.
+- **Errors** are one enum, `QuoteError` (built with `thiserror`). Each error has a readable message, a stable `code()` (like `INVALID_PHONE`), a `kind()` (`InvalidInput` or `BusinessRule`) and an `exit_code()`. `QuoteResult<T>` is the short name for `Result<T, QuoteError>`.
+- `main` is the one place where errors stop the program: it logs the code, prints the message, and exits with code 2 (wrong input) or 3 (business rule).
 
 Before every push:
 ```bash
@@ -43,7 +49,7 @@ GitHub Actions runs the same checks automatically on every push and pull request
 src/
 ├── main.rs              demo program (uses the quoto library)
 ├── lib.rs               the library's front door
-├── errors.rs  money.rs  province.rs  tax.rs
+├── errors.rs  logging.rs  money.rs  province.rs  tax.rs
 ├── customer.rs          Customer, plus the pieces it is built from
 ├── customer/            address, postal_code, contact, phone_number, email
 ├── equipment.rs         Equipment, plus its pieces

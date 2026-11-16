@@ -9,6 +9,7 @@
 pub mod customer;
 pub mod equipment;
 pub mod errors;
+pub mod logging;
 pub mod money;
 pub mod province;
 pub mod quote;
@@ -17,7 +18,7 @@ pub mod tax;
 // The short front door: `use quoto::{Quote, LineItem, ...};`
 pub use customer::{Address, Contact, Customer, Email, PhoneNumber, PostalCode};
 pub use equipment::{Equipment, EquipmentType, Identification, Meter, MeterType};
-pub use errors::QuoteError;
+pub use errors::{ErrorKind, QuoteError, QuoteResult};
 pub use money::format_money;
 pub use province::Province;
 pub use quote::{LineItem, LineKind, Quote};
