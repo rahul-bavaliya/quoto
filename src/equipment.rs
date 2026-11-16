@@ -3,103 +3,15 @@
 use crate::errors::QuoteError;
 use std::fmt;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum MeterType {
-    Kilometer,
-    Mile,
-    Hour,
-}
+mod equipment_type;
+mod identification;
+mod meter;
+mod meter_type;
 
-impl MeterType {
-    pub fn code(&self) -> &str {
-        match self {
-            MeterType::Kilometer => "km",
-            MeterType::Mile => "mi",
-            MeterType::Hour => "hr",
-        }
-    }
-}
-
-/// What kind of machine this is. A fixed list, so "Truck" and "truck "
-/// can never become two different kinds.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum EquipmentType {
-    Car,
-    Truck,
-    Tractor,
-    Trailer,
-    Other,
-}
-
-impl EquipmentType {
-    pub fn label(&self) -> &str {
-        match self {
-            EquipmentType::Car => "Car",
-            EquipmentType::Truck => "Truck",
-            EquipmentType::Tractor => "Tractor",
-            EquipmentType::Trailer => "Trailer",
-            EquipmentType::Other => "Other",
-        }
-    }
-}
-
-/// The reading is optional on a quote: the unit may not be in the shop yet.
-/// (A repair order will require it, in Phase 6.)
-#[derive(Debug, PartialEq)]
-pub struct Meter {
-    meter: Option<f64>,
-    meter_type: MeterType,
-}
-
-impl Meter {
-    pub fn new(meter: Option<f64>, meter_type: MeterType) -> Self {
-        Meter { meter, meter_type }
-    }
-}
-
-/// e.g. "28156.98 km", or "not recorded" when there's no reading
-impl fmt::Display for Meter {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.meter {
-            Some(reading) => write!(f, "{} {}", reading, self.meter_type.code()),
-            None => write!(f, "not recorded"),
-        }
-    }
-}
-
-/// How we recognise one machine: a serial number, a plate, or both.
-/// At least one is required, so a unit can never be anonymous.
-#[derive(Debug, PartialEq)]
-pub struct Identification {
-    serial_number: Option<String>,
-    plate: Option<String>,
-}
-
-impl Identification {
-    pub fn new(serial_number: Option<String>, plate: Option<String>) -> Result<Self, QuoteError> {
-        // A blank string is the same as nothing
-        let serial_number = serial_number.filter(|s| !s.trim().is_empty());
-        let plate = plate.filter(|p| !p.trim().is_empty());
-
-        if serial_number.is_none() && plate.is_none() {
-            return Err(QuoteError::MissingField {
-                field: "serial number or plate",
-            });
-        }
-        Ok(Identification {
-            serial_number,
-            plate,
-        })
-    }
-
-    pub fn serial_number(&self) -> Option<&str> {
-        self.serial_number.as_deref()
-    }
-
-    pub fn plate(&self) -> Option<&str> {
-        self.plate.as_deref()
-    }
-}
+pub use equipment_type::EquipmentType;
+pub use identification::Identification;
+pub use meter::Meter;
+pub use meter_type::MeterType;
 
 #[derive(Debug, PartialEq)]
 pub struct Equipment {
@@ -235,33 +147,6 @@ mod tests {
         );
     }
 
-    // ---- The identification rule ----
-
-    #[test]
-    fn identification_with_neither_serial_nor_plate_is_refused() {
-        assert_eq!(
-            Identification::new(None, None),
-            Err(QuoteError::MissingField {
-                field: "serial number or plate"
-            })
-        );
-    }
-
-    #[test]
-    fn identification_with_only_blank_text_is_refused() {
-        assert!(Identification::new(Some(String::from("  ")), Some(String::new())).is_err());
-    }
-
-    #[test]
-    fn identification_with_only_a_serial_is_accepted() {
-        assert!(Identification::new(Some(String::from("ABC123")), None).is_ok());
-    }
-
-    #[test]
-    fn identification_with_only_a_plate_is_accepted() {
-        assert!(Identification::new(None, Some(String::from("RB97"))).is_ok());
-    }
-
     // ---- Equipment::new refuses blanks ----
 
     #[test]
@@ -288,20 +173,6 @@ mod tests {
             EquipmentType::Car,
         );
         assert_eq!(result, Err(QuoteError::MissingField { field: "model" }));
-    }
-
-    // ---- The derives: whole values can be compared ----
-
-    #[test]
-    fn two_meters_with_the_same_reading_are_equal() {
-        assert_eq!(
-            Meter::new(Some(100.0), MeterType::Hour),
-            Meter::new(Some(100.0), MeterType::Hour)
-        );
-        assert_ne!(
-            Meter::new(Some(100.0), MeterType::Hour),
-            Meter::new(Some(100.0), MeterType::Mile)
-        );
     }
 
     #[test]
