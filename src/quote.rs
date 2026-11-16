@@ -171,6 +171,7 @@ mod tests {
 
     /// Sample equipment used as a test fixture.
     fn sample_equipment() -> Equipment {
+        Equipment::new(
             String::from("Toyota"),
             String::from("Corolla Cross"),
             2025,
