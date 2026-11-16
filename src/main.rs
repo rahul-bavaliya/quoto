@@ -61,7 +61,7 @@ fn prairie_farms() -> Result<Customer, QuoteError> {
 fn northern_oilfield() -> Result<Customer, QuoteError> {
     let contact = Contact::new(
         PhoneNumber::parse("780-555-0188")?,
-        Some(PhoneNumber::parse("3069902404")?),
+        Some(PhoneNumber::parse("3065558965")?),
         Some(Email::parse("mike@northernoilfield.ca")?),
     );
     let address = Address::new(

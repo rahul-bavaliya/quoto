@@ -203,4 +203,25 @@ mod tests {
     fn email_with_two_ats_is_refused() {
         assert!(Email::parse("rahul@@example.ca").is_err());
     }
+
+    // ---- PhoneNumber & Email ----
+
+    #[test]
+    fn phone_and_email_is_check_for_customer() {
+        let phone = PhoneNumber::parse("306-555-0142").unwrap();
+        let email = Email::parse("Rahul@test.com");
+        let contact = Contact::new(phone, None, email.ok());
+        assert_eq!(contact.phone().to_string(), "+1-306-555-0142");
+    }
+
+    // ---- PhoneNumber & Alternate PhoneNumber & Email ----
+
+    #[test]
+    fn phone_and_alternatephone_email_is_check_for_customer() {
+        let phone = PhoneNumber::parse("306-555-0142").unwrap();
+        let aternate_phone = Some(PhoneNumber::parse("306-555-1234").unwrap());
+        let email = Email::parse("Rahul@test.com");
+        let contact = Contact::new(phone, aternate_phone, email.ok());
+        assert_eq!(contact.phone().to_string(), "+1-306-555-0142");
+    }
 }

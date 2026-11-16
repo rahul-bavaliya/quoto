@@ -52,7 +52,6 @@ pub struct Equipment {
 impl Equipment {
     // 8 inputs is over clippy's limit of 7. Allowed for now; a builder
     // (or grouping fields into smaller structs) would be the long-term fix.
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
         make: String,
         model: String,
