@@ -43,11 +43,17 @@ GitHub Actions runs the same checks automatically on every push and pull request
 src/
 ├── main.rs              demo program (uses the quoto library)
 ├── lib.rs               the library's front door
-├── <feature>.rs         the feature's code + its unit tests at the bottom
+├── errors.rs  money.rs  province.rs  tax.rs
+├── customer.rs          Customer, plus the pieces it is built from
+├── customer/            address, postal_code, contact, phone_number, email
+├── equipment.rs         Equipment, plus its pieces
+├── equipment/           meter, meter_type, equipment_type, identification
+├── quote.rs             Quote, plus its pieces
+└── quote/               line_item, line_kind
 tests/
 └── quote_scenarios.rs   whole-quote scenarios through the public API
 ```
-Features: `errors`, `line_item`, `money`, `province`, `quote`, `tax`.
+One type per file, grouped into feature folders (no `mod.rs`). Each file has its unit tests at the bottom.
 
 ## Roadmap
 1. ✅ Toy calculator
