@@ -103,14 +103,14 @@ impl fmt::Display for Equipment {
         if let Some(year) = self.model_year {
             write!(f, " ({})", year)?;
         }
-        writeln!(f)?;
-
+        // Each later line starts with its own newline, so the last line
+        // ends cleanly and the caller decides what comes after it.
         if let Some(serial) = &self.serial_number {
-            writeln!(f, "S/N: {}", serial)?;
+            write!(f, "\nS/N: {}", serial)?;
         }
-        writeln!(f, "Meter: {}", self.meter)?;
+        write!(f, "\nMeter: {}", self.meter)?;
         if let Some(plate) = &self.plate {
-            writeln!(f, "Plate: {}", plate)?;
+            write!(f, "\nPlate: {}", plate)?;
         }
         Ok(())
     }
@@ -141,7 +141,7 @@ mod tests {
     fn equipment_shows_all_its_details() {
         assert_eq!(
             corolla().to_string(),
-            "Toyota Corolla Cross (2025)\nS/N: SERIAL_NUMBER_TEST_1\nMeter: 28156.98 km\nPlate: RB97\n"
+            "Toyota Corolla Cross (2025)\nS/N: SERIAL_NUMBER_TEST_1\nMeter: 28156.98 km\nPlate: RB97"
         );
     }
 
@@ -158,7 +158,7 @@ mod tests {
         );
         assert_eq!(
             tractor.to_string(),
-            "John Deere 8R 410\nMeter: not recorded\n"
+            "John Deere 8R 410\nMeter: not recorded"
         );
     }
 }

@@ -110,7 +110,7 @@ impl fmt::Display for Quote {
         )?;
         writeln!(f, "Customer: {}", self.customer)?;
         writeln!(f, "Contact: {}", self.customer.contact())?;
-        writeln!(f, "{} ", "-".repeat(20),)?;
+        writeln!(f, "{}", "-".repeat(20))?;
         writeln!(f, "Equipment: {}", self.equipment)?;
 
         for item in &self.items {
