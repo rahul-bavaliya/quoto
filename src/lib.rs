@@ -13,6 +13,7 @@ pub mod logging;
 pub mod money;
 pub mod province;
 pub mod quote;
+pub mod samples;
 pub mod tax;
 
 // The short front door: `use quoto::{Quote, LineItem, ...};`

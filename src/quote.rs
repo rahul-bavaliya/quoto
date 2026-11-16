@@ -161,61 +161,20 @@ impl fmt::Display for Quote {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::MeterType;
-    use crate::customer::{Address, Contact, PhoneNumber, PostalCode};
-    use crate::equipment::{EquipmentType, Identification, Meter};
+    use crate::samples;
 
     /// A customer who lives in the given province.
     fn sample_customer(province: Province) -> Customer {
-        let (city, postal_code) = match province {
-            Province::Saskatchewan => ("Regina", "S4P 3Y2"),
-            Province::Alberta => ("Calgary", "T2P 1J9"),
-        };
-        let contact = Contact::new(PhoneNumber::parse("306-555-0142").unwrap(), None, None);
-        let address = Address::new(
-            String::from("123 Main St"),
-            None,
-            String::from(city),
-            PostalCode::parse(postal_code).unwrap(),
-            province,
-        )
-        .unwrap();
-        Customer::new(String::from("Jane Smith"), None, None, contact, address).unwrap()
+        samples::customer_in(province).unwrap()
     }
 
-    /// Sample equipment used as a test fixture.
     fn sample_equipment() -> Equipment {
-        Equipment::new(
-            String::from("Toyota"),
-            String::from("Corolla Cross"),
-            Some(2025),
-            Identification::new(
-                Some(String::from("SERIAL_NUMBER_TEST_1")),
-                Some(String::from("RB97")),
-            )
-            .unwrap(),
-            Meter::new(Some(28156.98), MeterType::Kilometer).unwrap(),
-            EquipmentType::Car,
-        )
-        .unwrap()
+        samples::corolla().unwrap()
     }
 
     // The 5 standard lines. No credits here: credit robots add their own.
     fn sample_quote(province: Province) -> Quote {
-        let mut quote = Quote::new(sample_customer(province), sample_equipment());
-        let lines = [
-            ("Oil Filter", 1.0, 2500, LineKind::Part),
-            ("Oil Change Labour", 0.5, 16000, LineKind::Labour),
-            ("Engine Oil", 6.0, 850, LineKind::Part),
-            ("Shop Supplies", 1.0, 1000, LineKind::Fee),
-            ("Air Filter", 1.0, 3200, LineKind::Part),
-        ];
-        for (description, quantity, price_cents, kind) in lines {
-            let item =
-                LineItem::new(String::from(description), quantity, price_cents, kind).unwrap();
-            quote.add_item(item).unwrap();
-        }
-        quote
+        samples::oil_change_quote(province).unwrap()
     }
 
     // A credit of any size, for the credit robots

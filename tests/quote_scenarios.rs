@@ -3,60 +3,11 @@
 // These robots use Quoto exactly like a real program would: only through
 // the `pub` front door in `src/lib.rs`. They can't see private fields.
 
-use quoto::{
-    Address, Contact, Customer, Equipment, EquipmentType, Identification, LineItem, LineKind,
-    Meter, MeterType, PhoneNumber, PostalCode, Province, Quote, QuoteError,
-};
-
-/// A customer who lives in the given province (that's what decides the taxes).
-fn customer_in(province: Province) -> Customer {
-    let (city, postal_code) = match province {
-        Province::Saskatchewan => ("Regina", "S4P 3Y2"),
-        Province::Alberta => ("Calgary", "T2P 1J9"),
-    };
-    let contact = Contact::new(PhoneNumber::parse("306-555-0142").unwrap(), None, None);
-    let address = Address::new(
-        String::from("123 Main St"),
-        None,
-        String::from(city),
-        PostalCode::parse(postal_code).unwrap(),
-        province,
-    )
-    .unwrap();
-    Customer::new(String::from("Jane Smith"), None, None, contact, address).unwrap()
-}
-
-fn equipment_sample() -> Equipment {
-    Equipment::new(
-        String::from("Toyota"),
-        String::from("Corolla Cross"),
-        Some(2025),
-        Identification::new(
-            Some(String::from("SERIAL_NUMBER_TEST_1")),
-            Some(String::from("RB97")),
-        )
-        .unwrap(),
-        Meter::new(Some(28156.0), MeterType::Kilometer).unwrap(),
-        EquipmentType::Car,
-    )
-    .unwrap()
-}
+use quoto::{LineItem, LineKind, Province, Quote, QuoteError, samples};
 
 /// The standard 5-line oil-change job ($198.00 before tax).
 fn oil_change_quote(province: Province) -> Quote {
-    let mut quote = Quote::new(customer_in(province), equipment_sample());
-    let lines = [
-        ("Oil Filter", 1.0, 2500, LineKind::Part),
-        ("Oil Change Labour", 0.5, 16000, LineKind::Labour),
-        ("Engine Oil", 6.0, 850, LineKind::Part),
-        ("Shop Supplies", 1.0, 1000, LineKind::Fee),
-        ("Air Filter", 1.0, 3200, LineKind::Part),
-    ];
-    for (description, quantity, price_cents, kind) in lines {
-        let item = LineItem::new(String::from(description), quantity, price_cents, kind).unwrap();
-        quote.add_item(item).unwrap();
-    }
-    quote
+    samples::oil_change_quote(province).unwrap()
 }
 
 fn goodwill(cents: i64) -> LineItem {
