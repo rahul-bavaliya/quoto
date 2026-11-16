@@ -36,7 +36,7 @@ fn equipment_sample() -> Equipment {
             Some(String::from("RB97")),
         )
         .unwrap(),
-        Meter::new(Some(28156.0), MeterType::Kilometer),
+        Meter::new(Some(28156.0), MeterType::Kilometer).unwrap(),
         EquipmentType::Car,
     )
     .unwrap()

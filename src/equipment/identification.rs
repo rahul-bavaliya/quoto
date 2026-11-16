@@ -17,9 +17,7 @@ impl Identification {
         let plate = plate.filter(|p| !p.trim().is_empty());
 
         if serial_number.is_none() && plate.is_none() {
-            return Err(QuoteError::MissingField {
-                field: "serial number or plate",
-            });
+            return Err(QuoteError::MissingIdentification);
         }
         Ok(Identification {
             serial_number,
@@ -44,9 +42,7 @@ mod tests {
     fn identification_with_neither_serial_nor_plate_is_refused() {
         assert_eq!(
             Identification::new(None, None),
-            Err(QuoteError::MissingField {
-                field: "serial number or plate"
-            })
+            Err(QuoteError::MissingIdentification)
         );
     }
 
