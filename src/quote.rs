@@ -74,10 +74,6 @@ impl Quote {
         &self.number
     }
 
-    pub fn date(&self) -> NaiveDate {
-        self.date
-    }
-
     pub fn customer(&self) -> &Customer {
         &self.customer
     }
@@ -114,7 +110,7 @@ impl Quote {
     }
 
     pub fn subtotal(&self) -> i64 {
-        self.labour_total() + self.parts_total() + self.fees_total() + self.credit_total()
+        self.items.iter().map(|item| item.line_total()).sum()
     }
 
     pub fn gst_amount(&self) -> i64 {
@@ -122,10 +118,9 @@ impl Quote {
     }
 
     pub fn pst_amount(&self) -> i64 {
-        if let Some(pst_rate) = self.province().pst_rate() {
-            calculate_tax(self.subtotal(), pst_rate)
-        } else {
-            0
+        match self.province().pst_rate() {
+            Some(pst_rate) => calculate_tax(self.subtotal(), pst_rate),
+            None => 0,
         }
     }
 
@@ -142,11 +137,9 @@ impl fmt::Display for Quote {
         writeln!(f)?;
         writeln!(
             f,
-            "{} Quote {}: {} {}",
-            "=".repeat(5),
+            "===== Quote {}: {} =====",
             self.number,
-            self.province().label(),
-            "=".repeat(5)
+            self.province().label()
         )?;
         writeln!(f, "Date: {}", self.date)?;
         writeln!(f, "Customer: {}", self.customer)?;
@@ -183,114 +176,5 @@ impl fmt::Display for Quote {
             writeln!(f, "PST {}%: {}", pst_rate, format_money(self.pst_amount()))?;
         }
         write!(f, "Total: {}", format_money(self.total()))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::samples;
-
-    /// A customer who lives in the given province.
-    fn sample_customer(province: Province) -> Customer {
-        samples::customer_in(province).unwrap()
-    }
-
-    fn sample_equipment() -> Equipment {
-        samples::corolla().unwrap()
-    }
-
-    /// A new, empty quote with the sample number and date.
-    fn empty_quote(province: Province) -> Quote {
-        Quote::new(
-            samples::quote_number(),
-            samples::quote_date(),
-            sample_customer(province),
-            sample_equipment(),
-        )
-    }
-
-    // The 5 standard lines. No credits here: credit robots add their own.
-    fn sample_quote(province: Province) -> Quote {
-        samples::oil_change_quote(province).unwrap()
-    }
-
-    // A credit of any size, for the credit robots
-    fn credit(cents: i64) -> LineItem {
-        LineItem::new(String::from("Goodwill"), 1.0, cents, LineKind::Credit).unwrap()
-    }
-
-    #[test]
-    fn sk_quote_subtotal() {
-        let quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.subtotal(), 19800);
-    }
-
-    #[test]
-    fn ab_quote_has_no_pst() {
-        let quote = sample_quote(Province::Alberta);
-        assert_eq!(quote.pst_amount(), 0);
-    }
-
-    #[test]
-    fn sk_quote_gst_cents() {
-        let quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.gst_amount(), 990);
-    }
-
-    #[test]
-    fn sk_quote_pst() {
-        let quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.pst_amount(), 1188);
-    }
-
-    #[test]
-    fn new_quote_is_empty() {
-        let quote = empty_quote(Province::Alberta);
-        assert!(quote.items.is_empty());
-    }
-
-    #[test]
-    fn a_quote_knows_its_number_and_its_date() {
-        let quote = empty_quote(Province::Saskatchewan);
-        assert_eq!(quote.number().to_string(), "Q-2026-0001");
-        assert_eq!(quote.date().to_string(), "2026-11-16");
-    }
-
-    #[test]
-    fn the_printed_header_shows_the_number_and_the_date() {
-        let text = empty_quote(Province::Saskatchewan).to_string();
-        assert!(text.contains("===== Quote Q-2026-0001: Saskatchewan ====="));
-        assert!(text.contains("Date: 2026-11-16"));
-    }
-
-    #[test]
-    fn quote_takes_its_province_from_the_customer() {
-        let quote = empty_quote(Province::Alberta);
-        assert_eq!(quote.province(), &Province::Alberta);
-    }
-
-    #[test]
-    fn plain_quote_has_no_credits() {
-        let quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.credit_total(), 0);
-    }
-
-    #[test]
-    fn credit_comes_off_before_tax() {
-        let mut quote = sample_quote(Province::Saskatchewan);
-        quote.add_item(credit(5000)).unwrap();
-        assert_eq!(quote.credit_total(), -5000);
-        assert_eq!(quote.subtotal(), 14800); // 198.00 - 50.00
-        assert_eq!(quote.gst_amount(), 740); // 5% of 148.00, not of 198.00
-    }
-
-    #[test]
-    fn total_for_adds_only_that_kind() {
-        let quote = sample_quote(Province::Saskatchewan);
-        assert_eq!(quote.total_for(&LineKind::Part), 10800); // 25.00 + 51.00 + 32.00
-        assert_eq!(quote.total_for(&LineKind::Labour), 8000);
-        assert_eq!(quote.total_for(&LineKind::Fee), 1000);
-        assert_eq!(quote.total_for(&LineKind::Credit), 0);
     }
 }

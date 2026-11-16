@@ -1,10 +1,9 @@
 // src/lib.rs: the front door of the Quoto library 🚪
 //
 // Each feature is a file (`src/<feature>.rs`) plus a folder of the pieces it
-// is built from (`src/<feature>/`), one type per file, with unit tests at the
-// bottom in a `#[cfg(test)] mod tests`. Anything marked `pub`
-// here can be used by `main.rs`, by the scenario tests in `tests/`, and
-// later by the web API.
+// is built from (`src/<feature>/`), one type per file. All tests live in
+// `tests/` and use only the public API. Anything marked `pub` here can be
+// used by `main.rs`, by those tests, and later by the web API.
 
 pub mod customer;
 pub mod equipment;

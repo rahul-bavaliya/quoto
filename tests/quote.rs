@@ -1,0 +1,227 @@
+// tests/quote.rs: tests for the quote feature (public API only)
+
+use quoto::*;
+
+// ===== quote =====
+
+/// A customer who lives in the given province.
+fn sample_customer(province: Province) -> Customer {
+    samples::customer_in(province).unwrap()
+}
+
+fn sample_equipment() -> Equipment {
+    samples::corolla().unwrap()
+}
+
+/// A new, empty quote with the sample number and date.
+fn empty_quote(province: Province) -> Quote {
+    Quote::new(
+        samples::quote_number(),
+        samples::quote_date(),
+        sample_customer(province),
+        sample_equipment(),
+    )
+}
+
+// The 5 standard lines. No credits here: credit robots add their own.
+fn sample_quote(province: Province) -> Quote {
+    samples::oil_change_quote(province).unwrap()
+}
+
+// A credit of any size, for the credit robots
+fn credit(cents: i64) -> LineItem {
+    LineItem::new(String::from("Goodwill"), 1.0, cents, LineKind::Credit).unwrap()
+}
+
+#[test]
+fn sk_quote_subtotal() {
+    let quote = sample_quote(Province::Saskatchewan);
+    assert_eq!(quote.subtotal(), 19800);
+}
+
+#[test]
+fn ab_quote_has_no_pst() {
+    let quote = sample_quote(Province::Alberta);
+    assert_eq!(quote.pst_amount(), 0);
+}
+
+#[test]
+fn sk_quote_gst_cents() {
+    let quote = sample_quote(Province::Saskatchewan);
+    assert_eq!(quote.gst_amount(), 990);
+}
+
+#[test]
+fn sk_quote_pst() {
+    let quote = sample_quote(Province::Saskatchewan);
+    assert_eq!(quote.pst_amount(), 1188);
+}
+
+#[test]
+fn new_quote_is_empty() {
+    let quote = empty_quote(Province::Alberta);
+    assert_eq!(quote.subtotal(), 0);
+    assert_eq!(quote.total(), 0);
+}
+
+#[test]
+fn a_quote_knows_its_number_and_its_date() {
+    let quote = empty_quote(Province::Saskatchewan);
+    assert_eq!(quote.number().to_string(), "Q-2026-0001");
+    assert!(quote.to_string().contains("Date: 2026-11-16"));
+}
+
+#[test]
+fn the_printed_header_shows_the_number_and_the_date() {
+    let text = empty_quote(Province::Saskatchewan).to_string();
+    assert!(text.contains("===== Quote Q-2026-0001: Saskatchewan ====="));
+    assert!(text.contains("Date: 2026-11-16"));
+}
+
+#[test]
+fn quote_takes_its_province_from_the_customer() {
+    let quote = empty_quote(Province::Alberta);
+    assert_eq!(quote.customer().province(), &Province::Alberta);
+}
+
+#[test]
+fn plain_quote_has_no_credits() {
+    let quote = sample_quote(Province::Saskatchewan);
+    assert_eq!(quote.credit_total(), 0);
+}
+
+#[test]
+fn credit_comes_off_before_tax() {
+    let mut quote = sample_quote(Province::Saskatchewan);
+    quote.add_item(credit(5000)).unwrap();
+    assert_eq!(quote.credit_total(), -5000);
+    assert_eq!(quote.subtotal(), 14800); // 198.00 - 50.00
+    assert_eq!(quote.gst_amount(), 740); // 5% of 148.00, not of 198.00
+}
+
+#[test]
+fn total_for_adds_only_that_kind() {
+    let quote = sample_quote(Province::Saskatchewan);
+    assert_eq!(quote.total_for(&LineKind::Part), 10800); // 25.00 + 51.00 + 32.00
+    assert_eq!(quote.total_for(&LineKind::Labour), 8000);
+    assert_eq!(quote.total_for(&LineKind::Fee), 1000);
+    assert_eq!(quote.total_for(&LineKind::Credit), 0);
+}
+
+// ===== line item =====
+
+#[test]
+fn labour_line_total_is_hours_times_rate() {
+    let labour_item: LineItem =
+        LineItem::new(String::from("Oil Change Labour"), 2.0, 50, LineKind::Labour).unwrap();
+    assert_eq!(labour_item.line_total(), 100);
+}
+
+#[test]
+fn three_washers_cost_30_cents() {
+    let washers: LineItem = LineItem::new(String::from("Washer"), 3.0, 10, LineKind::Part).unwrap();
+    assert_eq!(washers.line_total(), 30);
+}
+
+#[test]
+fn line_total_rounds_half_cent_up() {
+    let line_item: LineItem =
+        LineItem::new(String::from("Test Item"), 1.5, 833, LineKind::Part).unwrap();
+    assert_eq!(line_item.line_total(), 1250);
+}
+
+#[test]
+fn negative_quantity_is_refused() {
+    let result = LineItem::new(String::from("Oil Filter"), -2.0, 2500, LineKind::Part);
+    assert!(matches!(result, Err(QuoteError::BadQuantity { .. })));
+}
+
+#[test]
+fn negative_price_is_refused() {
+    let result = LineItem::new(String::from("Oil Filter"), 2.0, -2500, LineKind::Part);
+    assert!(matches!(result, Err(QuoteError::NegativePrice { .. })));
+}
+
+#[test]
+fn zero_price_is_allowed() {
+    let result = LineItem::new(String::from("Free Warranty Part"), 2.0, 0, LineKind::Part);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn zero_quantity_is_refused() {
+    let result = LineItem::new(String::from("Oil Filter"), 0.0, 2500, LineKind::Part);
+    assert!(matches!(result, Err(QuoteError::BadQuantity { .. })));
+}
+
+#[test]
+fn credit_line_total_is_negative() {
+    let credit = LineItem::new(String::from("Goodwill"), 1.0, 5000, LineKind::Credit).unwrap();
+    assert_eq!(credit.line_total(), -5000);
+}
+
+// ===== quote number =====
+
+#[test]
+fn new_builds_a_valid_number() {
+    let number = QuoteNumber::new(2026, 1).unwrap();
+    assert_eq!(number.to_string(), "Q-2026-0001");
+}
+
+#[test]
+fn it_prints_with_leading_zeros() {
+    let number = QuoteNumber::new(2026, 42).unwrap();
+    assert_eq!(number.to_string(), "Q-2026-0042");
+}
+
+#[test]
+fn counter_zero_is_refused() {
+    assert!(QuoteNumber::new(2026, 0).is_err());
+}
+
+#[test]
+fn a_counter_over_9999_is_refused() {
+    assert!(QuoteNumber::new(2026, 10000).is_err());
+}
+
+#[test]
+fn the_highest_counter_is_accepted() {
+    assert!(QuoteNumber::new(2026, 9999).is_ok());
+}
+
+#[test]
+fn a_year_that_is_not_four_digits_is_refused() {
+    assert!(QuoteNumber::new(26, 1).is_err());
+    assert!(QuoteNumber::new(10000, 1).is_err());
+}
+
+#[test]
+fn the_error_remembers_the_number_it_refused() {
+    assert_eq!(
+        QuoteNumber::new(26, 1),
+        Err(QuoteError::InvalidQuoteNumber {
+            input: String::from("Q-26-0001")
+        })
+    );
+}
+
+#[test]
+fn the_first_quote_of_a_year_is_counter_one() {
+    let number = QuoteNumber::first_of_year(2027).unwrap();
+    assert_eq!(number.to_string(), "Q-2027-0001");
+}
+
+#[test]
+fn next_adds_one_in_the_same_year() {
+    let number = QuoteNumber::new(2026, 41).unwrap();
+    assert_eq!(number.next().unwrap().to_string(), "Q-2026-0042");
+}
+
+#[test]
+fn next_after_9999_is_refused_not_wrapped() {
+    let last = QuoteNumber::new(2026, 9999).unwrap();
+    assert_eq!(
+        last.next(),
+        Err(QuoteError::QuoteNumbersExhausted { year: 2026 })
+    );
+}
