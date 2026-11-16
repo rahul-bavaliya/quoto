@@ -45,7 +45,6 @@ pub struct Equipment {
     model_year: Option<i64>,
     serial_number: Option<String>,
     meter: Meter,
-    previous_meter: Option<Meter>,
     equipment_type: String,
     plate: Option<String>,
 }
@@ -60,7 +59,6 @@ impl Equipment {
         model_year: Option<i64>,
         serial_number: Option<String>,
         meter: Meter,
-        previous_meter: Option<Meter>,
         equipment_type: String,
         plate: Option<String>,
     ) -> Self {
@@ -70,7 +68,6 @@ impl Equipment {
             model_year,
             serial_number,
             meter,
-            previous_meter,
             equipment_type,
             plate,
         }
@@ -89,9 +86,6 @@ impl Equipment {
     }
     pub fn meter(&self) -> &Meter {
         &self.meter
-    }
-    pub fn previous_meter(&self) -> Option<&Meter> {
-        self.previous_meter.as_ref()
     }
     pub fn equipment_type(&self) -> &str {
         &self.equipment_type
@@ -136,7 +130,6 @@ mod tests {
             Some(2025),
             Some(String::from("SERIAL_NUMBER_TEST_1")),
             Meter::new(Some(28156.98), MeterType::Kilometer),
-            None,
             String::from("Car Suv AWD"),
             Some(String::from("RB97")),
         )
@@ -163,7 +156,6 @@ mod tests {
             None,
             None,
             Meter::new(None, MeterType::Hour),
-            None,
             String::from("Tractor"),
             None,
         );

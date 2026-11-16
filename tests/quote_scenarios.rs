@@ -33,7 +33,6 @@ fn equipment_sample() -> Equipment {
         Some(2025),
         Some(String::from("SERIAL_NUMBER_TEST_1")),
         Meter::new(Some(28156.0), MeterType::Kilometer),
-        None,
         String::from("Car Suv AWD"),
         Some(String::from("RB97")),
     )
