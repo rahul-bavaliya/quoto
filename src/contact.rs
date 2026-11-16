@@ -90,14 +90,14 @@ pub struct Contact {
 impl fmt::Display for Contact {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // The main phone is always there
-        writeln!(f, "{}", self.phone)?;
+        write!(f, "{}", self.phone)?;
 
         // The optional parts print only when they exist
         if let Some(alt) = &self.alternate_phone {
-            writeln!(f, "Alternate Phone: {}", alt)?;
+            write!(f, " · Alternate Phone: {}", alt)?;
         }
         if let Some(email) = &self.email {
-            writeln!(f, "Email: {}", email)?;
+            write!(f, " · Email: {}", email)?;
         }
         Ok(())
     }
