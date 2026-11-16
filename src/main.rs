@@ -1,10 +1,12 @@
 // src/main.rs: a small demo program that uses the Quoto library
 
 use quoto::{
-    Address, Contact, Customer, Email, LineItem, LineKind, PhoneNumber, PostalCode, Province,
-    Quote, QuoteError,
+    Address, Contact, Customer, Email, Equipment, LineItem, LineKind, Meter, MeterType,
+    PhoneNumber, PostalCode, Province, Quote, QuoteError,
 };
 
+/// The same job for every demo quote: a fresh set of lines each time,
+/// because each quote must own its own lines.
 fn sample_items() -> Result<Vec<LineItem>, QuoteError> {
     Ok(vec![
         LineItem::new(String::from("Oil Filter"), 1.0, 2500, LineKind::Part)?,
@@ -32,6 +34,7 @@ fn sample_items() -> Result<Vec<LineItem>, QuoteError> {
     ])
 }
 
+/// A Saskatchewan customer: GST + PST.
 fn prairie_farms() -> Result<Customer, QuoteError> {
     let contact = Contact::new(
         PhoneNumber::parse("306-555-0142")?,
@@ -54,35 +57,55 @@ fn prairie_farms() -> Result<Customer, QuoteError> {
     )
 }
 
-fn foothills_ranch() -> Result<Customer, QuoteError> {
-    let contact = Contact::new(PhoneNumber::parse("(403) 555 0199")?, None, None);
-    let address = Address::new(
-        String::from("RR 2"),
+/// An Alberta customer: GST only, no PST.
+fn northern_oilfield() -> Result<Customer, QuoteError> {
+    let contact = Contact::new(
+        PhoneNumber::parse("780-555-0188")?,
         None,
-        String::from("Calgary"),
-        PostalCode::parse("T2P 1J9")?,
+        Some(Email::parse("mike@northernoilfield.ca")?),
+    );
+    let address = Address::new(
+        String::from("456 Jasper Ave"),
+        None,
+        String::from("Edmonton"),
+        PostalCode::parse("T5J 0N3")?,
         Province::Alberta,
     )?;
     Customer::new(
-        String::from("Bob Lee"),
-        Some(String::from("Foothills Ranch")),
-        None,
+        String::from("Mike Brown"),
+        Some(String::from("Northern Oilfield Services")),
+        Some(String::from("Fleet Supervisor")),
         contact,
         address,
     )
 }
 
-fn main() -> Result<(), QuoteError> {
-    let mut sk_quote = Quote::new(prairie_farms()?);
-    for item in sample_items()? {
-        sk_quote.add_item(item)?;
-    }
-    println!("{}", sk_quote);
+/// A fresh unit each time: a quote owns its equipment, so two quotes
+/// can't share one.
+fn sample_equipment() -> Equipment {
+    Equipment::new(
+        String::from("Toyota"),
+        String::from("Corolla Cross"),
+        Some(2025),
+        Some(String::from("SERIAL_NUMBER_TEST_1")),
+        Meter::new(Some(28156.98), MeterType::Kilometer),
+        None,
+        String::from("Car Suv AWD"),
+        Some(String::from("RB97")),
+    )
+}
 
-    let mut ab_quote = Quote::new(foothills_ranch()?);
+/// Builds one demo quote: a customer, a unit, and the sample lines.
+fn build_quote(customer: Customer) -> Result<Quote, QuoteError> {
+    let mut quote = Quote::new(customer, sample_equipment());
     for item in sample_items()? {
-        ab_quote.add_item(item)?;
+        quote.add_item(item)?;
     }
-    println!("{}", ab_quote);
+    Ok(quote)
+}
+
+fn main() -> Result<(), QuoteError> {
+    println!("{}", build_quote(prairie_farms()?)?);
+    println!("{}", build_quote(northern_oilfield()?)?);
     Ok(())
 }

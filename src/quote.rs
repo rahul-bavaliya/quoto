@@ -1,6 +1,7 @@
 // src/quote.rs
 
 use crate::customer::Customer;
+use crate::equipment::Equipment;
 use crate::errors::QuoteError;
 use crate::line_item::{LineItem, LineKind};
 use crate::money::format_money;
@@ -10,13 +11,15 @@ use std::fmt;
 
 pub struct Quote {
     customer: Customer,
+    equipment: Equipment,
     items: Vec<LineItem>,
 }
 
 impl Quote {
-    pub fn new(customer: Customer) -> Self {
+    pub fn new(customer: Customer, equipment: Equipment) -> Self {
         Quote {
             customer,
+            equipment,
             items: Vec::new(),
         }
     }
@@ -106,6 +109,10 @@ impl fmt::Display for Quote {
             "=".repeat(5)
         )?;
         writeln!(f, "Customer: {}", self.customer)?;
+        writeln!(f, "Contact: {}", self.customer.contact())?;
+        writeln!(f, "{} ", "-".repeat(20),)?;
+        writeln!(f, "Equipment: {}", self.equipment)?;
+
         for item in &self.items {
             writeln!(
                 f,
@@ -141,8 +148,10 @@ impl fmt::Display for Quote {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::MeterType;
     use crate::address::{Address, PostalCode};
     use crate::contact::{Contact, PhoneNumber};
+    use crate::equipment::Meter;
 
     /// A customer who lives in the given province.
     fn sample_customer(province: Province) -> Customer {
@@ -162,9 +171,23 @@ mod tests {
         Customer::new(String::from("Jane Smith"), None, None, contact, address).unwrap()
     }
 
+    /// Sample equipment used as a test fixture.
+    fn sample_equipment() -> Equipment {
+        Equipment::new(
+            String::from("Toyota"),
+            String::from("Corolla Cross"),
+            Some(2025),
+            Some(String::from("SERIAL_NUMBER_TEST_1")),
+            Meter::new(Some(28156.98), MeterType::Kilometer),
+            None,
+            String::from("Car Suv AWD"),
+            Some(String::from("RB97")),
+        )
+    }
+
     // The 5 standard lines. No credits here: credit robots add their own.
     fn sample_quote(province: Province) -> Quote {
-        let mut quote = Quote::new(sample_customer(province));
+        let mut quote = Quote::new(sample_customer(province), sample_equipment());
         let lines = [
             ("Oil Filter", 1.0, 2500, LineKind::Part),
             ("Oil Change Labour", 0.5, 16000, LineKind::Labour),
@@ -211,13 +234,13 @@ mod tests {
 
     #[test]
     fn new_quote_is_empty() {
-        let quote = Quote::new(sample_customer(Province::Alberta));
+        let quote = Quote::new(sample_customer(Province::Alberta), sample_equipment());
         assert!(quote.items.is_empty());
     }
 
     #[test]
     fn quote_takes_its_province_from_the_customer() {
-        let quote = Quote::new(sample_customer(Province::Alberta));
+        let quote = Quote::new(sample_customer(Province::Alberta), sample_equipment());
         assert_eq!(quote.province(), &Province::Alberta);
     }
 
