@@ -109,6 +109,7 @@ impl fmt::Display for Quote {
             "=".repeat(5)
         )?;
         writeln!(f, "Customer: {}", self.customer)?;
+        writeln!(f, "Contact: {}", self.customer.contact())?;
         writeln!(f, "{} ", "-".repeat(20),)?;
         writeln!(f, "Equipment: {}", self.equipment)?;
 
@@ -150,6 +151,7 @@ mod tests {
     use crate::MeterType;
     use crate::address::{Address, PostalCode};
     use crate::contact::{Contact, PhoneNumber};
+    use crate::equipment::Meter;
 
     /// A customer who lives in the given province.
     fn sample_customer(province: Province) -> Customer {
@@ -174,13 +176,12 @@ mod tests {
         Equipment::new(
             String::from("Toyota"),
             String::from("Corolla Cross"),
-            2025,
+            Some(2025),
             Some(String::from("SERIAL_NUMBER_TEST_1")),
-            28156.0,
+            Meter::new(Some(28156.98), MeterType::Kilometer),
             None,
-            MeterType::Kilometer,
             String::from("Car Suv AWD"),
-            String::from("RB97"),
+            Some(String::from("RB97")),
         )
     }
 

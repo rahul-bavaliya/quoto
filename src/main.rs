@@ -2,7 +2,7 @@
 
 use quoto::{
     Address, Contact, Customer, Email, Equipment, LineItem, LineKind, MeterType, PhoneNumber,
-    PostalCode, Province, Quote, QuoteError,
+    PostalCode, Province, Quote, QuoteError, equipment::Meter,
 };
 
 fn sample_items() -> Result<Vec<LineItem>, QuoteError> {
@@ -58,13 +58,12 @@ fn main() -> Result<(), QuoteError> {
     let equipment = Equipment::new(
         String::from("Toyota"),
         String::from("Corolla Cross"),
-        2025,
+        Some(2025),
         Some(String::from("SERIAL_NUMBER_TEST_1")),
-        28156.98,
+        Meter::new(Some(28156.98), MeterType::Kilometer),
         None,
-        MeterType::Kilometer,
         String::from("Car Suv AWD"),
-        String::from("RB97"),
+        Some(String::from("RB97")),
     );
     let mut sk_quote = Quote::new(prairie_farms()?, equipment);
     for item in sample_items()? {
@@ -72,10 +71,5 @@ fn main() -> Result<(), QuoteError> {
     }
     println!("{}", sk_quote);
 
-    let mut ab_quote = Quote::new(foothills_ranch()?,equipment);
-    for item in sample_items()? {
-        ab_quote.add_item(item)?;
-    }
-    println!("{}", ab_quote);
     Ok(())
 }
