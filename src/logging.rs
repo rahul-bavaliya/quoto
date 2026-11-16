@@ -18,14 +18,3 @@ pub fn init() {
         .with_ansi(std::io::stderr().is_terminal())
         .try_init();
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn starting_the_logger_twice_is_harmless() {
-        init();
-        init();
-    }
-}

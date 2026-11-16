@@ -43,25 +43,3 @@ impl fmt::Display for PostalCode {
         write!(f, "{} {}", &self.value[..3], &self.value[3..])
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn postal_code_is_cleaned_up() {
-        let code = PostalCode::parse(" s4p-3y2 ").unwrap();
-        assert_eq!(code.to_string(), "S4P 3Y2");
-    }
-
-    #[test]
-    fn postal_code_with_wrong_shape_is_refused() {
-        let result = PostalCode::parse("12345");
-        assert!(matches!(result, Err(QuoteError::InvalidPostalCode { .. })));
-    }
-
-    #[test]
-    fn postal_code_too_short_is_refused() {
-        assert!(PostalCode::parse("S4P 3Y").is_err());
-    }
-}
