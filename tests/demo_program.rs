@@ -49,3 +49,13 @@ fn logs_do_not_contain_customer_details() {
     assert!(!stderr.contains("555"));
     assert!(!stderr.contains("@"));
 }
+
+#[test]
+fn each_printed_quote_is_logged_with_its_province_and_total() {
+    let output = run_demo(None);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    assert_eq!(stderr.matches("quote printed").count(), 2);
+    assert!(stderr.contains("Saskatchewan"));
+    assert!(stderr.contains("13653"));
+}

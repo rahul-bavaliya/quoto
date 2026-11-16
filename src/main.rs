@@ -122,11 +122,22 @@ fn build_quote(customer: Customer, equipment: Equipment) -> QuoteResult<Quote> {
     Ok(quote)
 }
 
+/// Shows a quote to the person, and logs that it happened.
+/// The log holds only the province and the total, never customer details.
+fn show(quote: &Quote) {
+    println!("{quote}");
+    info!(
+        province = quote.customer().province().label(),
+        total_cents = quote.total(),
+        "quote printed"
+    );
+}
+
 /// The real work. Any `QuoteError` stops it and is handed back to `main`.
 fn run() -> QuoteResult<()> {
     info!("building the demo quotes");
-    println!("{}", build_quote(prairie_farms()?, sample_equipment()?)?);
-    println!("{}", build_quote(northern_oilfield()?, oilfield_truck()?)?);
+    show(&build_quote(prairie_farms()?, sample_equipment()?)?);
+    show(&build_quote(northern_oilfield()?, oilfield_truck()?)?);
     info!("done");
     Ok(())
 }
