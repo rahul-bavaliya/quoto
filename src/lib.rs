@@ -22,4 +22,4 @@ pub use equipment::{Equipment, EquipmentType, Identification, Meter, MeterType};
 pub use errors::{ErrorKind, QuoteError, QuoteResult};
 pub use money::format_money;
 pub use province::Province;
-pub use quote::{LineItem, LineKind, Quote};
+pub use quote::{LineItem, LineKind, Quote, QuoteNumber};

@@ -44,6 +44,13 @@ pub enum QuoteError {
     #[error("\"{input}\" is not a valid postal code (like S4P 3Y2).")]
     InvalidPostalCode { input: String },
 
+    // ---- Quote ----
+    #[error("\"{input}\" is not a valid quote number (like Q-2026-0001).")]
+    InvalidQuoteNumber { input: String },
+
+    #[error("All the quote numbers for {year} are used up.")]
+    QuoteNumbersExhausted { year: u16 },
+
     // ---- Equipment ----
     #[error("A serial number or a plate is required to identify the unit.")]
     MissingIdentification,
@@ -64,13 +71,16 @@ pub enum ErrorKind {
 impl QuoteError {
     pub fn kind(&self) -> ErrorKind {
         match self {
-            QuoteError::CreditTooLarge { .. } => ErrorKind::BusinessRule,
+            QuoteError::CreditTooLarge { .. } | QuoteError::QuoteNumbersExhausted { .. } => {
+                ErrorKind::BusinessRule
+            }
             QuoteError::BadQuantity { .. }
             | QuoteError::NegativePrice { .. }
             | QuoteError::MissingField { .. }
             | QuoteError::InvalidPhone { .. }
             | QuoteError::InvalidEmail { .. }
             | QuoteError::InvalidPostalCode { .. }
+            | QuoteError::InvalidQuoteNumber { .. }
             | QuoteError::MissingIdentification
             | QuoteError::InvalidMeterReading { .. } => ErrorKind::InvalidInput,
         }
@@ -87,6 +97,8 @@ impl QuoteError {
             QuoteError::InvalidPhone { .. } => "INVALID_PHONE",
             QuoteError::InvalidEmail { .. } => "INVALID_EMAIL",
             QuoteError::InvalidPostalCode { .. } => "INVALID_POSTAL_CODE",
+            QuoteError::InvalidQuoteNumber { .. } => "INVALID_QUOTE_NUMBER",
+            QuoteError::QuoteNumbersExhausted { .. } => "QUOTE_NUMBERS_EXHAUSTED",
             QuoteError::MissingIdentification => "MISSING_IDENTIFICATION",
             QuoteError::InvalidMeterReading { .. } => "INVALID_METER_READING",
         }
@@ -172,6 +184,17 @@ mod tests {
             "\"12345\" is not a valid postal code (like S4P 3Y2)."
         );
         assert_eq!(
+            QuoteError::InvalidQuoteNumber {
+                input: String::from("Q-1")
+            }
+            .to_string(),
+            "\"Q-1\" is not a valid quote number (like Q-2026-0001)."
+        );
+        assert_eq!(
+            QuoteError::QuoteNumbersExhausted { year: 2026 }.to_string(),
+            "All the quote numbers for 2026 are used up."
+        );
+        assert_eq!(
             QuoteError::MissingIdentification.to_string(),
             "A serial number or a plate is required to identify the unit."
         );
@@ -189,6 +212,12 @@ mod tests {
         };
         assert_eq!(error.kind(), ErrorKind::BusinessRule);
         assert_eq!(error.exit_code(), 3);
+    }
+
+    #[test]
+    fn running_out_of_quote_numbers_is_a_business_rule() {
+        let error = QuoteError::QuoteNumbersExhausted { year: 2026 };
+        assert_eq!(error.kind(), ErrorKind::BusinessRule);
     }
 
     #[test]
@@ -229,6 +258,11 @@ mod tests {
                 input: String::new(),
             }
             .code(),
+            QuoteError::InvalidQuoteNumber {
+                input: String::new(),
+            }
+            .code(),
+            QuoteError::QuoteNumbersExhausted { year: 2026 }.code(),
             QuoteError::MissingIdentification.code(),
             QuoteError::InvalidMeterReading { reading: 0.0 }.code(),
         ];
