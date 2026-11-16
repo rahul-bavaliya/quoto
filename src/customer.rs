@@ -49,24 +49,8 @@ impl Customer {
         })
     }
 
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn company(&self) -> Option<&str> {
-        self.company.as_deref()
-    }
-
-    pub fn designation(&self) -> Option<&str> {
-        self.designation.as_deref()
-    }
-
     pub fn contact(&self) -> &Contact {
         &self.contact
-    }
-
-    pub fn address(&self) -> &Address {
-        &self.address
     }
 
     /// The customer's province decides the quote's taxes (one source of truth).

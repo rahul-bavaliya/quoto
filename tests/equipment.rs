@@ -21,11 +21,6 @@ fn corolla() -> Equipment {
 }
 
 #[test]
-fn equipment_sample_test() {
-    assert_eq!(corolla().make(), "Toyota");
-}
-
-#[test]
 fn equipment_shows_all_its_details() {
     assert_eq!(
         corolla().to_string(),

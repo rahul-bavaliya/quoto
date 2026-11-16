@@ -5,7 +5,7 @@ use std::fmt;
 
 /// A quote number like "Q-2026-0001": the letter Q, the year, and a
 /// counter that starts at 1 and restarts every year.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct QuoteNumber {
     year: u16,
     counter: u16,
@@ -36,14 +36,6 @@ impl QuoteNumber {
             return Err(QuoteError::QuoteNumbersExhausted { year: self.year });
         }
         QuoteNumber::new(self.year, self.counter + 1)
-    }
-
-    pub fn year(&self) -> u16 {
-        self.year
-    }
-
-    pub fn counter(&self) -> u16 {
-        self.counter
     }
 }
 

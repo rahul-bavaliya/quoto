@@ -74,10 +74,6 @@ impl Quote {
         &self.number
     }
 
-    pub fn date(&self) -> NaiveDate {
-        self.date
-    }
-
     pub fn customer(&self) -> &Customer {
         &self.customer
     }

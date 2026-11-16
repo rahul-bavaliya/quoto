@@ -68,7 +68,7 @@ fn new_quote_is_empty() {
 fn a_quote_knows_its_number_and_its_date() {
     let quote = empty_quote(Province::Saskatchewan);
     assert_eq!(quote.number().to_string(), "Q-2026-0001");
-    assert_eq!(quote.date().to_string(), "2026-11-16");
+    assert!(quote.to_string().contains("Date: 2026-11-16"));
 }
 
 #[test]
@@ -165,8 +165,7 @@ fn credit_line_total_is_negative() {
 #[test]
 fn new_builds_a_valid_number() {
     let number = QuoteNumber::new(2026, 1).unwrap();
-    assert_eq!(number.year(), 2026);
-    assert_eq!(number.counter(), 1);
+    assert_eq!(number.to_string(), "Q-2026-0001");
 }
 
 #[test]

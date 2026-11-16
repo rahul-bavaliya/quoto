@@ -47,27 +47,6 @@ impl Equipment {
             equipment_type,
         })
     }
-    pub fn make(&self) -> &str {
-        &self.make
-    }
-    pub fn model(&self) -> &str {
-        &self.model
-    }
-    pub fn model_year(&self) -> Option<i64> {
-        self.model_year
-    }
-    pub fn identification(&self) -> &Identification {
-        &self.identification
-    }
-    pub fn serial_number(&self) -> Option<&str> {
-        self.identification.serial_number()
-    }
-    pub fn plate(&self) -> Option<&str> {
-        self.identification.plate()
-    }
-    pub fn meter(&self) -> &Meter {
-        &self.meter
-    }
     pub fn equipment_type(&self) -> EquipmentType {
         self.equipment_type
     }
@@ -86,11 +65,11 @@ impl fmt::Display for Equipment {
         }
         // Each later line starts with its own newline, so the last line
         // ends cleanly and the caller decides what comes after it.
-        if let Some(serial) = self.serial_number() {
+        if let Some(serial) = self.identification.serial_number() {
             write!(f, "\nS/N: {}", serial)?;
         }
         write!(f, "\nMeter: {}", self.meter)?;
-        if let Some(plate) = self.plate() {
+        if let Some(plate) = self.identification.plate() {
             write!(f, "\nPlate: {}", plate)?;
         }
         Ok(())

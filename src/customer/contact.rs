@@ -40,16 +40,4 @@ impl Contact {
             email,
         }
     }
-
-    pub fn phone(&self) -> &PhoneNumber {
-        &self.phone
-    }
-
-    pub fn alternate_phone(&self) -> Option<&PhoneNumber> {
-        self.alternate_phone.as_ref()
-    }
-
-    pub fn email(&self) -> Option<&Email> {
-        self.email.as_ref()
-    }
 }

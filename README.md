@@ -60,7 +60,7 @@ src/
 tests/
 └── quote_scenarios.rs   whole-quote scenarios through the public API
 ```
-One type per file, grouped into feature folders (no `mod.rs`). Each file has its unit tests at the bottom.
+One type per file, grouped into feature folders (no `mod.rs`). All tests live in `tests/` (one file per feature) and only use the public API.
 
 ## Roadmap
 1. ✅ Toy calculator
