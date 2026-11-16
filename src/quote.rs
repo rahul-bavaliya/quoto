@@ -110,7 +110,7 @@ impl Quote {
     }
 
     pub fn subtotal(&self) -> i64 {
-        self.labour_total() + self.parts_total() + self.fees_total() + self.credit_total()
+        self.items.iter().map(|item| item.line_total()).sum()
     }
 
     pub fn gst_amount(&self) -> i64 {
@@ -118,10 +118,9 @@ impl Quote {
     }
 
     pub fn pst_amount(&self) -> i64 {
-        if let Some(pst_rate) = self.province().pst_rate() {
-            calculate_tax(self.subtotal(), pst_rate)
-        } else {
-            0
+        match self.province().pst_rate() {
+            Some(pst_rate) => calculate_tax(self.subtotal(), pst_rate),
+            None => 0,
         }
     }
 
@@ -138,11 +137,9 @@ impl fmt::Display for Quote {
         writeln!(f)?;
         writeln!(
             f,
-            "{} Quote {}: {} {}",
-            "=".repeat(5),
+            "===== Quote {}: {} =====",
             self.number,
-            self.province().label(),
-            "=".repeat(5)
+            self.province().label()
         )?;
         writeln!(f, "Date: {}", self.date)?;
         writeln!(f, "Customer: {}", self.customer)?;

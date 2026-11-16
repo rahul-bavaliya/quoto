@@ -70,19 +70,14 @@ pub enum ErrorKind {
 
 impl QuoteError {
     pub fn kind(&self) -> ErrorKind {
-        match self {
-            QuoteError::CreditTooLarge { .. } | QuoteError::QuoteNumbersExhausted { .. } => {
-                ErrorKind::BusinessRule
-            }
-            QuoteError::BadQuantity { .. }
-            | QuoteError::NegativePrice { .. }
-            | QuoteError::MissingField { .. }
-            | QuoteError::InvalidPhone { .. }
-            | QuoteError::InvalidEmail { .. }
-            | QuoteError::InvalidPostalCode { .. }
-            | QuoteError::InvalidQuoteNumber { .. }
-            | QuoteError::MissingIdentification
-            | QuoteError::InvalidMeterReading { .. } => ErrorKind::InvalidInput,
+        // Only these two are business rules; everything else is a wrong input.
+        if matches!(
+            self,
+            QuoteError::CreditTooLarge { .. } | QuoteError::QuoteNumbersExhausted { .. }
+        ) {
+            ErrorKind::BusinessRule
+        } else {
+            ErrorKind::InvalidInput
         }
     }
 
