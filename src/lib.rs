@@ -20,7 +20,7 @@ pub mod tax;
 pub use address::{Address, PostalCode};
 pub use contact::{Contact, Email, PhoneNumber};
 pub use customer::Customer;
-pub use equipment::{Equipment, MeterType};
+pub use equipment::{Equipment, Meter, MeterType};
 pub use errors::QuoteError;
 pub use line_item::{LineItem, LineKind};
 pub use money::format_money;

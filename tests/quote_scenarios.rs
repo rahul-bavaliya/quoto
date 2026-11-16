@@ -4,8 +4,8 @@
 // the `pub` front door in `src/lib.rs`. They can't see private fields.
 
 use quoto::{
-    Address, Contact, Customer, Equipment, LineItem, LineKind, MeterType, PhoneNumber, PostalCode,
-    Province, Quote, QuoteError,
+    Address, Contact, Customer, Equipment, LineItem, LineKind, Meter, MeterType, PhoneNumber,
+    PostalCode, Province, Quote, QuoteError,
 };
 
 /// A customer who lives in the given province (that's what decides the taxes).
@@ -30,13 +30,12 @@ fn equipment_sample() -> Equipment {
     Equipment::new(
         String::from("Toyota"),
         String::from("Corolla Cross"),
-        2025,
+        Some(2025),
         Some(String::from("SERIAL_NUMBER_TEST_1")),
-        28156.0,
+        Meter::new(Some(28156.0), MeterType::Kilometer),
         None,
-        MeterType::Kilometer,
         String::from("Car Suv AWD"),
-        String::from("RB97"),
+        Some(String::from("RB97")),
     )
 }
 
