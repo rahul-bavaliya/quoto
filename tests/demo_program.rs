@@ -70,3 +70,13 @@ fn each_printed_quote_logs_where_its_equipment_details_came_from() {
     assert!(stderr.contains("equipment_source=looked up with demo catalog"));
     assert!(stderr.contains("equipment_source=entered by hand"));
 }
+
+#[test]
+fn each_printed_quote_shows_its_expiry_and_promise_date() {
+    let output = run_demo(None);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(stdout.matches("Valid until: ").count(), 2);
+    // The first quote has a promise date, the second one is still to be confirmed.
+    assert_eq!(stdout.matches("Promise date: to be confirmed").count(), 1);
+    assert_eq!(stdout.matches("Promise date: 20").count(), 1);
+}

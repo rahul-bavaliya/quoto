@@ -105,6 +105,7 @@ fn a_typo_is_invalid_input() {
 
 #[test]
 fn every_error_has_its_own_code() {
+    let day = chrono::NaiveDate::from_ymd_opt(2026, 11, 16).unwrap();
     let codes = [
         QuoteError::BadQuantity {
             description: String::new(),
@@ -139,6 +140,20 @@ fn every_error_has_its_own_code() {
         QuoteError::QuoteNumbersExhausted { year: 2026 }.code(),
         QuoteError::MissingIdentification.code(),
         QuoteError::InvalidMeterReading { reading: 0.0 }.code(),
+        QuoteError::LookupFailed { provider: "x" }.code(),
+        QuoteError::DatabaseUnavailable.code(),
+        QuoteError::MissingSetting { name: "x" }.code(),
+        QuoteError::InvalidSetting { name: "x" }.code(),
+        QuoteError::ExpiryBeforeQuoteDate {
+            date: day,
+            quote_date: day,
+        }
+        .code(),
+        QuoteError::PromiseBeforeQuoteDate {
+            date: day,
+            quote_date: day,
+        }
+        .code(),
     ];
     let mut unique = codes.to_vec();
     unique.sort();
@@ -208,4 +223,28 @@ fn a_wrong_setup_is_a_configuration_problem() {
     assert_eq!(invalid.kind(), ErrorKind::Configuration);
     assert_eq!(invalid.code(), "INVALID_SETTING");
     assert_eq!(invalid.exit_code(), 5);
+}
+
+#[test]
+fn a_date_before_the_quote_date_is_wrong_input() {
+    let date = chrono::NaiveDate::from_ymd_opt(2026, 11, 1).unwrap();
+    let quote_date = chrono::NaiveDate::from_ymd_opt(2026, 11, 16).unwrap();
+
+    let expiry = QuoteError::ExpiryBeforeQuoteDate { date, quote_date };
+    assert_eq!(
+        expiry.to_string(),
+        "The expiry date 2026-11-01 can't be before the quote date 2026-11-16."
+    );
+    assert_eq!(expiry.kind(), ErrorKind::InvalidInput);
+    assert_eq!(expiry.code(), "EXPIRY_BEFORE_QUOTE_DATE");
+    assert_eq!(expiry.exit_code(), 2);
+
+    let promise = QuoteError::PromiseBeforeQuoteDate { date, quote_date };
+    assert_eq!(
+        promise.to_string(),
+        "The promise date 2026-11-01 can't be before the quote date 2026-11-16."
+    );
+    assert_eq!(promise.kind(), ErrorKind::InvalidInput);
+    assert_eq!(promise.code(), "PROMISE_BEFORE_QUOTE_DATE");
+    assert_eq!(promise.exit_code(), 2);
 }

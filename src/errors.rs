@@ -1,6 +1,7 @@
 // src/errors.rs: every way Quoto can refuse something
 
 use crate::money::format_money;
+use chrono::NaiveDate;
 use thiserror::Error;
 use tracing::{error, warn};
 
@@ -50,6 +51,18 @@ pub enum QuoteError {
 
     #[error("All the quote numbers for {year} are used up.")]
     QuoteNumbersExhausted { year: u16 },
+
+    #[error("The expiry date {date} can't be before the quote date {quote_date}.")]
+    ExpiryBeforeQuoteDate {
+        date: NaiveDate,
+        quote_date: NaiveDate,
+    },
+
+    #[error("The promise date {date} can't be before the quote date {quote_date}.")]
+    PromiseBeforeQuoteDate {
+        date: NaiveDate,
+        quote_date: NaiveDate,
+    },
 
     // ---- Equipment ----
     #[error("A serial number or a plate is required to identify the unit.")]
@@ -117,6 +130,8 @@ impl QuoteError {
             QuoteError::InvalidPostalCode { .. } => "INVALID_POSTAL_CODE",
             QuoteError::InvalidQuoteNumber { .. } => "INVALID_QUOTE_NUMBER",
             QuoteError::QuoteNumbersExhausted { .. } => "QUOTE_NUMBERS_EXHAUSTED",
+            QuoteError::ExpiryBeforeQuoteDate { .. } => "EXPIRY_BEFORE_QUOTE_DATE",
+            QuoteError::PromiseBeforeQuoteDate { .. } => "PROMISE_BEFORE_QUOTE_DATE",
             QuoteError::MissingIdentification => "MISSING_IDENTIFICATION",
             QuoteError::InvalidMeterReading { .. } => "INVALID_METER_READING",
             QuoteError::LookupFailed { .. } => "LOOKUP_FAILED",

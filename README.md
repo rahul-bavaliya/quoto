@@ -9,11 +9,14 @@ It's also a learning project: every feature is built one small step at a time, w
 - **Saskatchewan** and **Alberta** taxes: GST and PST are calculated and shown **separately** (Alberta has no PST)
 - **Safe money:** every amount is stored as whole **cents** (`i64`), so there are no floating-point crumbs
 - **Credits come off before tax**, and a credit can never push a quote below $0
+- **Dates:** every quote shows its **expiry date** (quote date + 30 days; can be changed, never before the quote date) and a **promise date** (when the machine will be ready; optional, shows "to be confirmed" until it is set)
 - **Validation:** bad lines (zero quantity, negative price) are refused with a clear `QuoteError`
 
 ```
 ===== Quote Q-2026-00000001: Saskatchewan =====
 Date: 2026-11-17 10:58:47
+Valid until: 2026-12-17
+Promise date: 2026-11-20
 [PART] Oil Filter: 1 x $25.00 = $25.00
 [LABOUR] Oil Change Labour: 0.5 x $160.00 = $80.00
 ...
