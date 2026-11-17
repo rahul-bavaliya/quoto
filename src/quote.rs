@@ -80,7 +80,7 @@ impl Quote {
     /// the subtotal below zero (the dealer would owe the customer).
     /// Only a pending quote can change: once the customer has decided, the
     /// price they decided on must not move (a rejected quote can be reopened).
-    pub fn add_item(&mut self, item: LineItem) -> Result<(), QuoteError> {
+    pub fn add_item(&mut self, mut item: LineItem) -> Result<(), QuoteError> {
         self.ensure_pending()?;
         let subtotal_after = self.subtotal() + item.line_total();
         if matches!(item.kind(), LineKind::Credit) && subtotal_after < 0 {
@@ -95,6 +95,10 @@ impl Quote {
             line_total_cents = item.line_total(),
             "line added"
         );
+        // The quote is the one place that says which quote a line belongs to.
+        if let Some(id) = self.id {
+            item.belong_to(id);
+        }
         self.items.push(item);
         Ok(())
     }
@@ -107,7 +111,16 @@ impl Quote {
     /// Attaches the id the database gave. Used when loading from the database.
     pub fn with_id(mut self, id: Uuid) -> Self {
         self.id = Some(id);
+        // Lines already on the quote now know which quote they belong to.
+        for item in &mut self.items {
+            item.belong_to(id);
+        }
         self
+    }
+
+    /// The lines on the quote, in the order they were added.
+    pub fn items(&self) -> &[LineItem] {
+        &self.items
     }
 
     pub fn number(&self) -> &QuoteNumber {

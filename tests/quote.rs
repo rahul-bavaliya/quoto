@@ -479,3 +479,92 @@ fn the_printed_quote_never_shows_the_id_only_the_quote_number() {
     );
     assert!(!with.to_string().contains(&some_id().to_string()));
 }
+
+// ===== line ids (the line's own id, and the quote it belongs to) =====
+
+fn part_line() -> LineItem {
+    LineItem::new(String::from("Oil filter"), 1.0, 500, LineKind::Part).unwrap()
+}
+
+fn line_id() -> uuid::Uuid {
+    uuid::Uuid::from_u128(0x7777)
+}
+
+#[test]
+fn a_new_line_has_no_id_and_no_quote_id() {
+    let line = part_line();
+    assert_eq!(line.id(), None);
+    assert_eq!(line.quote_id(), None);
+}
+
+#[test]
+fn a_line_loaded_from_the_database_has_its_id() {
+    let line = part_line().with_id(line_id());
+    assert_eq!(line.id(), Some(line_id()));
+    assert_eq!(line.quote_id(), None); // only a quote sets this
+}
+
+#[test]
+fn a_line_added_to_a_quote_without_an_id_has_no_quote_id() {
+    let mut quote = empty_quote(Province::Saskatchewan);
+    quote.add_item(part_line()).unwrap();
+    assert_eq!(quote.items()[0].quote_id(), None);
+}
+
+#[test]
+fn a_line_added_to_a_quote_with_an_id_gets_that_quote_id() {
+    let mut quote = empty_quote(Province::Saskatchewan).with_id(some_id());
+    quote.add_item(part_line()).unwrap();
+    assert_eq!(quote.items()[0].quote_id(), Some(some_id()));
+    assert_eq!(quote.items()[0].id(), None); // the line's own id is still not given
+}
+
+#[test]
+fn lines_already_on_a_quote_get_the_quote_id_when_it_is_given() {
+    let mut quote = empty_quote(Province::Saskatchewan);
+    quote.add_item(part_line()).unwrap();
+    quote.add_item(part_line()).unwrap();
+    let quote = quote.with_id(some_id());
+    assert!(
+        quote
+            .items()
+            .iter()
+            .all(|line| line.quote_id() == Some(some_id()))
+    );
+}
+
+#[test]
+fn a_line_keeps_its_own_id_when_it_joins_a_quote() {
+    let mut quote = empty_quote(Province::Saskatchewan).with_id(some_id());
+    quote.add_item(part_line().with_id(line_id())).unwrap();
+    assert_eq!(quote.items()[0].id(), Some(line_id()));
+}
+
+#[test]
+fn a_refused_line_is_not_added_and_nothing_changes() {
+    let mut quote = empty_quote(Province::Saskatchewan).with_id(some_id());
+    quote.add_item(credit(1000)).unwrap_err();
+    assert!(quote.items().is_empty());
+}
+
+#[test]
+fn lines_come_back_in_the_order_they_were_added() {
+    let mut quote = empty_quote(Province::Saskatchewan);
+    for name in ["First", "Second", "Third"] {
+        let line = LineItem::new(String::from(name), 1.0, 100, LineKind::Part).unwrap();
+        quote.add_item(line).unwrap();
+    }
+    let names: Vec<&str> = quote.items().iter().map(|l| l.description()).collect();
+    assert_eq!(names, ["First", "Second", "Third"]);
+}
+
+#[test]
+fn line_ids_never_change_the_printed_quote_or_the_totals() {
+    let mut plain = empty_quote(Province::Saskatchewan);
+    plain.add_item(part_line()).unwrap();
+    let mut with_ids = empty_quote(Province::Saskatchewan).with_id(some_id());
+    with_ids.add_item(part_line().with_id(line_id())).unwrap();
+    assert_eq!(with_ids.to_string(), plain.to_string());
+    assert_eq!(with_ids.total(), plain.total());
+    assert!(!with_ids.to_string().contains(&line_id().to_string()));
+}
