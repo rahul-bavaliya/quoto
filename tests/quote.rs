@@ -68,14 +68,16 @@ fn new_quote_is_empty() {
 fn a_quote_knows_its_number_and_its_date() {
     let quote = empty_quote(Province::Saskatchewan);
     assert_eq!(quote.number().to_string(), "Q-2026-0001");
-    assert!(quote.to_string().contains("Date: 2026-11-16"));
+    let date = samples::quote_date();
+    assert!(quote.to_string().contains(&format!("Date: {date}")));
 }
 
 #[test]
 fn the_printed_header_shows_the_number_and_the_date() {
     let text = empty_quote(Province::Saskatchewan).to_string();
     assert!(text.contains("===== Quote Q-2026-0001: Saskatchewan ====="));
-    assert!(text.contains("Date: 2026-11-16"));
+    let date = samples::quote_date();
+    assert!(text.contains(&format!("Date: {date}")));
 }
 
 #[test]
