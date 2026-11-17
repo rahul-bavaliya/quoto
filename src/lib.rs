@@ -6,6 +6,8 @@
 // `tests/` and use only the public API. Anything marked `pub` here can be
 // used by `main.rs`, by those tests, and later by the web API.
 
+pub mod branch;
+pub mod country;
 pub mod customer;
 pub mod database;
 pub mod equipment;
@@ -20,6 +22,8 @@ pub mod secret;
 pub mod tax;
 
 // The short front door: `use quoto::{Quote, LineItem, ...};`
+pub use branch::{Branch, BranchStatus, Location};
+pub use country::Country;
 pub use customer::{Address, Contact, Customer, Email, PhoneNumber, PostalCode};
 pub use database::DatabaseSettings;
 pub use equipment::{

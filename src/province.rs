@@ -1,6 +1,8 @@
 // src/province.rs
 
-#[derive(Debug, PartialEq)]
+use crate::country::Country;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Province {
     Saskatchewan,
     Alberta,
@@ -19,6 +21,13 @@ impl Province {
         match self {
             Province::Saskatchewan => "SK",
             Province::Alberta => "AB",
+        }
+    }
+
+    /// Every province belongs to one country.
+    pub fn country(&self) -> Country {
+        match self {
+            Province::Saskatchewan | Province::Alberta => Country::Canada,
         }
     }
 

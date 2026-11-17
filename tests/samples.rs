@@ -28,6 +28,7 @@ fn the_demo_quotes_total_what_the_demo_prints() {
     let sk = demo_quote(
         first,
         quote_time(),
+        branch_in(Province::Saskatchewan).unwrap(),
         prairie_farms().unwrap(),
         corolla().unwrap(),
     )
@@ -35,6 +36,7 @@ fn the_demo_quotes_total_what_the_demo_prints() {
     let ab = demo_quote(
         second,
         quote_time(),
+        branch_in(Province::Alberta).unwrap(),
         northern_oilfield().unwrap(),
         oilfield_truck().unwrap(),
     )
@@ -49,6 +51,7 @@ fn a_demo_quote_shows_the_time_it_is_given() {
     let quote = demo_quote(
         quote_number(),
         later,
+        branch_in(Province::Saskatchewan).unwrap(),
         prairie_farms().unwrap(),
         corolla().unwrap(),
     )

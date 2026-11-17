@@ -2,8 +2,8 @@
 
 use chrono::{Days, Local};
 use quoto::{
-    EquipmentDraft, EquipmentLookup, InMemoryQuoteNumbers, Quote, QuoteNumbers, QuoteResult,
-    logging, samples,
+    EquipmentDraft, EquipmentLookup, InMemoryQuoteNumbers, Province, Quote, QuoteNumbers,
+    QuoteResult, logging, samples,
 };
 use std::process::ExitCode;
 use tracing::info;
@@ -16,9 +16,9 @@ fn show(quote: &Quote) {
     println!("{quote}");
     info!(
         quote_number = %quote.number(),
-        province = quote.customer().province().label(),
+        province = quote.province().label(),
         total_cents = quote.total(),
-        equipment_source = %quote.equipment().source(),
+        equipment_source = %quote.equipment().map_or(String::from("none"), |e| e.source().to_string()),
         status = quote.status().label(),
         "quote printed"
     );
@@ -56,6 +56,7 @@ fn run() -> QuoteResult<()> {
     let mut first = samples::demo_quote(
         numbers.next_number()?,
         now,
+        samples::branch_in(Province::Saskatchewan)?,
         samples::prairie_farms()?,
         corolla,
     )?;
@@ -69,6 +70,7 @@ fn run() -> QuoteResult<()> {
     let mut second = samples::demo_quote(
         numbers.next_number()?,
         now,
+        samples::branch_in(Province::Alberta)?,
         samples::northern_oilfield()?,
         samples::oilfield_truck()?,
     )?;

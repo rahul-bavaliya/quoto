@@ -13,14 +13,23 @@ fn sample_equipment() -> Equipment {
     samples::corolla().unwrap()
 }
 
-/// A new, empty quote with the sample number and date.
+/// A new quote with the sample number and date, made at the branch in `province`,
+/// with the sample customer and machine already added but no lines yet.
 fn empty_quote(province: Province) -> Quote {
+    let mut quote = quick_quote(province);
+    quote.attach_customer(sample_customer(province)).unwrap();
+    quote.attach_equipment(sample_equipment()).unwrap();
+    quote
+}
+
+/// A quick quote: just the branch, no customer and no machine.
+fn quick_quote(province: Province) -> Quote {
     Quote::new(
         samples::quote_number(),
         samples::quote_time(),
-        sample_customer(province),
-        sample_equipment(),
+        samples::branch_in(province).unwrap(),
     )
+    .unwrap()
 }
 
 // The 5 standard lines. No credits here: credit robots add their own.
@@ -79,9 +88,14 @@ fn the_printed_header_shows_the_number_and_the_date() {
 }
 
 #[test]
-fn quote_takes_its_province_from_the_customer() {
-    let quote = empty_quote(Province::Alberta);
-    assert_eq!(quote.customer().province(), &Province::Alberta);
+fn quote_takes_its_province_from_the_branch_not_the_customer() {
+    // An Alberta branch quoting a Saskatchewan customer: the branch decides the taxes.
+    let mut quote = quick_quote(Province::Alberta);
+    quote
+        .attach_customer(sample_customer(Province::Saskatchewan))
+        .unwrap();
+    assert_eq!(quote.province(), &Province::Alberta);
+    assert_eq!(quote.branch().province(), &Province::Alberta);
 }
 
 #[test]
@@ -309,9 +323,9 @@ fn the_thirty_days_count_across_the_end_of_the_year() {
     let quote = Quote::new(
         samples::quote_number(),
         day(2026, 12, 20).and_hms_opt(16, 45, 0).unwrap(),
-        sample_customer(Province::Saskatchewan),
-        sample_equipment(),
-    );
+        samples::branch_in(Province::Saskatchewan).unwrap(),
+    )
+    .unwrap();
     assert_eq!(quote.expires_on(), day(2027, 1, 19));
 }
 
@@ -320,9 +334,9 @@ fn the_time_of_day_does_not_change_the_expiry_date() {
     let late = Quote::new(
         samples::quote_number(),
         day(2026, 11, 16).and_hms_opt(23, 59, 59).unwrap(),
-        sample_customer(Province::Saskatchewan),
-        sample_equipment(),
-    );
+        samples::branch_in(Province::Saskatchewan).unwrap(),
+    )
+    .unwrap();
     assert_eq!(
         late.expires_on(),
         empty_quote(Province::Saskatchewan).expires_on()
@@ -466,8 +480,8 @@ fn the_quote_id_stays_the_same_while_the_quote_changes() {
 #[test]
 fn the_quote_id_is_not_the_customers_or_the_equipments_id() {
     let quote = empty_quote(Province::Saskatchewan).with_id(some_id());
-    assert_eq!(quote.customer().id(), None);
-    assert_eq!(quote.equipment().id(), None);
+    assert_eq!(quote.customer().unwrap().id(), None);
+    assert_eq!(quote.equipment().unwrap().id(), None);
 }
 
 #[test]

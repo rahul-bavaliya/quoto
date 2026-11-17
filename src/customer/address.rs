@@ -40,6 +40,22 @@ impl Address {
         })
     }
 
+    pub fn line1(&self) -> &str {
+        &self.line1
+    }
+
+    pub fn line2(&self) -> Option<&str> {
+        self.line2.as_deref()
+    }
+
+    pub fn city(&self) -> &str {
+        &self.city
+    }
+
+    pub fn postal_code(&self) -> &PostalCode {
+        &self.postal_code
+    }
+
     pub fn province(&self) -> &Province {
         &self.province
     }
