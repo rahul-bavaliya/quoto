@@ -2,11 +2,11 @@
 
 use crate::customer::Customer;
 use crate::equipment::Equipment;
-use crate::errors::QuoteError;
+use crate::errors::{QuoteError, QuoteResult};
 use crate::money::format_money;
 use crate::province::Province;
 use crate::tax::calculate_tax;
-use chrono::NaiveDateTime;
+use chrono::{Days, NaiveDate, NaiveDateTime};
 use std::fmt;
 use tracing::debug;
 
@@ -20,9 +20,16 @@ pub use line_kind::LineKind;
 pub use number_machine::{InMemoryQuoteNumbers, QuoteNumbers};
 pub use quote_number::QuoteNumber;
 
+/// The prices on a quote are good for this many days after the quote date.
+const VALID_FOR_DAYS: u64 = 30;
+
 pub struct Quote {
     number: QuoteNumber,
     created_at: NaiveDateTime,
+    /// The last day the prices are honoured. Worked out when the quote is created.
+    expires_on: NaiveDate,
+    /// The day the machine will be ready. Often unknown when quoting (parts on order), so it can be empty.
+    promise_date: Option<NaiveDate>,
     customer: Customer,
     equipment: Equipment,
     items: Vec<LineItem>,
@@ -43,9 +50,17 @@ impl Quote {
             province = customer.province().label(),
             "quote created"
         );
+        // A date so far in the future that it overflows can't happen in real life;
+        // if it ever did, the latest possible date is the honest answer.
+        let expires_on = created_at
+            .date()
+            .checked_add_days(Days::new(VALID_FOR_DAYS))
+            .unwrap_or(NaiveDate::MAX);
         Quote {
             number,
             created_at,
+            expires_on,
+            promise_date: None,
             customer,
             equipment,
             items: Vec::new(),
@@ -74,6 +89,36 @@ impl Quote {
 
     pub fn number(&self) -> &QuoteNumber {
         &self.number
+    }
+
+    pub fn expires_on(&self) -> NaiveDate {
+        self.expires_on
+    }
+
+    pub fn promise_date(&self) -> Option<NaiveDate> {
+        self.promise_date
+    }
+
+    /// Changes the last day the prices are honoured. The quote's own date is allowed
+    /// (a quote that is good for today only); a day before it is not.
+    pub fn set_expiry(&mut self, date: NaiveDate) -> QuoteResult<()> {
+        let quote_date = self.created_at.date();
+        if date < quote_date {
+            return Err(QuoteError::ExpiryBeforeQuoteDate { date, quote_date });
+        }
+        self.expires_on = date;
+        Ok(())
+    }
+
+    /// Sets the day the machine will be ready. It can be later than the expiry date:
+    /// the expiry is about the prices, the promise is about the work.
+    pub fn set_promise_date(&mut self, date: NaiveDate) -> QuoteResult<()> {
+        let quote_date = self.created_at.date();
+        if date < quote_date {
+            return Err(QuoteError::PromiseBeforeQuoteDate { date, quote_date });
+        }
+        self.promise_date = Some(date);
+        Ok(())
     }
 
     pub fn customer(&self) -> &Customer {
@@ -148,6 +193,11 @@ impl fmt::Display for Quote {
             self.province().label()
         )?;
         writeln!(f, "Date: {}", self.created_at.format("%Y-%m-%d %H:%M:%S"))?;
+        writeln!(f, "Valid until: {}", self.expires_on)?;
+        match self.promise_date {
+            Some(date) => writeln!(f, "Promise date: {date}")?,
+            None => writeln!(f, "Promise date: to be confirmed")?,
+        }
         writeln!(f, "Customer: {}", self.customer)?;
         writeln!(f, "Contact: {}", self.customer.contact())?;
         writeln!(f, "{}", "-".repeat(20))?;

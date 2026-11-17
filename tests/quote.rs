@@ -283,3 +283,149 @@ fn a_new_machine_uses_the_current_year() {
     assert!(year >= 2026);
     assert!(number.ends_with("-00000001"));
 }
+
+// ===== expiry date and promise date =====
+
+use chrono::{Days, NaiveDate};
+
+/// The quote's own date, from the sample time.
+fn quote_day() -> NaiveDate {
+    samples::quote_time().date()
+}
+
+fn day(year: i32, month: u32, day: u32) -> NaiveDate {
+    NaiveDate::from_ymd_opt(year, month, day).unwrap()
+}
+
+#[test]
+fn a_new_quote_is_good_for_thirty_days() {
+    let quote = empty_quote(Province::Saskatchewan);
+    assert_eq!(quote.expires_on(), quote_day() + Days::new(30));
+}
+
+#[test]
+fn the_thirty_days_count_across_the_end_of_the_year() {
+    // 2026-12-20 + 30 days = 2027-01-19 (11 days left in December, then 19 in January)
+    let quote = Quote::new(
+        samples::quote_number(),
+        day(2026, 12, 20).and_hms_opt(16, 45, 0).unwrap(),
+        sample_customer(Province::Saskatchewan),
+        sample_equipment(),
+    );
+    assert_eq!(quote.expires_on(), day(2027, 1, 19));
+}
+
+#[test]
+fn the_time_of_day_does_not_change_the_expiry_date() {
+    let late = Quote::new(
+        samples::quote_number(),
+        day(2026, 11, 16).and_hms_opt(23, 59, 59).unwrap(),
+        sample_customer(Province::Saskatchewan),
+        sample_equipment(),
+    );
+    assert_eq!(
+        late.expires_on(),
+        empty_quote(Province::Saskatchewan).expires_on()
+    );
+}
+
+#[test]
+fn the_expiry_date_can_be_changed_to_a_later_or_earlier_day() {
+    let mut quote = empty_quote(Province::Saskatchewan);
+    quote.set_expiry(quote_day() + Days::new(60)).unwrap();
+    assert_eq!(quote.expires_on(), quote_day() + Days::new(60));
+    quote.set_expiry(quote_day() + Days::new(7)).unwrap();
+    assert_eq!(quote.expires_on(), quote_day() + Days::new(7));
+}
+
+#[test]
+fn a_quote_can_be_good_for_its_own_day_only() {
+    let mut quote = empty_quote(Province::Saskatchewan);
+    quote.set_expiry(quote_day()).unwrap();
+    assert_eq!(quote.expires_on(), quote_day());
+}
+
+#[test]
+fn an_expiry_date_before_the_quote_date_is_refused_and_nothing_changes() {
+    let mut quote = empty_quote(Province::Saskatchewan);
+    let before = quote_day() - Days::new(1);
+    assert_eq!(
+        quote.set_expiry(before),
+        Err(QuoteError::ExpiryBeforeQuoteDate {
+            date: before,
+            quote_date: quote_day()
+        })
+    );
+    assert_eq!(quote.expires_on(), quote_day() + Days::new(30));
+}
+
+#[test]
+fn a_new_quote_has_no_promise_date() {
+    assert_eq!(empty_quote(Province::Saskatchewan).promise_date(), None);
+}
+
+#[test]
+fn a_promise_date_can_be_set_and_changed() {
+    let mut quote = empty_quote(Province::Saskatchewan);
+    quote.set_promise_date(quote_day() + Days::new(3)).unwrap();
+    assert_eq!(quote.promise_date(), Some(quote_day() + Days::new(3)));
+    quote.set_promise_date(quote_day() + Days::new(5)).unwrap();
+    assert_eq!(quote.promise_date(), Some(quote_day() + Days::new(5)));
+}
+
+#[test]
+fn a_machine_can_be_promised_for_the_quote_day_itself() {
+    let mut quote = empty_quote(Province::Saskatchewan);
+    quote.set_promise_date(quote_day()).unwrap();
+    assert_eq!(quote.promise_date(), Some(quote_day()));
+}
+
+#[test]
+fn a_promise_date_before_the_quote_date_is_refused_and_nothing_changes() {
+    let mut quote = empty_quote(Province::Saskatchewan);
+    let before = quote_day() - Days::new(1);
+    assert_eq!(
+        quote.set_promise_date(before),
+        Err(QuoteError::PromiseBeforeQuoteDate {
+            date: before,
+            quote_date: quote_day()
+        })
+    );
+    assert_eq!(quote.promise_date(), None);
+}
+
+#[test]
+fn a_promise_date_may_be_after_the_prices_expire() {
+    // The expiry is about the prices, the promise is about the work.
+    let mut quote = empty_quote(Province::Saskatchewan);
+    let late = quote.expires_on() + Days::new(10);
+    quote.set_promise_date(late).unwrap();
+    assert_eq!(quote.promise_date(), Some(late));
+}
+
+#[test]
+fn the_printed_quote_shows_the_expiry_and_the_promise_date() {
+    let mut quote = empty_quote(Province::Saskatchewan);
+    quote.set_expiry(day(2026, 12, 16)).unwrap();
+    quote.set_promise_date(day(2026, 11, 20)).unwrap();
+    let text = quote.to_string();
+    assert!(text.contains("Valid until: 2026-12-16\n"));
+    assert!(text.contains("Promise date: 2026-11-20\n"));
+}
+
+#[test]
+fn a_quote_without_a_promise_date_says_it_is_to_be_confirmed() {
+    let text = empty_quote(Province::Saskatchewan).to_string();
+    assert!(text.contains("Valid until: 2026-12-16\n"));
+    assert!(text.contains("Promise date: to be confirmed\n"));
+}
+
+#[test]
+fn the_dates_come_right_after_the_quote_date_in_the_header() {
+    let text = empty_quote(Province::Saskatchewan).to_string();
+    let date = text.find("Date: 2026-11-16 09:30:00").unwrap();
+    let valid = text.find("Valid until:").unwrap();
+    let promise = text.find("Promise date:").unwrap();
+    let customer = text.find("Customer:").unwrap();
+    assert!(date < valid && valid < promise && promise < customer);
+}

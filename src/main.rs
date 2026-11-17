@@ -1,6 +1,6 @@
 // src/main.rs: a small demo program that uses the Quoto library
 
-use chrono::Local;
+use chrono::{Days, Local};
 use quoto::{
     EquipmentDraft, EquipmentLookup, InMemoryQuoteNumbers, Quote, QuoteNumbers, QuoteResult,
     logging, samples,
@@ -52,12 +52,16 @@ fn run() -> QuoteResult<()> {
         Some(draft) => samples::corolla_from(draft)?,
         None => samples::corolla()?,
     };
-    show(&samples::demo_quote(
+    let mut first = samples::demo_quote(
         numbers.next_number()?,
         now,
         samples::prairie_farms()?,
         corolla,
-    )?);
+    )?;
+    // The Corolla is promised three days after the quote date. The truck's quote
+    // has no promise date yet (it shows "to be confirmed").
+    first.set_promise_date(now.date() + Days::new(3))?;
+    show(&first);
     show(&samples::demo_quote(
         numbers.next_number()?,
         now,
