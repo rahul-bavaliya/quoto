@@ -1,4 +1,4 @@
-// src/database/mod.rs: the connection to PostgreSQL
+// src/database.rs: the connection to PostgreSQL
 
 use crate::errors::{QuoteError, QuoteResult};
 use sqlx::PgPool;

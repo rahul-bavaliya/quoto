@@ -88,13 +88,13 @@ GitHub Actions runs the same checks automatically on every push and pull request
 src/
 ├── main.rs              demo program (short: it uses quoto::samples)
 ├── lib.rs               the library's front door
-├── errors/  logging/  money/  province/  samples/  secret/  tax/    each is a folder with a mod.rs
-├── database/            mod.rs (connect) + settings (DatabaseSettings, read from the environment)
-├── customer/            mod.rs (Customer) + address, postal_code, contact, phone_number, email
-├── equipment/           mod.rs (Equipment) + meter, meter_type, equipment_type, identification,
-│                        equipment_draft, equipment_source
-├── equipment_lookup/    mod.rs (EquipmentLookup) + in_memory, chain, nhtsa
-└── quote/               mod.rs (Quote) + line_item, line_kind, quote_number, number_machine
+├── errors.rs  logging.rs  money.rs  province.rs  samples.rs  secret.rs  tax.rs
+├── customer.rs          Customer + customer/ (address, postal_code, contact, phone_number, email)
+├── database.rs          connect + database/ (settings: DatabaseSettings, read from the environment)
+├── equipment.rs         Equipment + equipment/ (meter, meter_type, equipment_type, identification,
+│                        equipment_draft, equipment_source)
+├── equipment_lookup.rs  EquipmentLookup + equipment_lookup/ (in_memory, chain, nhtsa)
+└── quote.rs             Quote + quote/ (line_item, line_kind, quote_number, number_machine)
 examples/
 ├── nhtsa_lookup.rs      try the lookups by hand (needs the internet)
 └── db_check.rs          check the database connection (needs docker compose up)
@@ -102,7 +102,7 @@ tests/                   one file per feature, plus quote_scenarios.rs and demo_
 docker-compose.yml       PostgreSQL for development
 .env.example             the settings Quoto needs (copy to .env)
 ```
-One type per file, grouped into feature folders (each folder's `mod.rs` holds the main type and lists its pieces). All tests live in `tests/` (one file per feature) and only use the public API.
+One type per file. Each feature is a file named after it (`customer.rs` holds `Customer` and lists its pieces); a feature with pieces also has a folder of the same name (`customer/`). All tests live in `tests/` (one file per feature) and only use the public API.
 
 ## Roadmap
 1. ✅ Toy calculator

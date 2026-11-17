@@ -1,4 +1,4 @@
-// src/secret/mod.rs: a value that must never be shown (a password, an API key)
+// src/secret.rs: a value that must never be shown (a password, an API key)
 
 use std::fmt;
 

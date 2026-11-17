@@ -1,4 +1,4 @@
-// src/customer/mod.rs: who the quote is for
+// src/customer.rs: who the quote is for
 
 use crate::errors::QuoteError;
 use crate::province::Province;

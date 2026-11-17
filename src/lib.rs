@@ -1,7 +1,8 @@
 // src/lib.rs: the front door of the Quoto library 🚪
 //
-// Each feature is a folder (`src/<feature>/`): `mod.rs` holds the main type and
-// lists the pieces, one type per file. All tests live in
+// Each feature is a file named after it (`src/<feature>.rs`) that holds the main
+// type and lists the pieces; a feature with pieces also has a folder of the same
+// name (`src/<feature>/`), one type per file. All tests live in
 // `tests/` and use only the public API. Anything marked `pub` here can be
 // used by `main.rs`, by those tests, and later by the web API.
 

@@ -1,4 +1,4 @@
-// src/logging/mod.rs: one logging setup for the whole program
+// src/logging.rs: one logging setup for the whole program
 
 use std::io::IsTerminal;
 use tracing_subscriber::EnvFilter;
