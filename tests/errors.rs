@@ -121,11 +121,31 @@ fn the_quote_party_errors_are_business_rules() {
 #[test]
 fn a_failed_database_set_up_is_a_service_problem() {
     assert_eq!(
-        QuoteError::MigrationFailed.kind(),
+        QuoteError::DatabaseSetupFailed.kind(),
         ErrorKind::ServiceUnavailable
     );
     // The message is safe to show: it names no table, address or password.
-    assert!(!QuoteError::MigrationFailed.to_string().contains("postgres"));
+    assert!(
+        !QuoteError::DatabaseSetupFailed
+            .to_string()
+            .contains("postgres")
+    );
+}
+
+#[test]
+fn the_tax_errors_are_wrong_input() {
+    let date = chrono::NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+    for error in [
+        QuoteError::InvalidTaxRate { value: 0 },
+        QuoteError::InvalidTaxSystem,
+        QuoteError::UnknownProvince { code: "ZZ".into() },
+        QuoteError::RatesDateBeforeCurrent {
+            date,
+            current: date,
+        },
+    ] {
+        assert_eq!(error.kind(), ErrorKind::InvalidInput);
+    }
 }
 
 #[test]
@@ -194,7 +214,15 @@ fn every_error_has_its_own_code() {
         QuoteError::QuoteIncomplete { missing: "x" }.code(),
         QuoteError::InvalidLocation.code(),
         QuoteError::BranchInactive.code(),
-        QuoteError::MigrationFailed.code(),
+        QuoteError::DatabaseSetupFailed.code(),
+        QuoteError::InvalidTaxRate { value: 0 }.code(),
+        QuoteError::InvalidTaxSystem.code(),
+        QuoteError::UnknownProvince { code: "x".into() }.code(),
+        QuoteError::RatesDateBeforeCurrent {
+            date: chrono::NaiveDate::MIN,
+            current: chrono::NaiveDate::MIN,
+        }
+        .code(),
     ];
     let mut unique = codes.to_vec();
     unique.sort();

@@ -2,7 +2,7 @@
 
 use crate::errors::{QuoteError, QuoteResult};
 use crate::secret::Secret;
-use sqlx::postgres::PgSslMode;
+use sea_orm::sqlx::postgres::PgSslMode;
 
 /// How to reach the database. Read from environment variables, never from code,
 /// so no password is ever written in a file that goes to git.

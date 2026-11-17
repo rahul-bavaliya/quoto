@@ -1,254 +1,258 @@
-// tests/database_provinces.rs: the provinces table, in a real database
+// tests/database_provinces.rs: the provinces table in a real database
 //
 // These need a running database, so they are skipped normally (and in CI). Run them by hand:
 //
 //     docker compose up -d
 //     cargo test --test database_provinces -- --ignored
 //
-// They build the tables first (safe to repeat). Every test works inside a transaction
-// that is rolled back at the end, so the database is left as it was found.
+// They build the table and the 13 starting rows first (safe to repeat). Every change a test
+// makes happens inside a transaction that is dropped at the end, which undoes it, so the
+// database is left as it was found. (The rules about which tax mixes are allowed need no
+// database: see tests/tax_rates.rs.)
 
-use quoto::{DatabaseSettings, database};
-use sqlx::{PgPool, Postgres, Transaction};
+use chrono::NaiveDate;
+use quoto::*;
+use sea_orm::{ConnectionTrait, DatabaseConnection, DatabaseTransaction, TransactionTrait};
 
-/// The tests take turns: `TRUNCATE` (tried in two of them) locks the whole table, and would
-/// otherwise collide with a test running at the same moment.
+/// The tests take turns: two of them building the table at the same moment would collide.
 static ONE_AT_A_TIME: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
-/// Waits for its turn, connects (settings from the environment or `.env`) and makes sure
-/// the tables exist. Keep the first part alive for the whole test.
-async fn setup() -> (tokio::sync::MutexGuard<'static, ()>, PgPool) {
+/// Waits for its turn, connects (settings from the environment or `.env`), builds the table
+/// and the starting rows. Keep the first part alive for the whole test.
+async fn setup() -> (tokio::sync::MutexGuard<'static, ()>, DatabaseConnection) {
     let turn = ONE_AT_A_TIME.lock().await;
     dotenvy::dotenv().ok();
     let settings = DatabaseSettings::from_env().expect("database settings (see .env.example)");
-    let pool = database::connect(&settings).await.expect("database");
-    database::migrate(&pool).await.expect("migrations");
-    (turn, pool)
+    let db = database::connect(&settings).await.expect("database");
+    database::sync(&db).await.expect("sync");
+    seed_provinces(&db).await.expect("seed");
+    (turn, db)
 }
 
 /// A transaction that is never committed: dropping it undoes everything.
-async fn work(pool: &PgPool) -> Transaction<'_, Postgres> {
-    pool.begin().await.expect("transaction")
+async fn work(db: &DatabaseConnection) -> DatabaseTransaction {
+    db.begin().await.expect("transaction")
 }
 
-/// The five-character error code PostgreSQL gave (e.g. "23514" = a rule was broken).
-fn sqlstate(error: sqlx::Error) -> String {
-    error
-        .as_database_error()
-        .and_then(|e| e.code().map(|c| c.to_string()))
-        .unwrap_or_else(|| format!("not a database error: {error}"))
+fn rate(thousandths: i32) -> TaxRate {
+    TaxRate::from_thousandths(thousandths).unwrap()
 }
 
-const CHECK_VIOLATION: &str = "23514";
-const UNIQUE_VIOLATION: &str = "23505";
-const RESTRICT_VIOLATION: &str = "23001";
-
-/// Runs one statement that must be refused, in its own transaction, and returns the code.
-async fn refused(pool: &PgPool, sql: &str) -> String {
-    let mut tx = work(pool).await;
-    sqlstate(sqlx::query(sql).execute(&mut *tx).await.unwrap_err())
+fn day(year: i32, month: u32, day: u32) -> NaiveDate {
+    NaiveDate::from_ymd_opt(year, month, day).unwrap()
 }
 
-async fn count(tx: &mut Transaction<'_, Postgres>, sql: &str) -> i64 {
-    sqlx::query_scalar::<_, i64>(sql)
-        .fetch_one(&mut **tx)
-        .await
-        .unwrap()
+fn gst_pst(gst: i32, pst: Option<i32>) -> TaxRates {
+    TaxRates::GstPst {
+        gst: rate(gst),
+        pst: pst.map(rate),
+    }
 }
 
-/// (gst, pst, hst) of one province.
-async fn rates(
-    tx: &mut Transaction<'_, Postgres>,
-    code: &str,
-) -> (Option<i32>, Option<i32>, Option<i32>) {
-    sqlx::query_as("SELECT gst_rate_thousandths, pst_rate_thousandths, hst_rate_thousandths FROM provinces WHERE code = $1")
-        .bind(code)
-        .fetch_one(&mut **tx)
-        .await
-        .unwrap()
-}
-
-// ===== the seed =====
+// ===== the starting rows =====
 
 #[tokio::test]
 #[ignore = "needs the database (docker compose up)"]
 async fn all_thirteen_provinces_and_territories_are_there() {
-    let (_turn, pool) = setup().await;
-    let mut tx = work(&pool).await;
-    assert_eq!(count(&mut tx, "SELECT count(*) FROM provinces").await, 13);
+    let (_turn, db) = setup().await;
+    let all = all_rates(&db).await.unwrap();
+    assert_eq!(all.len(), 13);
+    let codes: Vec<&str> = all.iter().map(|(code, _)| code.as_str()).collect();
+    assert_eq!(
+        codes,
+        [
+            "AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT"
+        ]
+    );
 }
 
 #[tokio::test]
 #[ignore = "needs the database (docker compose up)"]
 async fn the_seeded_rates_match_the_cra_table() {
-    let (_turn, pool) = setup().await;
-    let mut tx = work(&pool).await;
-    assert_eq!(rates(&mut tx, "SK").await, (Some(5000), Some(6000), None));
-    assert_eq!(rates(&mut tx, "AB").await, (Some(5000), None, None));
-    assert_eq!(rates(&mut tx, "BC").await, (Some(5000), Some(7000), None));
-    assert_eq!(rates(&mut tx, "MB").await, (Some(5000), Some(7000), None));
-    assert_eq!(rates(&mut tx, "QC").await, (Some(5000), Some(9975), None));
-    assert_eq!(rates(&mut tx, "ON").await, (None, None, Some(13000)));
-    assert_eq!(rates(&mut tx, "NS").await, (None, None, Some(14000)));
+    let (_turn, db) = setup().await;
+    let check = |code: &'static str, expected: TaxRates| {
+        let db = &db;
+        async move { assert_eq!(rates_for(db, code).await.unwrap(), expected, "{code}") }
+    };
+    check("SK", gst_pst(5000, Some(6000))).await;
+    check("AB", gst_pst(5000, None)).await;
+    check("BC", gst_pst(5000, Some(7000))).await;
+    check("MB", gst_pst(5000, Some(7000))).await;
+    check("QC", gst_pst(5000, Some(9975))).await;
+    check("ON", TaxRates::Hst(rate(13_000))).await;
+    check("NS", TaxRates::Hst(rate(14_000))).await;
     for code in ["NB", "NL", "PE"] {
-        assert_eq!(rates(&mut tx, code).await, (None, None, Some(15000)));
+        check(code, TaxRates::Hst(rate(15_000))).await;
     }
     for code in ["YT", "NT", "NU"] {
-        assert_eq!(rates(&mut tx, code).await, (Some(5000), None, None));
+        check(code, gst_pst(5000, None)).await;
     }
 }
 
 #[tokio::test]
 #[ignore = "needs the database (docker compose up)"]
-async fn running_the_migrations_again_is_safe() {
-    let (_turn, pool) = setup().await;
-    database::migrate(&pool).await.unwrap();
-    database::migrate(&pool).await.unwrap();
-}
+async fn setting_up_again_is_safe_and_does_not_put_a_changed_rate_back() {
+    let (_turn, db) = setup().await;
+    let tx = work(&db).await;
+    change_rates(
+        &tx,
+        "SK",
+        &gst_pst(5000, Some(7000)),
+        day(2027, 4, 1),
+        "test",
+    )
+    .await
+    .unwrap();
 
-// ===== a province must have its tax system =====
-
-#[tokio::test]
-#[ignore = "needs the database (docker compose up)"]
-async fn a_gst_and_an_hst_together_are_refused() {
-    let (_turn, pool) = setup().await;
-    let sql = "UPDATE provinces SET hst_rate_thousandths = 13000 WHERE code = 'AB'";
-    assert_eq!(refused(&pool, sql).await, CHECK_VIOLATION);
-}
-
-#[tokio::test]
-#[ignore = "needs the database (docker compose up)"]
-async fn a_province_with_no_tax_at_all_is_refused() {
-    let (_turn, pool) = setup().await;
-    let sql = "UPDATE provinces SET gst_rate_thousandths = NULL WHERE code = 'AB'";
-    assert_eq!(refused(&pool, sql).await, CHECK_VIOLATION);
+    seed_provinces(&tx).await.unwrap(); // a second seed in the same transaction
+    assert_eq!(all_rates(&tx).await.unwrap().len(), 13);
+    assert_eq!(
+        rates_for(&tx, "SK").await.unwrap(),
+        gst_pst(5000, Some(7000))
+    );
 }
 
 #[tokio::test]
 #[ignore = "needs the database (docker compose up)"]
-async fn an_hst_province_cannot_also_have_a_pst() {
-    let (_turn, pool) = setup().await;
-    let sql = "UPDATE provinces SET pst_rate_thousandths = 1000 WHERE code = 'ON'";
-    assert_eq!(refused(&pool, sql).await, CHECK_VIOLATION);
+async fn an_unknown_province_is_refused() {
+    let (_turn, db) = setup().await;
+    assert_eq!(
+        rates_for(&db, "ZZ").await,
+        Err(QuoteError::UnknownProvince { code: "ZZ".into() })
+    );
+}
+
+// ===== changing a rate (what the admin does) =====
+
+#[tokio::test]
+#[ignore = "needs the database (docker compose up)"]
+async fn a_rate_can_be_changed_in_one_update() {
+    let (_turn, db) = setup().await;
+    let tx = work(&db).await;
+    change_rates(
+        &tx,
+        "SK",
+        &gst_pst(5000, Some(7000)),
+        day(2027, 4, 1),
+        "test change",
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        rates_for(&tx, "SK").await.unwrap(),
+        gst_pst(5000, Some(7000))
+    );
+    // The other provinces are untouched.
+    assert_eq!(rates_for(&tx, "AB").await.unwrap(), gst_pst(5000, None));
 }
 
 #[tokio::test]
 #[ignore = "needs the database (docker compose up)"]
-async fn a_rate_must_be_above_zero_and_at_most_a_hundred_percent() {
-    let (_turn, pool) = setup().await;
-    for value in ["0", "-1", "100001"] {
-        let sql = format!("UPDATE provinces SET pst_rate_thousandths = {value} WHERE code = 'SK'");
-        assert_eq!(refused(&pool, &sql).await, CHECK_VIOLATION, "{value}");
-    }
+async fn a_province_can_switch_from_gst_and_pst_to_hst() {
+    let (_turn, db) = setup().await;
+    let tx = work(&db).await;
+    change_rates(
+        &tx,
+        "SK",
+        &TaxRates::Hst(rate(11_000)),
+        day(2027, 1, 1),
+        "test switch",
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        rates_for(&tx, "SK").await.unwrap(),
+        TaxRates::Hst(rate(11_000))
+    );
+}
+
+#[tokio::test]
+#[ignore = "needs the database (docker compose up)"]
+async fn the_new_date_cannot_be_before_the_current_rates_date() {
+    let (_turn, db) = setup().await;
+    let tx = work(&db).await;
+    // The starting rows are "in force since 2025-04-01".
+    assert_eq!(
+        change_rates(
+            &tx,
+            "SK",
+            &gst_pst(5000, None),
+            day(2024, 1, 1),
+            "too early"
+        )
+        .await,
+        Err(QuoteError::RatesDateBeforeCurrent {
+            date: day(2024, 1, 1),
+            current: day(2025, 4, 1)
+        })
+    );
+    assert_eq!(
+        rates_for(&tx, "SK").await.unwrap(),
+        gst_pst(5000, Some(6000))
+    );
 }
 
 #[tokio::test]
 #[ignore = "needs the database (docker compose up)"]
 async fn a_blank_note_is_refused() {
-    let (_turn, pool) = setup().await;
-    let sql = "UPDATE provinces SET note = '   ' WHERE code = 'SK'";
-    assert_eq!(refused(&pool, sql).await, CHECK_VIOLATION);
-}
-
-#[tokio::test]
-#[ignore = "needs the database (docker compose up)"]
-async fn a_province_code_must_be_two_capital_letters_and_unique() {
-    let (_turn, pool) = setup().await;
-    let insert = |code: &str| {
-        format!(
-            "INSERT INTO provinces (code, name, country_code, gst_rate_thousandths, effective_from, note) \
-             VALUES ('{code}', 'Test Land {code}', 'CA', 5000, '2026-01-01', 'test')"
-        )
-    };
-    assert_eq!(refused(&pool, &insert("sk")).await, CHECK_VIOLATION);
-    assert_eq!(refused(&pool, &insert("SKK")).await, CHECK_VIOLATION);
-    assert_eq!(refused(&pool, &insert("SK")).await, UNIQUE_VIOLATION);
-}
-
-// ===== a province is never deleted =====
-
-#[tokio::test]
-#[ignore = "needs the database (docker compose up)"]
-async fn a_province_cannot_be_deleted() {
-    let (_turn, pool) = setup().await;
+    let (_turn, db) = setup().await;
+    let tx = work(&db).await;
     assert_eq!(
-        refused(&pool, "DELETE FROM provinces WHERE code = 'SK'").await,
-        RESTRICT_VIOLATION
-    );
-    assert_eq!(
-        refused(&pool, "DELETE FROM provinces").await,
-        RESTRICT_VIOLATION
+        change_rates(&tx, "SK", &gst_pst(5000, None), day(2027, 1, 1), "   ").await,
+        Err(QuoteError::MissingField { field: "note" })
     );
 }
 
 #[tokio::test]
 #[ignore = "needs the database (docker compose up)"]
-async fn the_provinces_table_cannot_be_emptied_with_truncate() {
-    let (_turn, pool) = setup().await;
+async fn changing_an_unknown_province_is_refused() {
+    let (_turn, db) = setup().await;
+    let tx = work(&db).await;
     assert_eq!(
-        refused(&pool, "TRUNCATE provinces CASCADE").await,
-        RESTRICT_VIOLATION
+        change_rates(&tx, "ZZ", &gst_pst(5000, None), day(2027, 1, 1), "test").await,
+        Err(QuoteError::UnknownProvince { code: "ZZ".into() })
     );
 }
 
-// ===== changing a rate (what the admin does) =====
 #[tokio::test]
 #[ignore = "needs the database (docker compose up)"]
-async fn a_rate_can_be_changed_in_one_update() {
-    let (_turn, pool) = setup().await;
-    let mut tx = work(&pool).await;
-    sqlx::query(
-        "UPDATE provinces SET pst_rate_thousandths = 7000, effective_from = '2027-04-01', \
-         note = 'test change' WHERE code = 'SK'",
+async fn updated_at_moves_when_the_rates_change() {
+    let (_turn, db) = setup().await;
+    let tx = work(&db).await;
+    change_rates(
+        &tx,
+        "SK",
+        &gst_pst(5000, Some(7000)),
+        day(2027, 4, 1),
+        "test",
     )
-    .execute(&mut *tx)
     .await
     .unwrap();
-    assert_eq!(rates(&mut tx, "SK").await, (Some(5000), Some(7000), None));
+    let row = tx
+        .query_one_raw(sea_orm::Statement::from_string(
+            sea_orm::DbBackend::Postgres,
+            "SELECT updated_at > created_at AS moved FROM provinces WHERE code = 'SK'",
+        ))
+        .await
+        .unwrap()
+        .expect("a row");
+    assert!(row.try_get::<bool>("", "moved").unwrap());
 }
+
+// ===== a damaged row is caught when it is read =====
 
 #[tokio::test]
 #[ignore = "needs the database (docker compose up)"]
-async fn a_province_can_switch_from_gst_and_pst_to_hst_in_one_update() {
-    let (_turn, pool) = setup().await;
-    let mut tx = work(&pool).await;
-    sqlx::query(
-        "UPDATE provinces SET gst_rate_thousandths = NULL, pst_rate_thousandths = NULL, \
-         hst_rate_thousandths = 11000, effective_from = '2027-01-01', note = 'test switch' \
-         WHERE code = 'SK'",
-    )
-    .execute(&mut *tx)
-    .await
-    .unwrap();
-    assert_eq!(rates(&mut tx, "SK").await, (None, None, Some(11000)));
-}
-
-#[tokio::test]
-#[ignore = "needs the database (docker compose up)"]
-async fn updated_at_moves_when_a_row_is_updated() {
-    let (_turn, pool) = setup().await;
-    let mut tx = work(&pool).await;
-    let moved: bool = sqlx::query_scalar(
-        "WITH changed AS (UPDATE provinces SET note = 'touched' WHERE code = 'SK' \
-         RETURNING updated_at, created_at) SELECT updated_at > created_at FROM changed",
-    )
-    .fetch_one(&mut *tx)
-    .await
-    .unwrap();
-    assert!(moved);
-}
-
-// ===== the rate history was dropped (migration 0004) =====
-
-#[tokio::test]
-#[ignore = "needs the database (docker compose up)"]
-async fn there_is_no_rate_history_table_any_more() {
-    let (_turn, pool) = setup().await;
-    let mut tx = work(&pool).await;
-    let tables = count(
-        &mut tx,
-        "SELECT count(*) FROM information_schema.tables WHERE table_name = 'province_rate_history'",
-    )
-    .await;
-    assert_eq!(tables, 0);
+async fn a_row_with_a_gst_and_an_hst_is_refused_when_it_is_read() {
+    let (_turn, db) = setup().await;
+    let tx = work(&db).await;
+    // Written behind Quoto's back (the table itself no longer has any rules).
+    tx.execute_unprepared("UPDATE provinces SET hst_rate_thousandths = 13000 WHERE code = 'AB'")
+        .await
+        .unwrap();
+    assert_eq!(
+        rates_for(&tx, "AB").await,
+        Err(QuoteError::InvalidTaxSystem)
+    );
+    assert_eq!(all_rates(&tx).await, Err(QuoteError::InvalidTaxSystem));
 }

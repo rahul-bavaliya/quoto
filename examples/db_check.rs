@@ -18,8 +18,8 @@ async fn main() -> ExitCode {
 
     let result = async {
         let settings = DatabaseSettings::from_env()?;
-        let pool = database::connect(&settings).await?;
-        pool.close().await;
+        let db = database::connect(&settings).await?;
+        let _ = db.close().await;
         Ok::<_, quoto::QuoteError>(settings.describe())
     }
     .await;

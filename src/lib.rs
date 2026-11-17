@@ -31,7 +31,9 @@ pub use equipment::{
 pub use equipment_lookup::{ChainedLookup, EquipmentLookup, InMemoryEquipmentLookup, NhtsaLookup};
 pub use errors::{ErrorKind, QuoteError, QuoteResult};
 pub use money::format_money;
-pub use province::{Province, calculate_tax};
+pub use province::{
+    Province, TaxRate, TaxRates, all_rates, calculate_tax, change_rates, rates_for, seed_provinces,
+};
 pub use quote::{
     InMemoryQuoteNumbers, LineItem, LineKind, Quote, QuoteNumber, QuoteNumbers, QuoteStatus,
 };

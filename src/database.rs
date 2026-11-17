@@ -1,8 +1,9 @@
-// src/database.rs: the connection to PostgreSQL
+// src/database.rs: the connection to PostgreSQL, and building its tables
 
 use crate::errors::{QuoteError, QuoteResult};
-use sqlx::PgPool;
-use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
+use crate::province;
+use sea_orm::sqlx::postgres::{PgConnectOptions, PgPoolOptions};
+use sea_orm::{DatabaseConnection, SqlxPostgresConnector};
 use std::time::Duration;
 use tracing::debug;
 
@@ -19,7 +20,7 @@ const WAIT_FOR_CONNECTION: Duration = Duration::from_secs(5);
 /// password or a stopped database is found now, not at the first quote.
 ///
 /// The password is only opened here, with `expose()`. It is never logged.
-pub async fn connect(settings: &DatabaseSettings) -> QuoteResult<PgPool> {
+pub async fn connect(settings: &DatabaseSettings) -> QuoteResult<DatabaseConnection> {
     let options = PgConnectOptions::new()
         .host(&settings.host)
         .port(settings.port)
@@ -28,7 +29,7 @@ pub async fn connect(settings: &DatabaseSettings) -> QuoteResult<PgPool> {
         .database(&settings.database)
         .ssl_mode(settings.ssl_mode);
 
-    PgPoolOptions::new()
+    let pool = PgPoolOptions::new()
         .max_connections(MAX_CONNECTIONS)
         .acquire_timeout(WAIT_FOR_CONNECTION)
         .connect_with(options)
@@ -38,20 +39,22 @@ pub async fn connect(settings: &DatabaseSettings) -> QuoteResult<PgPool> {
             // short message. Debug level, so it isn't printed by default.
             debug!(%cause, "database connection failed");
             QuoteError::DatabaseUnavailable
-        })
+        })?;
+    Ok(SqlxPostgresConnector::from_sqlx_postgres_pool(pool))
 }
 
-/// Builds or updates the tables: runs every file in `migrations/` that hasn't run yet,
-/// in order. The files are packed into the program when it is built, so a running
-/// server can't be tricked into running a different file. Running it twice is safe
-/// (a migration that already ran is skipped). It needs a database user that is allowed
-/// to create tables; later the running program gets a user with fewer rights.
-pub async fn migrate(pool: &PgPool) -> QuoteResult<()> {
-    sqlx::migrate!("./migrations")
-        .run(pool)
+/// Makes the database match the Rust structs: creates a missing table, adds a missing column.
+/// It never drops anything (a field removed from a struct leaves its column behind), and
+/// running it twice is safe. For learning and development: it changes the database when the
+/// program starts and writes no migration file, so before real customer data it is replaced by
+/// reviewable migrations. It needs a database user that is allowed to create tables.
+pub async fn sync(db: &DatabaseConnection) -> QuoteResult<()> {
+    db.get_schema_builder()
+        .register(province::entity::Entity)
+        .sync(db)
         .await
         .map_err(|cause| {
-            debug!(%cause, "database migration failed");
-            QuoteError::MigrationFailed
+            debug!(%cause, "database sync failed");
+            QuoteError::DatabaseSetupFailed
         })
 }
