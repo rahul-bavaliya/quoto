@@ -2,6 +2,7 @@
 
 use crate::errors::QuoteError;
 use std::fmt;
+use uuid::Uuid;
 
 mod equipment_draft;
 mod equipment_source;
@@ -19,6 +20,9 @@ pub use meter_type::MeterType;
 
 #[derive(Debug, PartialEq)]
 pub struct Equipment {
+    /// The database's id. Empty until this unit is loaded from the database:
+    /// a new one never makes its own id.
+    id: Option<Uuid>,
     make: String,
     model: String,
     model_year: Option<i64>,
@@ -45,6 +49,7 @@ impl Equipment {
             return Err(QuoteError::MissingField { field: "model" });
         }
         Ok(Equipment {
+            id: None,
             make,
             model,
             model_year,
@@ -73,6 +78,17 @@ impl Equipment {
         equipment.source = draft.source;
         Ok(equipment)
     }
+    /// `None` means "not saved yet". The database gives the id; Quoto never makes one.
+    pub fn id(&self) -> Option<Uuid> {
+        self.id
+    }
+
+    /// Attaches the id the database gave. Used when loading from the database.
+    pub fn with_id(mut self, id: Uuid) -> Self {
+        self.id = Some(id);
+        self
+    }
+
     pub fn equipment_type(&self) -> EquipmentType {
         self.equipment_type
     }

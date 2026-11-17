@@ -11,6 +11,7 @@ It's also a learning project: every feature is built one small step at a time, w
 - **Credits come off before tax**, and a credit can never push a quote below $0
 - **Dates:** every quote shows its **expiry date** (quote date + 30 days; can be changed, never before the quote date) and a **promise date** (when the machine will be ready; optional, shows "to be confirmed" until it is set)
 - **Status:** a quote is **pending**, **accepted**, or **rejected** (a rejection must say why, up to 500 characters). Only a pending quote can change or be decided; an accepted quote is final; a rejected one can be reopened. Whether a quote is **expired** is worked out from today's date (`quote.is_expired(today)`), and an expired quote can't be accepted until its expiry date is extended
+- **IDs:** a customer, a piece of equipment and a quote each have an optional UUID (`id()`). A new one has **no** id; the database will give it one, and an object loaded from the database gets it with `with_id(...)`. The id is internal: it is never printed on a quote (the quote number is the name people use)
 - **Validation:** bad lines (zero quantity, negative price) are refused with a clear `QuoteError`
 
 ```

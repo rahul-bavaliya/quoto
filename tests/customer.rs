@@ -253,3 +253,41 @@ fn email_with_nothing_before_at_is_refused() {
 fn email_with_two_ats_is_refused() {
     assert!(Email::parse("rahul@@example.ca").is_err());
 }
+
+// ===== id (given by the database, never made by Quoto) =====
+
+fn some_id() -> uuid::Uuid {
+    uuid::Uuid::from_u128(0x1111)
+}
+
+#[test]
+fn a_new_customer_has_no_id() {
+    assert_eq!(samples::prairie_farms().unwrap().id(), None);
+}
+
+#[test]
+fn a_customer_loaded_from_the_database_has_its_id() {
+    let customer = samples::prairie_farms().unwrap().with_id(some_id());
+    assert_eq!(customer.id(), Some(some_id()));
+}
+
+#[test]
+fn giving_a_customer_an_id_does_not_change_what_it_shows() {
+    let without = samples::prairie_farms().unwrap();
+    let with = samples::prairie_farms().unwrap().with_id(some_id());
+    assert_eq!(with.to_string(), without.to_string());
+    assert!(!with.to_string().contains(&some_id().to_string()));
+}
+
+#[test]
+fn customers_with_the_same_details_are_the_same_only_if_the_id_matches() {
+    let a = samples::prairie_farms().unwrap().with_id(some_id());
+    let same = samples::prairie_farms().unwrap().with_id(some_id());
+    let other = samples::prairie_farms()
+        .unwrap()
+        .with_id(uuid::Uuid::from_u128(0x2222));
+    let unsaved = samples::prairie_farms().unwrap();
+    assert_eq!(a, same);
+    assert_ne!(a, other);
+    assert_ne!(a, unsaved);
+}

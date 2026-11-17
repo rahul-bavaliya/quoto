@@ -229,3 +229,52 @@ fn a_draft_with_a_blank_model_is_refused() {
         Err(QuoteError::MissingField { field: "model" })
     );
 }
+
+// ===== id (given by the database, never made by Quoto) =====
+
+fn some_id() -> uuid::Uuid {
+    uuid::Uuid::from_u128(0x3333)
+}
+
+#[test]
+fn new_equipment_has_no_id() {
+    assert_eq!(corolla().id(), None);
+}
+
+#[test]
+fn equipment_built_from_a_lookup_has_no_id_either() {
+    let draft = samples::equipment_lookup()
+        .lookup(samples::COROLLA_SERIAL)
+        .unwrap()
+        .unwrap();
+    assert_eq!(samples::corolla_from(draft).unwrap().id(), None);
+}
+
+#[test]
+fn equipment_loaded_from_the_database_has_its_id_and_keeps_its_source() {
+    let draft = samples::equipment_lookup()
+        .lookup(samples::COROLLA_SERIAL)
+        .unwrap()
+        .unwrap();
+    let looked_up = samples::corolla_from(draft).unwrap().with_id(some_id());
+    assert_eq!(looked_up.id(), Some(some_id()));
+    assert_eq!(
+        looked_up.source().to_string(),
+        "looked up with demo catalog"
+    );
+}
+
+#[test]
+fn giving_equipment_an_id_does_not_change_what_it_shows() {
+    let with = corolla().with_id(some_id());
+    assert_eq!(with.to_string(), corolla().to_string());
+    assert!(!with.to_string().contains(&some_id().to_string()));
+}
+
+#[test]
+fn equipment_with_the_same_details_is_the_same_only_if_the_id_matches() {
+    let a = corolla().with_id(some_id());
+    assert_eq!(a, corolla().with_id(some_id()));
+    assert_ne!(a, corolla().with_id(uuid::Uuid::from_u128(0x4444)));
+    assert_ne!(a, corolla());
+}

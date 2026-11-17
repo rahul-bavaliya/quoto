@@ -429,3 +429,53 @@ fn the_dates_come_right_after_the_quote_date_in_the_header() {
     let customer = text.find("Customer:").unwrap();
     assert!(date < valid && valid < promise && promise < customer);
 }
+
+// ===== id (given by the database, never made by Quoto) =====
+
+fn some_id() -> uuid::Uuid {
+    uuid::Uuid::from_u128(0x5555)
+}
+
+#[test]
+fn a_new_quote_has_no_id() {
+    assert_eq!(empty_quote(Province::Saskatchewan).id(), None);
+}
+
+#[test]
+fn a_quote_loaded_from_the_database_has_its_id() {
+    let quote = empty_quote(Province::Saskatchewan).with_id(some_id());
+    assert_eq!(quote.id(), Some(some_id()));
+}
+
+#[test]
+fn the_quote_id_stays_the_same_while_the_quote_changes() {
+    let mut quote = empty_quote(Province::Saskatchewan).with_id(some_id());
+    quote.add_item(credit(1000)).unwrap_err(); // refused: a credit on an empty quote
+    quote
+        .add_item(LineItem::new(String::from("Part"), 1.0, 500, LineKind::Part).unwrap())
+        .unwrap();
+    quote
+        .set_promise_date(samples::quote_time().date())
+        .unwrap();
+    quote.reject("Too expensive").unwrap();
+    quote.reopen().unwrap();
+    quote.accept(samples::quote_time().date()).unwrap();
+    assert_eq!(quote.id(), Some(some_id()));
+}
+
+#[test]
+fn the_quote_id_is_not_the_customers_or_the_equipments_id() {
+    let quote = empty_quote(Province::Saskatchewan).with_id(some_id());
+    assert_eq!(quote.customer().id(), None);
+    assert_eq!(quote.equipment().id(), None);
+}
+
+#[test]
+fn the_printed_quote_never_shows_the_id_only_the_quote_number() {
+    let with = empty_quote(Province::Saskatchewan).with_id(some_id());
+    assert_eq!(
+        with.to_string(),
+        empty_quote(Province::Saskatchewan).to_string()
+    );
+    assert!(!with.to_string().contains(&some_id().to_string()));
+}
