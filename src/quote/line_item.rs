@@ -2,8 +2,15 @@
 
 use super::LineKind;
 use crate::errors::QuoteError;
+use uuid::Uuid;
 
 pub struct LineItem {
+    /// The database's id. Empty until this line is loaded from the database:
+    /// a new one never makes its own id.
+    id: Option<Uuid>,
+    /// The id of the quote this line belongs to. Empty until the quote has an id.
+    /// Only the quote sets it (see `Quote`), so a line can never point at the wrong quote.
+    quote_id: Option<Uuid>,
     description: String,
     quantity: f64,
     unit_price_cents: i64,
@@ -33,11 +40,34 @@ impl LineItem {
         }
 
         Ok(LineItem {
+            id: None,
+            quote_id: None,
             description,
             quantity,
             unit_price_cents,
             kind,
         })
+    }
+
+    /// `None` means "not saved yet". The database gives the id; Quoto never makes one.
+    pub fn id(&self) -> Option<Uuid> {
+        self.id
+    }
+
+    /// Attaches the id the database gave. Used when loading from the database.
+    pub fn with_id(mut self, id: Uuid) -> Self {
+        self.id = Some(id);
+        self
+    }
+
+    /// The quote this line belongs to, once that quote has an id.
+    pub fn quote_id(&self) -> Option<Uuid> {
+        self.quote_id
+    }
+
+    /// Only a quote may say which quote a line belongs to.
+    pub(super) fn belong_to(&mut self, quote_id: Uuid) {
+        self.quote_id = Some(quote_id);
     }
 
     pub fn line_total(&self) -> i64 {
