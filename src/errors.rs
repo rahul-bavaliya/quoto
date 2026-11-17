@@ -64,6 +64,20 @@ pub enum QuoteError {
         quote_date: NaiveDate,
     },
 
+    #[error("This quote is already {status}.")]
+    AlreadyDecided { status: &'static str },
+
+    #[error(
+        "This quote was only valid until {valid_until}. Extend its expiry date before it can be accepted."
+    )]
+    QuoteExpired { valid_until: NaiveDate },
+
+    #[error("Only a rejected quote can be reopened.")]
+    NotRejected,
+
+    #[error("The rejection reason can be at most {max} characters.")]
+    RejectionReasonTooLong { max: usize },
+
     // ---- Equipment ----
     #[error("A serial number or a plate is required to identify the unit.")]
     MissingIdentification,
@@ -103,9 +117,11 @@ pub enum ErrorKind {
 impl QuoteError {
     pub fn kind(&self) -> ErrorKind {
         match self {
-            QuoteError::CreditTooLarge { .. } | QuoteError::QuoteNumbersExhausted { .. } => {
-                ErrorKind::BusinessRule
-            }
+            QuoteError::CreditTooLarge { .. }
+            | QuoteError::QuoteNumbersExhausted { .. }
+            | QuoteError::AlreadyDecided { .. }
+            | QuoteError::QuoteExpired { .. }
+            | QuoteError::NotRejected => ErrorKind::BusinessRule,
             QuoteError::LookupFailed { .. } | QuoteError::DatabaseUnavailable => {
                 ErrorKind::ServiceUnavailable
             }
@@ -132,6 +148,10 @@ impl QuoteError {
             QuoteError::QuoteNumbersExhausted { .. } => "QUOTE_NUMBERS_EXHAUSTED",
             QuoteError::ExpiryBeforeQuoteDate { .. } => "EXPIRY_BEFORE_QUOTE_DATE",
             QuoteError::PromiseBeforeQuoteDate { .. } => "PROMISE_BEFORE_QUOTE_DATE",
+            QuoteError::AlreadyDecided { .. } => "ALREADY_DECIDED",
+            QuoteError::QuoteExpired { .. } => "QUOTE_EXPIRED",
+            QuoteError::NotRejected => "NOT_REJECTED",
+            QuoteError::RejectionReasonTooLong { .. } => "REJECTION_REASON_TOO_LONG",
             QuoteError::MissingIdentification => "MISSING_IDENTIFICATION",
             QuoteError::InvalidMeterReading { .. } => "INVALID_METER_READING",
             QuoteError::LookupFailed { .. } => "LOOKUP_FAILED",

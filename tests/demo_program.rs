@@ -80,3 +80,16 @@ fn each_printed_quote_shows_its_expiry_and_promise_date() {
     assert_eq!(stdout.matches("Promise date: to be confirmed").count(), 1);
     assert_eq!(stdout.matches("Promise date: 20").count(), 1);
 }
+
+#[test]
+fn the_demo_shows_an_accepted_and_a_rejected_quote_and_never_logs_the_reason() {
+    let output = run_demo(Some("debug"));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(stdout.matches("Status: accepted").count(), 1);
+    assert!(stdout.contains("Status: rejected (Found a lower price elsewhere)"));
+    // The log says what happened, but the customer's own words stay out of it.
+    assert!(stderr.contains("status=\"accepted\""));
+    assert!(stderr.contains("status=\"rejected\""));
+    assert!(!stderr.contains("lower price"));
+}
