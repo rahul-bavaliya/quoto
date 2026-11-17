@@ -1,4 +1,4 @@
-// src/errors.rs: every way Quoto can refuse something
+// src/errors/mod.rs: every way Quoto can refuse something
 
 use crate::money::format_money;
 use thiserror::Error;

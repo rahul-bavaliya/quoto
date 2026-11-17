@@ -1,4 +1,4 @@
-// src/samples.rs: made-up sample data, in ONE place
+// src/samples/mod.rs: made-up sample data, in ONE place
 //
 // The demo program (`main.rs`), the unit tests and the scenario tests all
 // need the same pretend customers, machines and quote lines. They live here

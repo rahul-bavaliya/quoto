@@ -50,7 +50,7 @@ GitHub Actions runs the same checks automatically on every push and pull request
 src/
 ├── main.rs              demo program (short: it uses quoto::samples)
 ├── lib.rs               the library's front door
-├── errors.rs  logging.rs  money.rs  province.rs  samples.rs  tax.rs
+├── errors/  logging/  money/  province/  samples/  tax/     each is a folder with a mod.rs
 ├── customer/            mod.rs (Customer) + address, postal_code, contact, phone_number, email
 ├── equipment/           mod.rs (Equipment) + meter, meter_type, equipment_type, identification
 └── quote/               mod.rs (Quote) + line_item, line_kind, quote_number
