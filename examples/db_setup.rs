@@ -1,13 +1,14 @@
-// examples/db_migrate.rs: build or update the database tables
+// examples/db_setup.rs: build or update the database tables and add the starting rows
 //
 //     docker compose up -d        (start the database; see README)
-//     cargo run --example db_migrate
+//     cargo run --example db_setup
 //
-// Runs every file in `migrations/` that hasn't run yet (safe to run again).
-// It reads the settings from your environment, or from the `.env` file in this
-// folder. It needs a running database, so the tests and CI never run it.
+// Makes the tables match the Rust structs and adds any missing province (safe to run again;
+// a rate someone changed is never put back). It reads the settings from your environment,
+// or from the `.env` file in this folder. It needs a running database, so the tests and CI
+// never run it.
 
-use quoto::{DatabaseSettings, database, logging};
+use quoto::{DatabaseSettings, database, logging, seed_provinces};
 use std::process::ExitCode;
 
 #[tokio::main]
@@ -17,9 +18,10 @@ async fn main() -> ExitCode {
 
     let result = async {
         let settings = DatabaseSettings::from_env()?;
-        let pool = database::connect(&settings).await?;
-        database::migrate(&pool).await?;
-        pool.close().await;
+        let db = database::connect(&settings).await?;
+        database::sync(&db).await?;
+        seed_provinces(&db).await?;
+        let _ = db.close().await;
         Ok::<_, quoto::QuoteError>(settings.describe())
     }
     .await;

@@ -96,6 +96,21 @@ pub enum QuoteError {
     #[error("The rejection reason can be at most {max} characters.")]
     RejectionReasonTooLong { max: usize },
 
+    // ---- Provinces and taxes ----
+    #[error(
+        "A tax rate must be above 0% and at most 100% (1 to 100000 thousandths of a percent), not {value}."
+    )]
+    InvalidTaxRate { value: i32 },
+
+    #[error("A province needs a GST (with an optional PST) or an HST: never both, never neither.")]
+    InvalidTaxSystem,
+
+    #[error("There is no province with the code {code}.")]
+    UnknownProvince { code: String },
+
+    #[error("The new rates start on {date}, which is before the current rates ({current}).")]
+    RatesDateBeforeCurrent { date: NaiveDate, current: NaiveDate },
+
     // ---- Equipment ----
     #[error("A serial number or a plate is required to identify the unit.")]
     MissingIdentification,
@@ -111,7 +126,7 @@ pub enum QuoteError {
     DatabaseUnavailable,
 
     #[error("The database could not be set up. Ask whoever runs the server to check the logs.")]
-    MigrationFailed,
+    DatabaseSetupFailed,
 
     // ---- Settings (set by whoever runs the program, not typed by a customer) ----
     #[error("The setting {name} is missing. Copy .env.example to .env and fill it in.")]
@@ -150,7 +165,7 @@ impl QuoteError {
             | QuoteError::BranchInactive => ErrorKind::BusinessRule,
             QuoteError::LookupFailed { .. }
             | QuoteError::DatabaseUnavailable
-            | QuoteError::MigrationFailed => ErrorKind::ServiceUnavailable,
+            | QuoteError::DatabaseSetupFailed => ErrorKind::ServiceUnavailable,
             QuoteError::MissingSetting { .. } | QuoteError::InvalidSetting { .. } => {
                 ErrorKind::Configuration
             }
@@ -184,11 +199,15 @@ impl QuoteError {
             QuoteError::InvalidLocation => "INVALID_LOCATION",
             QuoteError::BranchInactive => "BRANCH_INACTIVE",
             QuoteError::RejectionReasonTooLong { .. } => "REJECTION_REASON_TOO_LONG",
+            QuoteError::InvalidTaxRate { .. } => "INVALID_TAX_RATE",
+            QuoteError::InvalidTaxSystem => "INVALID_TAX_SYSTEM",
+            QuoteError::UnknownProvince { .. } => "UNKNOWN_PROVINCE",
+            QuoteError::RatesDateBeforeCurrent { .. } => "RATES_DATE_BEFORE_CURRENT",
             QuoteError::MissingIdentification => "MISSING_IDENTIFICATION",
             QuoteError::InvalidMeterReading { .. } => "INVALID_METER_READING",
             QuoteError::LookupFailed { .. } => "LOOKUP_FAILED",
             QuoteError::DatabaseUnavailable => "DATABASE_UNAVAILABLE",
-            QuoteError::MigrationFailed => "MIGRATION_FAILED",
+            QuoteError::DatabaseSetupFailed => "DATABASE_SETUP_FAILED",
             QuoteError::MissingSetting { .. } => "MISSING_SETTING",
             QuoteError::InvalidSetting { .. } => "INVALID_SETTING",
         }

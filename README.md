@@ -57,15 +57,17 @@ cp .env.example .env            # .env is ignored by git
 # edit .env: put a real password in POSTGRES_PASSWORD (make one: openssl rand -base64 24)
 docker compose up -d            # start PostgreSQL (waits until it is healthy)
 cargo run --example db_check    # "Connected to the database at localhost:5432/quoto_dev."
-cargo run --example db_migrate  # build / update the tables (safe to run again)
+cargo run --example db_setup    # build / update the tables and add the 13 provinces (safe to run again)
 cargo test -- --ignored         # also run the tests that need the database
 docker compose down             # stop it; the data stays in a Docker volume
 ```
 
 - The database is reachable **only from your own computer** (`127.0.0.1`), and the compose file refuses to start without a password.
 - Quoto reads `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` (required) and `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_SSLMODE` (optional) from the environment. The names are the same ones the Postgres image uses, so compose and Quoto share one `.env`.
-- **Migrations:** the tables are made by the numbered files in `migrations/`. They only ever go forward, and a file that has been run is **never edited**: a fix is a new file. `build.rs` makes Cargo rebuild when a migration file is added.
-- **Provinces:** one table, `provinces`, holds each province's GST, PST or HST (rates in thousandths of a percent: 5% = `5000`, 9.975% = `9975`). The database itself refuses a province with both GST and HST, with no tax, or with a rate of 0. Provinces are never deleted. When the government changes a rate it is one `UPDATE` (provinces change rates rarely, so there is no history table; migration `0004` removed the one `0003` made). Old quotes stay correct because a quote keeps a copy of the rates it used.
+- **No SQL files:** the tables are built from Rust structs (SeaORM, "entity first"): `database::sync` creates a missing table and adds a missing column when the program starts. It **never drops** anything (a field removed from a struct leaves its column behind) and writes no migration file, so it is for learning and development. **Before real customer data it must be replaced by reviewable migrations.**
+- **The rules live in Rust, not in the database:** `TaxRate` (above 0% and at most 100%) and `TaxRates` (a GST with an optional PST, **or** an HST alone; never both, never neither) refuse a wrong combination, when it is built and when a row is read. The table itself has no such rules, so only Quoto should write to it. There is no delete function: a province is never deleted.
+- **Provinces:** one table, `provinces`, holds each province's GST, PST or HST (rates in thousandths of a percent: 5% = `5000`, 9.975% = `9975`). `seed_provinces` adds the 13 starting rows (CRA table, checked 2026-11-17) and never puts back a rate that someone changed. When the government changes a rate, `change_rates(...)` is one update (a note is required and the new date can't be before the current one); there is no history table, because rates change rarely and a quote keeps a copy of the rates it used.
+- **If your dev database was built by the old `.sql` files**, reset it once: `docker compose down -v && docker compose up -d && cargo run --example db_setup` (this deletes the dev data).
 - The database tests change data only inside a transaction that is rolled back.
 - The password lives in a `Secret`, which prints as `[hidden]`; the connection is the only place that opens it.
 
@@ -103,9 +105,9 @@ src/
 ├── branch.rs            Branch + branch/ (branch_status, location) (a dealership location; its province decides the taxes)
 ├── country.rs           Country (follows from the province)
 ├── errors.rs  logging.rs  money.rs  samples.rs  secret.rs
-├── province.rs          Province + province/ (tax: the tax sum); the rates per province live in the database
+├── province.rs          Province + province/ (tax, tax_rate, tax_rates, entity, seed, store); the rates live in the database
 ├── customer.rs          Customer + customer/ (address, postal_code, contact, phone_number, email)
-├── database.rs          connect + database/ (settings: DatabaseSettings, read from the environment)
+├── database.rs          connect + sync + database/ (settings: DatabaseSettings, read from the environment)
 ├── equipment.rs         Equipment + equipment/ (meter, meter_type, equipment_type, identification,
 │                        equipment_draft, equipment_source)
 ├── equipment_lookup.rs  EquipmentLookup + equipment_lookup/ (in_memory, chain, nhtsa)
@@ -113,8 +115,7 @@ src/
 examples/
 ├── nhtsa_lookup.rs      try the lookups by hand (needs the internet)
 ├── db_check.rs          check the database connection (needs docker compose up)
-└── db_migrate.rs        build / update the database tables (needs docker compose up)
-migrations/              the database tables, as numbered SQL files (never edited once run)
+└── db_setup.rs          build / update the database tables and add the provinces (needs docker compose up)
 tests/                   one file per feature, plus quote_scenarios.rs and demo_program.rs
 docker-compose.yml       PostgreSQL for development
 .env.example             the settings Quoto needs (copy to .env)
@@ -125,7 +126,7 @@ One type per file. Each feature is a file named after it (`customer.rs` holds `C
 1. ✅ Toy calculator
 2. ✅ Real shapes: structs, enums, `Vec`, `Option`
 3. ✅ Safe money and errors: cents, `Result`, custom errors, tests
-4. 🚧 Save quotes in a database (PostgreSQL set-up ✅; provinces + tax rates table ✅; saving quotes ⬜)
+4. 🚧 Save quotes in a database (PostgreSQL set-up ✅; provinces + tax rates table, built from a Rust struct ✅; saving quotes ⬜)
 5. ⬜ A web API
 6. ⬜ Quote → Repair Order
 7. ⬜ Screens for service writers
