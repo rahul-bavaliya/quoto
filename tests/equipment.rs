@@ -278,3 +278,27 @@ fn equipment_with_the_same_details_is_the_same_only_if_the_id_matches() {
     assert_ne!(a, corolla().with_id(uuid::Uuid::from_u128(0x4444)));
     assert_ne!(a, corolla());
 }
+
+// ===== owner (the customer's id, given when the machine is loaded from the database) =====
+
+#[test]
+fn a_new_machine_has_no_owner_id() {
+    assert_eq!(corolla().customer_id(), None);
+}
+
+#[test]
+fn a_machine_loaded_from_the_database_knows_its_owner() {
+    let owner = uuid::Uuid::from_u128(0xAAA);
+    let machine = corolla().with_customer_id(owner);
+    assert_eq!(machine.customer_id(), Some(owner));
+    assert_eq!(machine.id(), None); // the owner is not the machine's own id
+}
+
+#[test]
+fn the_owner_id_is_never_printed() {
+    let owner = uuid::Uuid::from_u128(0xAAA);
+    assert_eq!(
+        corolla().with_customer_id(owner).to_string(),
+        corolla().to_string()
+    );
+}

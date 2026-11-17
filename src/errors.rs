@@ -75,6 +75,18 @@ pub enum QuoteError {
     #[error("Only a rejected quote can be reopened.")]
     NotRejected,
 
+    #[error("This quote already has a {what}.")]
+    AlreadyAttached { what: &'static str },
+
+    #[error("Add the customer before the equipment: a machine always belongs to a customer.")]
+    EquipmentNeedsCustomer,
+
+    #[error("This equipment belongs to a different customer.")]
+    EquipmentNotOwnedByCustomer,
+
+    #[error("A quote needs a {missing} before it can be accepted.")]
+    QuoteIncomplete { missing: &'static str },
+
     #[error("The rejection reason can be at most {max} characters.")]
     RejectionReasonTooLong { max: usize },
 
@@ -121,7 +133,11 @@ impl QuoteError {
             | QuoteError::QuoteNumbersExhausted { .. }
             | QuoteError::AlreadyDecided { .. }
             | QuoteError::QuoteExpired { .. }
-            | QuoteError::NotRejected => ErrorKind::BusinessRule,
+            | QuoteError::NotRejected
+            | QuoteError::AlreadyAttached { .. }
+            | QuoteError::EquipmentNeedsCustomer
+            | QuoteError::EquipmentNotOwnedByCustomer
+            | QuoteError::QuoteIncomplete { .. } => ErrorKind::BusinessRule,
             QuoteError::LookupFailed { .. } | QuoteError::DatabaseUnavailable => {
                 ErrorKind::ServiceUnavailable
             }
@@ -151,6 +167,10 @@ impl QuoteError {
             QuoteError::AlreadyDecided { .. } => "ALREADY_DECIDED",
             QuoteError::QuoteExpired { .. } => "QUOTE_EXPIRED",
             QuoteError::NotRejected => "NOT_REJECTED",
+            QuoteError::AlreadyAttached { .. } => "ALREADY_ATTACHED",
+            QuoteError::EquipmentNeedsCustomer => "EQUIPMENT_NEEDS_CUSTOMER",
+            QuoteError::EquipmentNotOwnedByCustomer => "EQUIPMENT_NOT_OWNED_BY_CUSTOMER",
+            QuoteError::QuoteIncomplete { .. } => "QUOTE_INCOMPLETE",
             QuoteError::RejectionReasonTooLong { .. } => "REJECTION_REASON_TOO_LONG",
             QuoteError::MissingIdentification => "MISSING_IDENTIFICATION",
             QuoteError::InvalidMeterReading { .. } => "INVALID_METER_READING",

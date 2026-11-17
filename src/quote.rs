@@ -1,5 +1,6 @@
 // src/quote.rs
 
+use crate::branch::Branch;
 use crate::customer::Customer;
 use crate::equipment::Equipment;
 use crate::errors::{QuoteError, QuoteResult};
@@ -37,24 +38,25 @@ pub struct Quote {
     /// The day the machine will be ready. Often unknown when quoting (parts on order), so it can be empty.
     promise_date: Option<NaiveDate>,
     status: QuoteStatus,
-    customer: Customer,
-    equipment: Equipment,
+    /// The location that operates this quote. Always known; its province decides the taxes.
+    branch: Branch,
+    /// Empty on a quick quote (a walk-in or a phone call). Needed before the quote can be accepted.
+    customer: Option<Customer>,
+    /// Empty until the writer adds the machine. A machine always belongs to the quote's customer.
+    equipment: Option<Equipment>,
     items: Vec<LineItem>,
 }
 
 impl Quote {
     /// The number and the date and time are handed in, never made here: a quote doesn't
     /// look at the clock or keep a counter (that keeps it easy to test).
-    pub fn new(
-        number: QuoteNumber,
-        created_at: NaiveDateTime,
-        customer: Customer,
-        equipment: Equipment,
-    ) -> Self {
+    /// A new quote starts with just its branch (a quick quote). The customer and the
+    /// machine are added with `attach_customer` and `attach_equipment`.
+    pub fn new(number: QuoteNumber, created_at: NaiveDateTime, branch: Branch) -> Self {
         // Logs never include names, phones or emails: only what we need to debug.
         debug!(
             quote_number = %number,
-            province = customer.province().label(),
+            province = branch.province().label(),
             "quote created"
         );
         // A date so far in the future that it overflows can't happen in real life;
@@ -70,8 +72,9 @@ impl Quote {
             expires_on,
             promise_date: None,
             status: QuoteStatus::Pending,
-            customer,
-            equipment,
+            branch,
+            customer: None,
+            equipment: None,
             items: Vec::new(),
         }
     }
@@ -170,9 +173,20 @@ impl Quote {
     }
 
     /// The customer accepts. Refused if the quote has already been decided,
+    /// if it has no customer or machine yet (a repair order needs both),
     /// or if its prices have expired (extend the expiry date first).
     pub fn accept(&mut self, today: NaiveDate) -> QuoteResult<()> {
         self.ensure_pending()?;
+        if self.customer.is_none() {
+            return Err(QuoteError::QuoteIncomplete {
+                missing: "customer",
+            });
+        }
+        if self.equipment.is_none() {
+            return Err(QuoteError::QuoteIncomplete {
+                missing: "equipment",
+            });
+        }
         if self.is_expired(today) {
             return Err(QuoteError::QuoteExpired {
                 valid_until: self.expires_on,
@@ -213,17 +227,53 @@ impl Quote {
         }
     }
 
-    pub fn customer(&self) -> &Customer {
-        &self.customer
+    pub fn branch(&self) -> &Branch {
+        &self.branch
     }
 
-    pub fn equipment(&self) -> &Equipment {
-        &self.equipment
+    pub fn customer(&self) -> Option<&Customer> {
+        self.customer.as_ref()
     }
 
-    /// The customer's province decides the taxes (one source of truth).
-    fn province(&self) -> &Province {
-        self.customer.province()
+    pub fn equipment(&self) -> Option<&Equipment> {
+        self.equipment.as_ref()
+    }
+
+    /// Adds the customer to a pending quote. A quote has one customer: adding a second is refused.
+    pub fn attach_customer(&mut self, customer: Customer) -> QuoteResult<()> {
+        self.ensure_pending()?;
+        if self.customer.is_some() {
+            return Err(QuoteError::AlreadyAttached { what: "customer" });
+        }
+        self.customer = Some(customer);
+        debug!(quote_number = %self.number, "customer added");
+        Ok(())
+    }
+
+    /// Adds the machine to a pending quote. The customer comes first, and the machine
+    /// must be theirs: when both are known to the database and the owner is someone
+    /// else, it is refused. (A machine not saved yet has no owner to compare.)
+    pub fn attach_equipment(&mut self, equipment: Equipment) -> QuoteResult<()> {
+        self.ensure_pending()?;
+        if self.equipment.is_some() {
+            return Err(QuoteError::AlreadyAttached { what: "equipment" });
+        }
+        let Some(customer) = &self.customer else {
+            return Err(QuoteError::EquipmentNeedsCustomer);
+        };
+        if let (Some(owner), Some(customer_id)) = (equipment.customer_id(), customer.id())
+            && owner != customer_id
+        {
+            return Err(QuoteError::EquipmentNotOwnedByCustomer);
+        }
+        self.equipment = Some(equipment);
+        debug!(quote_number = %self.number, "equipment added");
+        Ok(())
+    }
+
+    /// The branch's province decides the taxes (one source of truth).
+    pub fn province(&self) -> &Province {
+        self.branch.province()
     }
 
     /// Adds up every line of one kind (e.g. all the parts).
@@ -284,6 +334,7 @@ impl fmt::Display for Quote {
             self.number,
             self.province().label()
         )?;
+        writeln!(f, "Branch: {}", self.branch.name())?;
         writeln!(f, "Date: {}", self.created_at.format("%Y-%m-%d %H:%M:%S"))?;
         writeln!(f, "Valid until: {}", self.expires_on)?;
         match self.promise_date {
@@ -291,10 +342,18 @@ impl fmt::Display for Quote {
             None => writeln!(f, "Promise date: to be confirmed")?,
         }
         writeln!(f, "Status: {}", self.status)?;
-        writeln!(f, "Customer: {}", self.customer)?;
-        writeln!(f, "Contact: {}", self.customer.contact())?;
+        match &self.customer {
+            Some(customer) => {
+                writeln!(f, "Customer: {customer}")?;
+                writeln!(f, "Contact: {}", customer.contact())?;
+            }
+            None => writeln!(f, "Customer: to be added")?,
+        }
         writeln!(f, "{}", "-".repeat(20))?;
-        writeln!(f, "Equipment: {}", self.equipment)?;
+        match &self.equipment {
+            Some(equipment) => writeln!(f, "Equipment: {equipment}")?,
+            None => writeln!(f, "Equipment: to be added")?,
+        }
 
         for item in &self.items {
             writeln!(

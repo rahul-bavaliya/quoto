@@ -1,6 +1,6 @@
 // src/province.rs
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Province {
     Saskatchewan,
     Alberta,

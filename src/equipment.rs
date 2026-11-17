@@ -23,6 +23,9 @@ pub struct Equipment {
     /// The database's id. Empty until this unit is loaded from the database:
     /// a new one never makes its own id.
     id: Option<Uuid>,
+    /// The customer who owns this machine (the database's id for that customer).
+    /// Empty until the machine is loaded from the database.
+    customer_id: Option<Uuid>,
     make: String,
     model: String,
     model_year: Option<i64>,
@@ -50,6 +53,7 @@ impl Equipment {
         }
         Ok(Equipment {
             id: None,
+            customer_id: None,
             make,
             model,
             model_year,
@@ -86,6 +90,17 @@ impl Equipment {
     /// Attaches the id the database gave. Used when loading from the database.
     pub fn with_id(mut self, id: Uuid) -> Self {
         self.id = Some(id);
+        self
+    }
+
+    /// The owner, once known. A quote uses it to refuse a machine that belongs to someone else.
+    pub fn customer_id(&self) -> Option<Uuid> {
+        self.customer_id
+    }
+
+    /// Says which customer owns this machine. Used when loading from the database.
+    pub fn with_customer_id(mut self, customer_id: Uuid) -> Self {
+        self.customer_id = Some(customer_id);
         self
     }
 

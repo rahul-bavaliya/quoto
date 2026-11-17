@@ -104,6 +104,20 @@ fn a_typo_is_invalid_input() {
 }
 
 #[test]
+fn the_quote_party_errors_are_business_rules() {
+    for error in [
+        QuoteError::AlreadyAttached { what: "customer" },
+        QuoteError::EquipmentNeedsCustomer,
+        QuoteError::EquipmentNotOwnedByCustomer,
+        QuoteError::QuoteIncomplete {
+            missing: "customer",
+        },
+    ] {
+        assert_eq!(error.kind(), ErrorKind::BusinessRule);
+    }
+}
+
+#[test]
 fn every_error_has_its_own_code() {
     let day = chrono::NaiveDate::from_ymd_opt(2026, 11, 16).unwrap();
     let codes = [
@@ -158,6 +172,10 @@ fn every_error_has_its_own_code() {
         QuoteError::QuoteExpired { valid_until: day }.code(),
         QuoteError::NotRejected.code(),
         QuoteError::RejectionReasonTooLong { max: 1 }.code(),
+        QuoteError::AlreadyAttached { what: "x" }.code(),
+        QuoteError::EquipmentNeedsCustomer.code(),
+        QuoteError::EquipmentNotOwnedByCustomer.code(),
+        QuoteError::QuoteIncomplete { missing: "x" }.code(),
     ];
     let mut unique = codes.to_vec();
     unique.sort();
