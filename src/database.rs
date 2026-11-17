@@ -40,3 +40,18 @@ pub async fn connect(settings: &DatabaseSettings) -> QuoteResult<PgPool> {
             QuoteError::DatabaseUnavailable
         })
 }
+
+/// Builds or updates the tables: runs every file in `migrations/` that hasn't run yet,
+/// in order. The files are packed into the program when it is built, so a running
+/// server can't be tricked into running a different file. Running it twice is safe
+/// (a migration that already ran is skipped). It needs a database user that is allowed
+/// to create tables; later the running program gets a user with fewer rights.
+pub async fn migrate(pool: &PgPool) -> QuoteResult<()> {
+    sqlx::migrate!("./migrations")
+        .run(pool)
+        .await
+        .map_err(|cause| {
+            debug!(%cause, "database migration failed");
+            QuoteError::MigrationFailed
+        })
+}

@@ -119,6 +119,16 @@ fn the_quote_party_errors_are_business_rules() {
 }
 
 #[test]
+fn a_failed_database_set_up_is_a_service_problem() {
+    assert_eq!(
+        QuoteError::MigrationFailed.kind(),
+        ErrorKind::ServiceUnavailable
+    );
+    // The message is safe to show: it names no table, address or password.
+    assert!(!QuoteError::MigrationFailed.to_string().contains("postgres"));
+}
+
+#[test]
 fn a_location_off_the_map_is_wrong_input() {
     assert_eq!(QuoteError::InvalidLocation.kind(), ErrorKind::InvalidInput);
 }
@@ -184,6 +194,7 @@ fn every_error_has_its_own_code() {
         QuoteError::QuoteIncomplete { missing: "x" }.code(),
         QuoteError::InvalidLocation.code(),
         QuoteError::BranchInactive.code(),
+        QuoteError::MigrationFailed.code(),
     ];
     let mut unique = codes.to_vec();
     unique.sort();

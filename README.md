@@ -50,18 +50,23 @@ Type a serial number and a **lookup** fills in the make, model, year and kind of
 - Tests never touch the internet. To try the real service by hand: `cargo run --example nhtsa_lookup -- 1HGCM82633A004352`
 
 ## The database (PostgreSQL in Docker)
-Quoto will keep quotes, customers and equipment in PostgreSQL (Phase 4). Today there is only the connection set-up; the demo program doesn't use the database yet.
+Quoto will keep quotes, customers and equipment in PostgreSQL (Phase 4). The database has its first tables (the provinces and their tax rates); the demo program doesn't use the database yet.
 
 ```bash
 cp .env.example .env            # .env is ignored by git
 # edit .env: put a real password in POSTGRES_PASSWORD (make one: openssl rand -base64 24)
 docker compose up -d            # start PostgreSQL (waits until it is healthy)
 cargo run --example db_check    # "Connected to the database at localhost:5432/quoto_dev."
+cargo run --example db_migrate  # build / update the tables (safe to run again)
+cargo test -- --ignored         # also run the tests that need the database
 docker compose down             # stop it; the data stays in a Docker volume
 ```
 
 - The database is reachable **only from your own computer** (`127.0.0.1`), and the compose file refuses to start without a password.
 - Quoto reads `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` (required) and `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_SSLMODE` (optional) from the environment. The names are the same ones the Postgres image uses, so compose and Quoto share one `.env`.
+- **Migrations:** the tables are made by the numbered files in `migrations/`. They only ever go forward, and a file that has been run is **never edited**: a fix is a new file.
+- **Provinces:** one table, `provinces`, holds each province's GST, PST or HST (rates in thousandths of a percent: 5% = `5000`, 9.975% = `9975`). The database itself refuses a province with both GST and HST, with no tax, or with a rate of 0. Provinces are never deleted. When the government changes a rate it is one `UPDATE`; a trigger copies the old rates into `province_rate_history`, a log that can't be edited. Old quotes stay correct because a quote keeps a copy of the rates it used.
+- The database tests change data only inside a transaction that is rolled back.
 - The password lives in a `Secret`, which prints as `[hidden]`; the connection is the only place that opens it.
 
 ## Keeping secrets secret
@@ -106,7 +111,9 @@ src/
 └── quote.rs             Quote + quote/ (line_item, line_kind, quote_number, quote_status, number_machine)
 examples/
 ├── nhtsa_lookup.rs      try the lookups by hand (needs the internet)
-└── db_check.rs          check the database connection (needs docker compose up)
+├── db_check.rs          check the database connection (needs docker compose up)
+└── db_migrate.rs        build / update the database tables (needs docker compose up)
+migrations/              the database tables, as numbered SQL files (never edited once run)
 tests/                   one file per feature, plus quote_scenarios.rs and demo_program.rs
 docker-compose.yml       PostgreSQL for development
 .env.example             the settings Quoto needs (copy to .env)
@@ -117,7 +124,7 @@ One type per file. Each feature is a file named after it (`customer.rs` holds `C
 1. ✅ Toy calculator
 2. ✅ Real shapes: structs, enums, `Vec`, `Option`
 3. ✅ Safe money and errors: cents, `Result`, custom errors, tests
-4. 🚧 Save quotes in a database (PostgreSQL set-up ✅; saving quotes, tax rates as data with effective dates ⬜)
+4. 🚧 Save quotes in a database (PostgreSQL set-up ✅; provinces + tax rates table with history ✅; saving quotes ⬜)
 5. ⬜ A web API
 6. ⬜ Quote → Repair Order
 7. ⬜ Screens for service writers
