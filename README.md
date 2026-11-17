@@ -51,16 +51,13 @@ src/
 ├── main.rs              demo program (short: it uses quoto::samples)
 ├── lib.rs               the library's front door
 ├── errors.rs  logging.rs  money.rs  province.rs  samples.rs  tax.rs
-├── customer.rs          Customer, plus the pieces it is built from
-├── customer/            address, postal_code, contact, phone_number, email
-├── equipment.rs         Equipment, plus its pieces
-├── equipment/           meter, meter_type, equipment_type, identification
-├── quote.rs             Quote, plus its pieces
-└── quote/               line_item, line_kind
+├── customer/            mod.rs (Customer) + address, postal_code, contact, phone_number, email
+├── equipment/           mod.rs (Equipment) + meter, meter_type, equipment_type, identification
+└── quote/               mod.rs (Quote) + line_item, line_kind, quote_number
 tests/
 └── quote_scenarios.rs   whole-quote scenarios through the public API
 ```
-One type per file, grouped into feature folders (no `mod.rs`). All tests live in `tests/` (one file per feature) and only use the public API.
+One type per file, grouped into feature folders (each folder's `mod.rs` holds the main type and lists its pieces). All tests live in `tests/` (one file per feature) and only use the public API.
 
 ## Roadmap
 1. ✅ Toy calculator
