@@ -230,7 +230,7 @@ fn next_after_the_last_number_is_refused_not_wrapped() {
 
 #[test]
 fn the_first_press_gives_number_one_of_the_year() {
-    let mut machine = InMemoryQuoteNumbers::new(2026);
+    let mut machine = InMemoryQuoteNumbers::for_year(2026);
     assert_eq!(
         machine.next_number().unwrap().to_string(),
         "Q-2026-00000001"
@@ -239,7 +239,7 @@ fn the_first_press_gives_number_one_of_the_year() {
 
 #[test]
 fn each_press_gives_the_next_number() {
-    let mut machine = InMemoryQuoteNumbers::new(2026);
+    let mut machine = InMemoryQuoteNumbers::for_year(2026);
     let first = machine.next_number().unwrap();
     let second = machine.next_number().unwrap();
     let third = machine.next_number().unwrap();
@@ -250,8 +250,8 @@ fn each_press_gives_the_next_number() {
 
 #[test]
 fn two_machines_do_not_share_a_count() {
-    let mut one = InMemoryQuoteNumbers::new(2026);
-    let mut other = InMemoryQuoteNumbers::new(2027);
+    let mut one = InMemoryQuoteNumbers::for_year(2026);
+    let mut other = InMemoryQuoteNumbers::for_year(2027);
     one.next_number().unwrap();
     one.next_number().unwrap();
     assert_eq!(other.next_number().unwrap().to_string(), "Q-2027-00000001");
@@ -259,7 +259,7 @@ fn two_machines_do_not_share_a_count() {
 
 #[test]
 fn a_machine_with_a_bad_year_refuses_to_start() {
-    let mut machine = InMemoryQuoteNumbers::new(26);
+    let mut machine = InMemoryQuoteNumbers::for_year(26);
     assert!(matches!(
         machine.next_number(),
         Err(QuoteError::InvalidQuoteNumber { .. })
@@ -270,4 +270,16 @@ fn a_machine_with_a_bad_year_refuses_to_start() {
 fn the_sample_machine_starts_at_the_sample_number() {
     let mut machine = samples::quote_numbers();
     assert_eq!(machine.next_number().unwrap(), samples::quote_number());
+}
+
+#[test]
+fn a_new_machine_uses_the_current_year() {
+    let number = InMemoryQuoteNumbers::new()
+        .next_number()
+        .unwrap()
+        .to_string();
+    // "Q-2026-00000001": the 4 characters after "Q-" are the year.
+    let year: u16 = number[2..6].parse().unwrap();
+    assert!(year >= 2026);
+    assert!(number.ends_with("-00000001"));
 }

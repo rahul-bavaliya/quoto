@@ -1,6 +1,6 @@
 // src/main.rs: a small demo program that uses the Quoto library
 
-use quoto::{Quote, QuoteNumbers, QuoteResult, logging, samples};
+use quoto::{InMemoryQuoteNumbers, Quote, QuoteNumbers, QuoteResult, logging, samples};
 use std::process::ExitCode;
 use tracing::info;
 
@@ -21,8 +21,9 @@ fn show(quote: &Quote) {
 /// The real work. Any `QuoteError` stops it and is handed back to `main`.
 fn run() -> QuoteResult<()> {
     info!("building the demo quotes");
-    // The machine hands out numbers one after the other: Q-2026-00000001, Q-2026-00000002
-    let mut numbers = samples::quote_numbers();
+    // The machine hands out numbers one after the other, for the current year:
+    // Q-<year>-00000001, Q-<year>-00000002
+    let mut numbers = InMemoryQuoteNumbers::new();
     show(&samples::demo_quote(
         numbers.next_number()?,
         samples::prairie_farms()?,

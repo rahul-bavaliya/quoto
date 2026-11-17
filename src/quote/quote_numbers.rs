@@ -2,6 +2,7 @@
 
 use super::QuoteNumber;
 use crate::errors::QuoteResult;
+use chrono::{Datelike, Local};
 
 /// Anything that can hand out the next quote number.
 /// Today a machine in memory does the job; in Phase 4 a database will,
@@ -21,9 +22,24 @@ pub struct InMemoryQuoteNumbers {
 }
 
 impl InMemoryQuoteNumbers {
-    /// The year is handed in: the machine never looks at the clock.
-    pub fn new(year: u16) -> Self {
+    /// A new machine for the current year, read from the clock.
+    pub fn new() -> Self {
+        // A year that doesn't fit in a `u16` becomes 0, which `QuoteNumber`
+        // refuses with a clear error on the first press.
+        let year = u16::try_from(Local::now().year()).unwrap_or(0);
+        InMemoryQuoteNumbers::for_year(year)
+    }
+
+    /// A new machine for a chosen year. Tests use this so they never
+    /// depend on today's date.
+    pub fn for_year(year: u16) -> Self {
         InMemoryQuoteNumbers { year, last: None }
+    }
+}
+
+impl Default for InMemoryQuoteNumbers {
+    fn default() -> Self {
+        InMemoryQuoteNumbers::new()
     }
 }
 

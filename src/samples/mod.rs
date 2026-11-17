@@ -158,7 +158,7 @@ pub fn quote_number() -> QuoteNumber {
 
 /// A fresh ticket machine for the sample year: its first number is Q-2026-00000001.
 pub fn quote_numbers() -> InMemoryQuoteNumbers {
-    InMemoryQuoteNumbers::new(2026)
+    InMemoryQuoteNumbers::for_year(2026)
 }
 
 /// A quote for the plain customer in `province`, with the standard oil change.
