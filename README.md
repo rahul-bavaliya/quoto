@@ -10,6 +10,7 @@ It's also a learning project: every feature is built one small step at a time, w
 - **Safe money:** every amount is stored as whole **cents** (`i64`), so there are no floating-point crumbs
 - **Credits come off before tax**, and a credit can never push a quote below $0
 - **Dates:** every quote shows its **expiry date** (quote date + 30 days; can be changed, never before the quote date) and a **promise date** (when the machine will be ready; optional, shows "to be confirmed" until it is set)
+- **Status:** a quote is **pending**, **accepted**, or **rejected** (a rejection must say why, up to 500 characters). Only a pending quote can change or be decided; an accepted quote is final; a rejected one can be reopened. Whether a quote is **expired** is worked out from today's date (`quote.is_expired(today)`), and an expired quote can't be accepted until its expiry date is extended
 - **Validation:** bad lines (zero quantity, negative price) are refused with a clear `QuoteError`
 
 ```
@@ -17,6 +18,7 @@ It's also a learning project: every feature is built one small step at a time, w
 Date: 2026-11-17 10:58:47
 Valid until: 2026-12-17
 Promise date: 2026-11-20
+Status: accepted
 [PART] Oil Filter: 1 x $25.00 = $25.00
 [LABOUR] Oil Change Labour: 0.5 x $160.00 = $80.00
 ...
@@ -97,7 +99,7 @@ src/
 ├── equipment.rs         Equipment + equipment/ (meter, meter_type, equipment_type, identification,
 │                        equipment_draft, equipment_source)
 ├── equipment_lookup.rs  EquipmentLookup + equipment_lookup/ (in_memory, chain, nhtsa)
-└── quote.rs             Quote + quote/ (line_item, line_kind, quote_number, number_machine)
+└── quote.rs             Quote + quote/ (line_item, line_kind, quote_number, quote_status, number_machine)
 examples/
 ├── nhtsa_lookup.rs      try the lookups by hand (needs the internet)
 └── db_check.rs          check the database connection (needs docker compose up)

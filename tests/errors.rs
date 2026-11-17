@@ -154,6 +154,10 @@ fn every_error_has_its_own_code() {
             quote_date: day,
         }
         .code(),
+        QuoteError::AlreadyDecided { status: "x" }.code(),
+        QuoteError::QuoteExpired { valid_until: day }.code(),
+        QuoteError::NotRejected.code(),
+        QuoteError::RejectionReasonTooLong { max: 1 }.code(),
     ];
     let mut unique = codes.to_vec();
     unique.sort();
@@ -247,4 +251,44 @@ fn a_date_before_the_quote_date_is_wrong_input() {
     assert_eq!(promise.kind(), ErrorKind::InvalidInput);
     assert_eq!(promise.code(), "PROMISE_BEFORE_QUOTE_DATE");
     assert_eq!(promise.exit_code(), 2);
+}
+
+#[test]
+fn deciding_a_quote_wrongly_is_a_business_rule_problem() {
+    let day = chrono::NaiveDate::from_ymd_opt(2026, 12, 16).unwrap();
+
+    let decided = QuoteError::AlreadyDecided { status: "accepted" };
+    assert_eq!(decided.to_string(), "This quote is already accepted.");
+    assert_eq!(decided.kind(), ErrorKind::BusinessRule);
+    assert_eq!(decided.code(), "ALREADY_DECIDED");
+    assert_eq!(decided.exit_code(), 3);
+
+    let expired = QuoteError::QuoteExpired { valid_until: day };
+    assert_eq!(
+        expired.to_string(),
+        "This quote was only valid until 2026-12-16. Extend its expiry date before it can be accepted."
+    );
+    assert_eq!(expired.kind(), ErrorKind::BusinessRule);
+    assert_eq!(expired.code(), "QUOTE_EXPIRED");
+    assert_eq!(expired.exit_code(), 3);
+
+    let not_rejected = QuoteError::NotRejected;
+    assert_eq!(
+        not_rejected.to_string(),
+        "Only a rejected quote can be reopened."
+    );
+    assert_eq!(not_rejected.kind(), ErrorKind::BusinessRule);
+    assert_eq!(not_rejected.code(), "NOT_REJECTED");
+}
+
+#[test]
+fn a_reason_that_is_too_long_is_wrong_input() {
+    let error = QuoteError::RejectionReasonTooLong { max: 500 };
+    assert_eq!(
+        error.to_string(),
+        "The rejection reason can be at most 500 characters."
+    );
+    assert_eq!(error.kind(), ErrorKind::InvalidInput);
+    assert_eq!(error.code(), "REJECTION_REASON_TOO_LONG");
+    assert_eq!(error.exit_code(), 2);
 }

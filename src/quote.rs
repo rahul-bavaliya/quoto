@@ -14,11 +14,13 @@ mod line_item;
 mod line_kind;
 mod number_machine;
 mod quote_number;
+mod quote_status;
 
 pub use line_item::LineItem;
 pub use line_kind::LineKind;
 pub use number_machine::{InMemoryQuoteNumbers, QuoteNumbers};
 pub use quote_number::QuoteNumber;
+pub use quote_status::QuoteStatus;
 
 /// The prices on a quote are good for this many days after the quote date.
 const VALID_FOR_DAYS: u64 = 30;
@@ -30,6 +32,7 @@ pub struct Quote {
     expires_on: NaiveDate,
     /// The day the machine will be ready. Often unknown when quoting (parts on order), so it can be empty.
     promise_date: Option<NaiveDate>,
+    status: QuoteStatus,
     customer: Customer,
     equipment: Equipment,
     items: Vec<LineItem>,
@@ -61,6 +64,7 @@ impl Quote {
             created_at,
             expires_on,
             promise_date: None,
+            status: QuoteStatus::Pending,
             customer,
             equipment,
             items: Vec::new(),
@@ -69,7 +73,10 @@ impl Quote {
 
     /// Adds a line to the quote. A credit is refused if it would push
     /// the subtotal below zero (the dealer would owe the customer).
+    /// Only a pending quote can change: once the customer has decided, the
+    /// price they decided on must not move (a rejected quote can be reopened).
     pub fn add_item(&mut self, item: LineItem) -> Result<(), QuoteError> {
+        self.ensure_pending()?;
         let subtotal_after = self.subtotal() + item.line_total();
         if matches!(item.kind(), LineKind::Credit) && subtotal_after < 0 {
             return Err(QuoteError::CreditTooLarge {
@@ -119,6 +126,62 @@ impl Quote {
         }
         self.promise_date = Some(date);
         Ok(())
+    }
+
+    pub fn status(&self) -> &QuoteStatus {
+        &self.status
+    }
+
+    /// Is the quote past its expiry date? Today's date is handed in (a quote never
+    /// looks at the clock), so a quote loaded from the database later is judged by
+    /// the day it is asked on. The expiry date itself is still valid.
+    /// Only a pending quote can expire: an accepted quote keeps its price.
+    pub fn is_expired(&self, today: NaiveDate) -> bool {
+        matches!(self.status, QuoteStatus::Pending) && today > self.expires_on
+    }
+
+    /// The customer accepts. Refused if the quote has already been decided,
+    /// or if its prices have expired (extend the expiry date first).
+    pub fn accept(&mut self, today: NaiveDate) -> QuoteResult<()> {
+        self.ensure_pending()?;
+        if self.is_expired(today) {
+            return Err(QuoteError::QuoteExpired {
+                valid_until: self.expires_on,
+            });
+        }
+        self.status = QuoteStatus::Accepted;
+        debug!(quote_number = %self.number, "quote accepted");
+        Ok(())
+    }
+
+    /// The customer says no, and why. An expired quote can still be rejected.
+    /// The reason is the customer's own words, so it is never logged.
+    pub fn reject(&mut self, reason: &str) -> QuoteResult<()> {
+        self.ensure_pending()?;
+        self.status = QuoteStatus::rejected(reason)?;
+        debug!(quote_number = %self.number, "quote rejected");
+        Ok(())
+    }
+
+    /// A rejected quote goes back to pending (the customer came back). The old reason is dropped.
+    /// An accepted quote is final: it becomes a repair order later.
+    pub fn reopen(&mut self) -> QuoteResult<()> {
+        if !matches!(self.status, QuoteStatus::Rejected { .. }) {
+            return Err(QuoteError::NotRejected);
+        }
+        self.status = QuoteStatus::Pending;
+        debug!(quote_number = %self.number, "quote reopened");
+        Ok(())
+    }
+
+    /// Only a pending quote can be decided or changed.
+    fn ensure_pending(&self) -> QuoteResult<()> {
+        match &self.status {
+            QuoteStatus::Pending => Ok(()),
+            decided => Err(QuoteError::AlreadyDecided {
+                status: decided.label(),
+            }),
+        }
     }
 
     pub fn customer(&self) -> &Customer {
@@ -198,6 +261,7 @@ impl fmt::Display for Quote {
             Some(date) => writeln!(f, "Promise date: {date}")?,
             None => writeln!(f, "Promise date: to be confirmed")?,
         }
+        writeln!(f, "Status: {}", self.status)?;
         writeln!(f, "Customer: {}", self.customer)?;
         writeln!(f, "Contact: {}", self.customer.contact())?;
         writeln!(f, "{}", "-".repeat(20))?;

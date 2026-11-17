@@ -29,5 +29,7 @@ pub use equipment_lookup::{ChainedLookup, EquipmentLookup, InMemoryEquipmentLook
 pub use errors::{ErrorKind, QuoteError, QuoteResult};
 pub use money::format_money;
 pub use province::Province;
-pub use quote::{InMemoryQuoteNumbers, LineItem, LineKind, Quote, QuoteNumber, QuoteNumbers};
+pub use quote::{
+    InMemoryQuoteNumbers, LineItem, LineKind, Quote, QuoteNumber, QuoteNumbers, QuoteStatus,
+};
 pub use secret::Secret;

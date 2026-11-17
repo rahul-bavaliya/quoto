@@ -19,6 +19,7 @@ fn show(quote: &Quote) {
         province = quote.customer().province().label(),
         total_cents = quote.total(),
         equipment_source = %quote.equipment().source(),
+        status = quote.status().label(),
         "quote printed"
     );
 }
@@ -61,13 +62,19 @@ fn run() -> QuoteResult<()> {
     // The Corolla is promised three days after the quote date. The truck's quote
     // has no promise date yet (it shows "to be confirmed").
     first.set_promise_date(now.date() + Days::new(3))?;
+    // The customer says yes. Today's date is handed in, like the clock above.
+    first.accept(now.date())?;
     show(&first);
-    show(&samples::demo_quote(
+
+    let mut second = samples::demo_quote(
         numbers.next_number()?,
         now,
         samples::northern_oilfield()?,
         samples::oilfield_truck()?,
-    )?);
+    )?;
+    // The customer says no, and why (the reason is shown on the quote, never logged).
+    second.reject("Found a lower price elsewhere")?;
+    show(&second);
     info!("done");
     Ok(())
 }
