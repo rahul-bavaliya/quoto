@@ -1,6 +1,6 @@
 // tests/tax.rs: tests for the tax feature (public API only)
 
-use quoto::tax::calculate_tax;
+use quoto::calculate_tax;
 
 // ===== tax =====
 

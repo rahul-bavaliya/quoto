@@ -1,4 +1,4 @@
-// src/tax.rs
+// src/province/tax.rs: the tax sum for one amount
 
 /// Tax on an amount (in cents) at a percentage rate, rounded to the nearest cent.
 pub fn calculate_tax(amount: i64, rate: f64) -> i64 {

@@ -19,7 +19,6 @@ pub mod province;
 pub mod quote;
 pub mod samples;
 pub mod secret;
-pub mod tax;
 
 // The short front door: `use quoto::{Quote, LineItem, ...};`
 pub use branch::{Branch, BranchStatus, Location};
@@ -32,7 +31,7 @@ pub use equipment::{
 pub use equipment_lookup::{ChainedLookup, EquipmentLookup, InMemoryEquipmentLookup, NhtsaLookup};
 pub use errors::{ErrorKind, QuoteError, QuoteResult};
 pub use money::format_money;
-pub use province::Province;
+pub use province::{Province, calculate_tax};
 pub use quote::{
     InMemoryQuoteNumbers, LineItem, LineKind, Quote, QuoteNumber, QuoteNumbers, QuoteStatus,
 };
