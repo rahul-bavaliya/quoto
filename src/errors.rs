@@ -110,6 +110,9 @@ pub enum QuoteError {
     #[error("Could not reach the database. Please try again later.")]
     DatabaseUnavailable,
 
+    #[error("The database could not be set up. Ask whoever runs the server to check the logs.")]
+    MigrationFailed,
+
     // ---- Settings (set by whoever runs the program, not typed by a customer) ----
     #[error("The setting {name} is missing. Copy .env.example to .env and fill it in.")]
     MissingSetting { name: &'static str },
@@ -145,9 +148,9 @@ impl QuoteError {
             | QuoteError::EquipmentNotOwnedByCustomer
             | QuoteError::QuoteIncomplete { .. }
             | QuoteError::BranchInactive => ErrorKind::BusinessRule,
-            QuoteError::LookupFailed { .. } | QuoteError::DatabaseUnavailable => {
-                ErrorKind::ServiceUnavailable
-            }
+            QuoteError::LookupFailed { .. }
+            | QuoteError::DatabaseUnavailable
+            | QuoteError::MigrationFailed => ErrorKind::ServiceUnavailable,
             QuoteError::MissingSetting { .. } | QuoteError::InvalidSetting { .. } => {
                 ErrorKind::Configuration
             }
@@ -185,6 +188,7 @@ impl QuoteError {
             QuoteError::InvalidMeterReading { .. } => "INVALID_METER_READING",
             QuoteError::LookupFailed { .. } => "LOOKUP_FAILED",
             QuoteError::DatabaseUnavailable => "DATABASE_UNAVAILABLE",
+            QuoteError::MigrationFailed => "MIGRATION_FAILED",
             QuoteError::MissingSetting { .. } => "MISSING_SETTING",
             QuoteError::InvalidSetting { .. } => "INVALID_SETTING",
         }
