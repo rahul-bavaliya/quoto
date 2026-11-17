@@ -1,4 +1,4 @@
-// src/quote/quote_numbers.rs: the "ticket machine" that hands out quote numbers
+// src/quote/number_machine.rs: the "ticket machine" that hands out quote numbers
 
 use super::QuoteNumber;
 use crate::errors::QuoteResult;
