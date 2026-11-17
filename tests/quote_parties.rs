@@ -13,7 +13,7 @@ fn branch() -> Branch {
 
 /// A quick quote: just the branch.
 fn quick_quote() -> Quote {
-    Quote::new(samples::quote_number(), samples::quote_time(), branch())
+    Quote::new(samples::quote_number(), samples::quote_time(), branch()).unwrap()
 }
 
 fn customer() -> Customer {

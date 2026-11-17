@@ -19,10 +19,10 @@ use chrono::{NaiveDate, NaiveDateTime};
 
 /// A branch in the given province (that decides the taxes).
 pub fn branch_in(province: Province) -> QuoteResult<Branch> {
-    let (code, name, city, postal_code, phone) = match province {
-        Province::Saskatchewan => ("REG", "Regina Branch", "Regina", "S4P 3Y2", "306-555-0100"),
+    let (number, name, city, postal_code, phone) = match province {
+        Province::Saskatchewan => ("001", "Regina Branch", "Regina", "S4P 3Y2", "306-555-0100"),
         Province::Alberta => (
-            "CGY",
+            "002",
             "Calgary Branch",
             "Calgary",
             "T2P 1J9",
@@ -37,7 +37,7 @@ pub fn branch_in(province: Province) -> QuoteResult<Branch> {
         province,
     )?;
     Branch::new(
-        String::from(code),
+        String::from(number),
         String::from(name),
         address,
         PhoneNumber::parse(phone)?,
@@ -244,7 +244,7 @@ pub fn quote_numbers() -> InMemoryQuoteNumbers {
 /// A quote made at the branch in `province` for the plain customer and the Corolla,
 /// with the standard oil change.
 pub fn oil_change_quote(province: Province) -> QuoteResult<Quote> {
-    let mut quote = Quote::new(quote_number(), quote_time(), branch_in(province)?);
+    let mut quote = Quote::new(quote_number(), quote_time(), branch_in(province)?)?;
     quote.attach_customer(customer_in(province)?)?;
     quote.attach_equipment(corolla()?)?;
     for item in oil_change_lines()? {
@@ -261,7 +261,7 @@ pub fn demo_quote(
     customer: Customer,
     equipment: Equipment,
 ) -> QuoteResult<Quote> {
-    let mut quote = Quote::new(number, time, branch);
+    let mut quote = Quote::new(number, time, branch)?;
     quote.attach_customer(customer)?;
     quote.attach_equipment(equipment)?;
     for item in demo_lines()? {

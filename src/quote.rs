@@ -52,7 +52,15 @@ impl Quote {
     /// look at the clock or keep a counter (that keeps it easy to test).
     /// A new quote starts with just its branch (a quick quote). The customer and the
     /// machine are added with `attach_customer` and `attach_equipment`.
-    pub fn new(number: QuoteNumber, created_at: NaiveDateTime, branch: Branch) -> Self {
+    /// An inactive branch can't start new quotes (its old quotes stay as they are).
+    pub fn new(
+        number: QuoteNumber,
+        created_at: NaiveDateTime,
+        branch: Branch,
+    ) -> QuoteResult<Self> {
+        if !branch.is_active() {
+            return Err(QuoteError::BranchInactive);
+        }
         // Logs never include names, phones or emails: only what we need to debug.
         debug!(
             quote_number = %number,
@@ -65,7 +73,7 @@ impl Quote {
             .date()
             .checked_add_days(Days::new(VALID_FOR_DAYS))
             .unwrap_or(NaiveDate::MAX);
-        Quote {
+        Ok(Quote {
             id: None,
             number,
             created_at,
@@ -76,7 +84,7 @@ impl Quote {
             customer: None,
             equipment: None,
             items: Vec::new(),
-        }
+        })
     }
 
     /// Adds a line to the quote. A credit is refused if it would push

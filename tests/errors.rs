@@ -112,9 +112,15 @@ fn the_quote_party_errors_are_business_rules() {
         QuoteError::QuoteIncomplete {
             missing: "customer",
         },
+        QuoteError::BranchInactive,
     ] {
         assert_eq!(error.kind(), ErrorKind::BusinessRule);
     }
+}
+
+#[test]
+fn a_location_off_the_map_is_wrong_input() {
+    assert_eq!(QuoteError::InvalidLocation.kind(), ErrorKind::InvalidInput);
 }
 
 #[test]
@@ -176,6 +182,8 @@ fn every_error_has_its_own_code() {
         QuoteError::EquipmentNeedsCustomer.code(),
         QuoteError::EquipmentNotOwnedByCustomer.code(),
         QuoteError::QuoteIncomplete { missing: "x" }.code(),
+        QuoteError::InvalidLocation.code(),
+        QuoteError::BranchInactive.code(),
     ];
     let mut unique = codes.to_vec();
     unique.sort();

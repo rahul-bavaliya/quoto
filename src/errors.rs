@@ -87,6 +87,12 @@ pub enum QuoteError {
     #[error("A quote needs a {missing} before it can be accepted.")]
     QuoteIncomplete { missing: &'static str },
 
+    #[error("A map location needs a latitude from -90 to 90 and a longitude from -180 to 180.")]
+    InvalidLocation,
+
+    #[error("This branch is inactive and cannot start new quotes.")]
+    BranchInactive,
+
     #[error("The rejection reason can be at most {max} characters.")]
     RejectionReasonTooLong { max: usize },
 
@@ -137,7 +143,8 @@ impl QuoteError {
             | QuoteError::AlreadyAttached { .. }
             | QuoteError::EquipmentNeedsCustomer
             | QuoteError::EquipmentNotOwnedByCustomer
-            | QuoteError::QuoteIncomplete { .. } => ErrorKind::BusinessRule,
+            | QuoteError::QuoteIncomplete { .. }
+            | QuoteError::BranchInactive => ErrorKind::BusinessRule,
             QuoteError::LookupFailed { .. } | QuoteError::DatabaseUnavailable => {
                 ErrorKind::ServiceUnavailable
             }
@@ -171,6 +178,8 @@ impl QuoteError {
             QuoteError::EquipmentNeedsCustomer => "EQUIPMENT_NEEDS_CUSTOMER",
             QuoteError::EquipmentNotOwnedByCustomer => "EQUIPMENT_NOT_OWNED_BY_CUSTOMER",
             QuoteError::QuoteIncomplete { .. } => "QUOTE_INCOMPLETE",
+            QuoteError::InvalidLocation => "INVALID_LOCATION",
+            QuoteError::BranchInactive => "BRANCH_INACTIVE",
             QuoteError::RejectionReasonTooLong { .. } => "REJECTION_REASON_TOO_LONG",
             QuoteError::MissingIdentification => "MISSING_IDENTIFICATION",
             QuoteError::InvalidMeterReading { .. } => "INVALID_METER_READING",

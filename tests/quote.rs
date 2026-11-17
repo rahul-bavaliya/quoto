@@ -29,6 +29,7 @@ fn quick_quote(province: Province) -> Quote {
         samples::quote_time(),
         samples::branch_in(province).unwrap(),
     )
+    .unwrap()
 }
 
 // The 5 standard lines. No credits here: credit robots add their own.
@@ -323,7 +324,8 @@ fn the_thirty_days_count_across_the_end_of_the_year() {
         samples::quote_number(),
         day(2026, 12, 20).and_hms_opt(16, 45, 0).unwrap(),
         samples::branch_in(Province::Saskatchewan).unwrap(),
-    );
+    )
+    .unwrap();
     assert_eq!(quote.expires_on(), day(2027, 1, 19));
 }
 
@@ -333,7 +335,8 @@ fn the_time_of_day_does_not_change_the_expiry_date() {
         samples::quote_number(),
         day(2026, 11, 16).and_hms_opt(23, 59, 59).unwrap(),
         samples::branch_in(Province::Saskatchewan).unwrap(),
-    );
+    )
+    .unwrap();
     assert_eq!(
         late.expires_on(),
         empty_quote(Province::Saskatchewan).expires_on()
