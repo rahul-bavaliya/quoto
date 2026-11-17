@@ -1,4 +1,4 @@
-// src/quote/mod.rs
+// src/quote.rs
 
 use crate::customer::Customer;
 use crate::equipment::Equipment;

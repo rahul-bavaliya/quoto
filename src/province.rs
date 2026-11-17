@@ -1,4 +1,4 @@
-// src/province/mod.rs
+// src/province.rs
 
 #[derive(Debug, PartialEq)]
 pub enum Province {

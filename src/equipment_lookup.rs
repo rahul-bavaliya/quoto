@@ -1,4 +1,4 @@
-// src/equipment_lookup/mod.rs: "tell me the serial number, I tell you what the machine is"
+// src/equipment_lookup.rs: "tell me the serial number, I tell you what the machine is"
 
 use crate::equipment::EquipmentDraft;
 use crate::errors::QuoteResult;

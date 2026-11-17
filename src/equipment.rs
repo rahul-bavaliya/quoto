@@ -1,4 +1,4 @@
-// src/equipment/mod.rs
+// src/equipment.rs
 
 use crate::errors::QuoteError;
 use std::fmt;
