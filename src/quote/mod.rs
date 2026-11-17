@@ -12,10 +12,12 @@ use tracing::debug;
 
 mod line_item;
 mod line_kind;
+mod number_machine;
 mod quote_number;
 
 pub use line_item::LineItem;
 pub use line_kind::LineKind;
+pub use number_machine::{InMemoryQuoteNumbers, QuoteNumbers};
 pub use quote_number::QuoteNumber;
 
 pub struct Quote {

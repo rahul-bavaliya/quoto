@@ -10,7 +10,7 @@ use crate::customer::{Address, Contact, Customer, Email, PhoneNumber, PostalCode
 use crate::equipment::{Equipment, EquipmentType, Identification, Meter, MeterType};
 use crate::errors::QuoteResult;
 use crate::province::Province;
-use crate::quote::{LineItem, LineKind, Quote, QuoteNumber};
+use crate::quote::{InMemoryQuoteNumbers, LineItem, LineKind, Quote, QuoteNumber};
 use chrono::{NaiveDate, NaiveDateTime};
 
 /// A plain customer who lives in the given province (that decides the taxes).
@@ -154,6 +154,11 @@ pub fn quote_time() -> NaiveDateTime {
 /// The first quote number of the sample year: Q-2026-00000001.
 pub fn quote_number() -> QuoteNumber {
     QuoteNumber::first_of_year(2026).expect("2026 is a valid year")
+}
+
+/// A fresh ticket machine for the sample year: its first number is Q-2026-00000001.
+pub fn quote_numbers() -> InMemoryQuoteNumbers {
+    InMemoryQuoteNumbers::for_year(2026)
 }
 
 /// A quote for the plain customer in `province`, with the standard oil change.
