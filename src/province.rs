@@ -1,23 +1,16 @@
 // src/province.rs: a province, its country and its tax rates
 //
-// The pieces live in `src/province/`: `tax` (the tax sum), `tax_rate` and `tax_rates`
-// (the rules for the rates), `entity` (the `provinces` table as a struct; `database::sync`
-// builds the table from it), `seed` (the 13 starting rows) and `store` (read and change rates).
+// The pieces live in `src/province/`: `tax` (the tax sum and the rules for tax rates) and
+// `table` (the `provinces` table in the database: build it, seed it, read and change the rates).
 
 use crate::country::Country;
 
-pub(crate) mod entity;
-mod seed;
-mod store;
+mod table;
 mod tax;
-mod tax_rate;
-mod tax_rates;
 
-pub use seed::seed_provinces;
-pub use store::{all_rates, change_rates, rates_for};
-pub use tax::calculate_tax;
-pub use tax_rate::TaxRate;
-pub use tax_rates::TaxRates;
+pub(crate) use table::ProvinceTable;
+pub use table::{all_rates, change_rates, rates_for, seed_provinces};
+pub use tax::{TaxRate, TaxRates, calculate_tax};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Province {

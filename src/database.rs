@@ -50,7 +50,7 @@ pub async fn connect(settings: &DatabaseSettings) -> QuoteResult<DatabaseConnect
 /// reviewable migrations. It needs a database user that is allowed to create tables.
 pub async fn sync(db: &DatabaseConnection) -> QuoteResult<()> {
     db.get_schema_builder()
-        .register(province::entity::Entity)
+        .register(province::ProvinceTable)
         .sync(db)
         .await
         .map_err(|cause| {
