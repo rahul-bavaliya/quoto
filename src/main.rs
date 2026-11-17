@@ -1,5 +1,6 @@
 // src/main.rs: a small demo program that uses the Quoto library
 
+use chrono::Local;
 use quoto::{InMemoryQuoteNumbers, Quote, QuoteNumbers, QuoteResult, logging, samples};
 use std::process::ExitCode;
 use tracing::info;
@@ -24,13 +25,17 @@ fn run() -> QuoteResult<()> {
     // The machine hands out numbers one after the other, for the current year:
     // Q-<year>-00000001, Q-<year>-00000002
     let mut numbers = InMemoryQuoteNumbers::new();
+    // The clock is read once, here, and handed down: a quote never looks at it.
+    let now = Local::now().naive_local();
     show(&samples::demo_quote(
         numbers.next_number()?,
+        now,
         samples::prairie_farms()?,
         samples::corolla()?,
     )?);
     show(&samples::demo_quote(
         numbers.next_number()?,
+        now,
         samples::northern_oilfield()?,
         samples::oilfield_truck()?,
     )?);
