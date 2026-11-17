@@ -178,10 +178,11 @@ pub fn oil_change_quote(province: Province) -> QuoteResult<Quote> {
 /// A demo quote: the given number, customer and unit, with the demo lines.
 pub fn demo_quote(
     number: QuoteNumber,
+    time: NaiveDateTime,
     customer: Customer,
     equipment: Equipment,
 ) -> QuoteResult<Quote> {
-    let mut quote = Quote::new(number, quote_time(), customer, equipment);
+    let mut quote = Quote::new(number, time, customer, equipment);
     for item in demo_lines()? {
         quote.add_item(item)?;
     }
