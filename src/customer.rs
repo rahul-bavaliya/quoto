@@ -3,6 +3,7 @@
 use crate::errors::QuoteError;
 use crate::province::Province;
 use std::fmt;
+use uuid::Uuid;
 
 mod address;
 mod contact;
@@ -20,6 +21,9 @@ pub use postal_code::PostalCode;
 /// Service Manager at Prairie Farms Ltd.").
 #[derive(Debug, PartialEq)]
 pub struct Customer {
+    /// The database's id. Empty until this customer is loaded from the database:
+    /// a new one never makes its own id.
+    id: Option<Uuid>,
     name: String,
     company: Option<String>,
     designation: Option<String>,
@@ -41,12 +45,24 @@ impl Customer {
             });
         }
         Ok(Customer {
+            id: None,
             name,
             company,
             designation,
             contact,
             address,
         })
+    }
+
+    /// `None` means "not saved yet". The database gives the id; Quoto never makes one.
+    pub fn id(&self) -> Option<Uuid> {
+        self.id
+    }
+
+    /// Attaches the id the database gave. Used when loading from the database.
+    pub fn with_id(mut self, id: Uuid) -> Self {
+        self.id = Some(id);
+        self
     }
 
     pub fn contact(&self) -> &Contact {

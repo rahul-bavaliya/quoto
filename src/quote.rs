@@ -9,6 +9,7 @@ use crate::tax::calculate_tax;
 use chrono::{Days, NaiveDate, NaiveDateTime};
 use std::fmt;
 use tracing::debug;
+use uuid::Uuid;
 
 mod line_item;
 mod line_kind;
@@ -26,6 +27,9 @@ pub use quote_status::QuoteStatus;
 const VALID_FOR_DAYS: u64 = 30;
 
 pub struct Quote {
+    /// The database's id. Empty until this quote is loaded from the database:
+    /// a new one never makes its own id.
+    id: Option<Uuid>,
     number: QuoteNumber,
     created_at: NaiveDateTime,
     /// The last day the prices are honoured. Worked out when the quote is created.
@@ -60,6 +64,7 @@ impl Quote {
             .checked_add_days(Days::new(VALID_FOR_DAYS))
             .unwrap_or(NaiveDate::MAX);
         Quote {
+            id: None,
             number,
             created_at,
             expires_on,
@@ -92,6 +97,17 @@ impl Quote {
         );
         self.items.push(item);
         Ok(())
+    }
+
+    /// `None` means "not saved yet". The database gives the id; Quoto never makes one.
+    pub fn id(&self) -> Option<Uuid> {
+        self.id
+    }
+
+    /// Attaches the id the database gave. Used when loading from the database.
+    pub fn with_id(mut self, id: Uuid) -> Self {
+        self.id = Some(id);
+        self
     }
 
     pub fn number(&self) -> &QuoteNumber {
