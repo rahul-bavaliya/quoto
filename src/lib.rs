@@ -6,6 +6,7 @@
 // used by `main.rs`, by those tests, and later by the web API.
 
 pub mod customer;
+pub mod database;
 pub mod equipment;
 pub mod equipment_lookup;
 pub mod errors;
@@ -14,10 +15,12 @@ pub mod money;
 pub mod province;
 pub mod quote;
 pub mod samples;
+pub mod secret;
 pub mod tax;
 
 // The short front door: `use quoto::{Quote, LineItem, ...};`
 pub use customer::{Address, Contact, Customer, Email, PhoneNumber, PostalCode};
+pub use database::DatabaseSettings;
 pub use equipment::{
     Equipment, EquipmentDraft, EquipmentSource, EquipmentType, Identification, Meter, MeterType,
 };
@@ -26,3 +29,4 @@ pub use errors::{ErrorKind, QuoteError, QuoteResult};
 pub use money::format_money;
 pub use province::Province;
 pub use quote::{InMemoryQuoteNumbers, LineItem, LineKind, Quote, QuoteNumber, QuoteNumbers};
+pub use secret::Secret;

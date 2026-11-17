@@ -172,3 +172,40 @@ fn a_failed_lookup_is_a_service_problem_not_a_typo() {
     assert_eq!(error.code(), "LOOKUP_FAILED");
     assert_eq!(error.exit_code(), 4);
 }
+
+#[test]
+fn an_unreachable_database_is_a_service_problem() {
+    let error = QuoteError::DatabaseUnavailable;
+    assert_eq!(
+        error.to_string(),
+        "Could not reach the database. Please try again later."
+    );
+    assert_eq!(error.kind(), ErrorKind::ServiceUnavailable);
+    assert_eq!(error.code(), "DATABASE_UNAVAILABLE");
+    assert_eq!(error.exit_code(), 4);
+}
+
+#[test]
+fn a_wrong_setup_is_a_configuration_problem() {
+    let missing = QuoteError::MissingSetting {
+        name: "POSTGRES_USER",
+    };
+    assert_eq!(
+        missing.to_string(),
+        "The setting POSTGRES_USER is missing. Copy .env.example to .env and fill it in."
+    );
+    assert_eq!(missing.kind(), ErrorKind::Configuration);
+    assert_eq!(missing.code(), "MISSING_SETTING");
+    assert_eq!(missing.exit_code(), 5);
+
+    let invalid = QuoteError::InvalidSetting {
+        name: "POSTGRES_PORT",
+    };
+    assert_eq!(
+        invalid.to_string(),
+        "The setting POSTGRES_PORT is not valid."
+    );
+    assert_eq!(invalid.kind(), ErrorKind::Configuration);
+    assert_eq!(invalid.code(), "INVALID_SETTING");
+    assert_eq!(invalid.exit_code(), 5);
+}

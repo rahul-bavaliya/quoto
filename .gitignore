@@ -30,3 +30,7 @@ rustc-ice-*.txt
 
 # Editor settings (personal, not shared)
 .vscode/
+# Secrets: never commit these. `.env.example` is the safe template.
+.env
+.env.*
+!.env.example
