@@ -46,7 +46,8 @@ fn logs_do_not_contain_customer_details() {
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     assert!(!stderr.contains("Jane Smith"));
-    assert!(!stderr.contains("555"));
+    // "-555-" is how the sample phones look; a bare "555" can appear in a timestamp by chance.
+    assert!(!stderr.contains("-555-"));
     assert!(!stderr.contains("@"));
 }
 

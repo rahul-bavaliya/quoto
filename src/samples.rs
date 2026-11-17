@@ -11,7 +11,7 @@ use crate::equipment::{Equipment, EquipmentType, Identification, Meter, MeterTyp
 use crate::errors::QuoteResult;
 use crate::province::Province;
 use crate::quote::{LineItem, LineKind, Quote, QuoteNumber};
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveDateTime};
 
 /// A plain customer who lives in the given province (that decides the taxes).
 pub fn customer_in(province: Province) -> QuoteResult<Customer> {
@@ -145,11 +145,13 @@ pub fn demo_lines() -> QuoteResult<Vec<LineItem>> {
 
 /// The date every sample quote is written on. A fixed date (not today's),
 /// so the demo and the tests print the same text every day.
-pub fn quote_date() -> NaiveDate {
-    NaiveDate::from_ymd_opt(2026, 11, 16).expect("2026-11-16 is a real date")
+pub fn quote_time() -> NaiveDateTime {
+    NaiveDate::from_ymd_opt(2026, 11, 16)
+        .and_then(|day| day.and_hms_opt(9, 30, 0))
+        .expect("2026-11-16 09:30:00 is a real time")
 }
 
-/// The first quote number of the sample year: Q-2026-0001.
+/// The first quote number of the sample year: Q-2026-00000001.
 pub fn quote_number() -> QuoteNumber {
     QuoteNumber::first_of_year(2026).expect("2026 is a valid year")
 }
@@ -158,7 +160,7 @@ pub fn quote_number() -> QuoteNumber {
 pub fn oil_change_quote(province: Province) -> QuoteResult<Quote> {
     let mut quote = Quote::new(
         quote_number(),
-        quote_date(),
+        quote_time(),
         customer_in(province)?,
         corolla()?,
     );
@@ -174,7 +176,7 @@ pub fn demo_quote(
     customer: Customer,
     equipment: Equipment,
 ) -> QuoteResult<Quote> {
-    let mut quote = Quote::new(number, quote_date(), customer, equipment);
+    let mut quote = Quote::new(number, quote_time(), customer, equipment);
     for item in demo_lines()? {
         quote.add_item(item)?;
     }

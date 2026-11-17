@@ -17,7 +17,7 @@ fn sample_equipment() -> Equipment {
 fn empty_quote(province: Province) -> Quote {
     Quote::new(
         samples::quote_number(),
-        samples::quote_date(),
+        samples::quote_time(),
         sample_customer(province),
         sample_equipment(),
     )
@@ -67,17 +67,15 @@ fn new_quote_is_empty() {
 #[test]
 fn a_quote_knows_its_number_and_its_date() {
     let quote = empty_quote(Province::Saskatchewan);
-    assert_eq!(quote.number().to_string(), "Q-2026-0001");
-    let date = samples::quote_date();
-    assert!(quote.to_string().contains(&format!("Date: {date}")));
+    assert_eq!(quote.number().to_string(), "Q-2026-00000001");
+    assert!(quote.to_string().contains("Date: 2026-11-16 09:30:00"));
 }
 
 #[test]
 fn the_printed_header_shows_the_number_and_the_date() {
     let text = empty_quote(Province::Saskatchewan).to_string();
-    assert!(text.contains("===== Quote Q-2026-0001: Saskatchewan ====="));
-    let date = samples::quote_date();
-    assert!(text.contains(&format!("Date: {date}")));
+    assert!(text.contains("===== Quote Q-2026-00000001: Saskatchewan ====="));
+    assert!(text.contains("Date: 2026-11-16 09:30:00"));
 }
 
 #[test]
@@ -167,13 +165,13 @@ fn credit_line_total_is_negative() {
 #[test]
 fn new_builds_a_valid_number() {
     let number = QuoteNumber::new(2026, 1).unwrap();
-    assert_eq!(number.to_string(), "Q-2026-0001");
+    assert_eq!(number.to_string(), "Q-2026-00000001");
 }
 
 #[test]
 fn it_prints_with_leading_zeros() {
     let number = QuoteNumber::new(2026, 42).unwrap();
-    assert_eq!(number.to_string(), "Q-2026-0042");
+    assert_eq!(number.to_string(), "Q-2026-00000042");
 }
 
 #[test]
@@ -182,13 +180,13 @@ fn counter_zero_is_refused() {
 }
 
 #[test]
-fn a_counter_over_9999_is_refused() {
-    assert!(QuoteNumber::new(2026, 10000).is_err());
+fn a_counter_over_99_999_999_is_refused() {
+    assert!(QuoteNumber::new(2026, 100_000_000).is_err());
 }
 
 #[test]
 fn the_highest_counter_is_accepted() {
-    assert!(QuoteNumber::new(2026, 9999).is_ok());
+    assert!(QuoteNumber::new(2026, 99_999_999).is_ok());
 }
 
 #[test]
@@ -202,7 +200,7 @@ fn the_error_remembers_the_number_it_refused() {
     assert_eq!(
         QuoteNumber::new(26, 1),
         Err(QuoteError::InvalidQuoteNumber {
-            input: String::from("Q-26-0001")
+            input: String::from("Q-26-00000001")
         })
     );
 }
@@ -210,18 +208,18 @@ fn the_error_remembers_the_number_it_refused() {
 #[test]
 fn the_first_quote_of_a_year_is_counter_one() {
     let number = QuoteNumber::first_of_year(2027).unwrap();
-    assert_eq!(number.to_string(), "Q-2027-0001");
+    assert_eq!(number.to_string(), "Q-2027-00000001");
 }
 
 #[test]
 fn next_adds_one_in_the_same_year() {
     let number = QuoteNumber::new(2026, 41).unwrap();
-    assert_eq!(number.next().unwrap().to_string(), "Q-2026-0042");
+    assert_eq!(number.next().unwrap().to_string(), "Q-2026-00000042");
 }
 
 #[test]
-fn next_after_9999_is_refused_not_wrapped() {
-    let last = QuoteNumber::new(2026, 9999).unwrap();
+fn next_after_the_last_number_is_refused_not_wrapped() {
+    let last = QuoteNumber::new(2026, 99_999_999).unwrap();
     assert_eq!(
         last.next(),
         Err(QuoteError::QuoteNumbersExhausted { year: 2026 })

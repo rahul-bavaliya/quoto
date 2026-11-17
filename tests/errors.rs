@@ -62,7 +62,7 @@ fn every_message_reads_like_a_sentence() {
             input: String::from("Q-1")
         }
         .to_string(),
-        "\"Q-1\" is not a valid quote number (like Q-2026-0001)."
+        "\"Q-1\" is not a valid quote number (like Q-2026-00000001)."
     );
     assert_eq!(
         QuoteError::QuoteNumbersExhausted { year: 2026 }.to_string(),

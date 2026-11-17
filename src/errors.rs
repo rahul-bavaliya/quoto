@@ -45,7 +45,7 @@ pub enum QuoteError {
     InvalidPostalCode { input: String },
 
     // ---- Quote ----
-    #[error("\"{input}\" is not a valid quote number (like Q-2026-0001).")]
+    #[error("\"{input}\" is not a valid quote number (like Q-2026-00000001).")]
     InvalidQuoteNumber { input: String },
 
     #[error("All the quote numbers for {year} are used up.")]
