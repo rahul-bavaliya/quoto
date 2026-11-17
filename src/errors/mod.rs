@@ -61,6 +61,17 @@ pub enum QuoteError {
     // ---- Outside services ----
     #[error("Could not look up the details with {provider}. Please enter them by hand.")]
     LookupFailed { provider: &'static str },
+
+    #[error("Could not reach the database. Please try again later.")]
+    DatabaseUnavailable,
+
+    // ---- Settings (set by whoever runs the program, not typed by a customer) ----
+    #[error("The setting {name} is missing. Copy .env.example to .env and fill it in.")]
+    MissingSetting { name: &'static str },
+
+    // The message never repeats the value: a setting may be (next to) a secret.
+    #[error("The setting {name} is not valid.")]
+    InvalidSetting { name: &'static str },
 }
 
 /// Who can fix the problem? Screens and APIs use this to pick the right reaction.
@@ -72,6 +83,8 @@ pub enum ErrorKind {
     BusinessRule,
     /// An outside service didn't answer. Nobody typed anything wrong; try again later or enter by hand.
     ServiceUnavailable,
+    /// The program is set up wrongly (a missing or invalid setting). Whoever runs it fixes it.
+    Configuration,
 }
 
 impl QuoteError {
@@ -80,7 +93,12 @@ impl QuoteError {
             QuoteError::CreditTooLarge { .. } | QuoteError::QuoteNumbersExhausted { .. } => {
                 ErrorKind::BusinessRule
             }
-            QuoteError::LookupFailed { .. } => ErrorKind::ServiceUnavailable,
+            QuoteError::LookupFailed { .. } | QuoteError::DatabaseUnavailable => {
+                ErrorKind::ServiceUnavailable
+            }
+            QuoteError::MissingSetting { .. } | QuoteError::InvalidSetting { .. } => {
+                ErrorKind::Configuration
+            }
             // Everything else is a wrong input.
             _ => ErrorKind::InvalidInput,
         }
@@ -102,6 +120,9 @@ impl QuoteError {
             QuoteError::MissingIdentification => "MISSING_IDENTIFICATION",
             QuoteError::InvalidMeterReading { .. } => "INVALID_METER_READING",
             QuoteError::LookupFailed { .. } => "LOOKUP_FAILED",
+            QuoteError::DatabaseUnavailable => "DATABASE_UNAVAILABLE",
+            QuoteError::MissingSetting { .. } => "MISSING_SETTING",
+            QuoteError::InvalidSetting { .. } => "INVALID_SETTING",
         }
     }
 
@@ -111,12 +132,14 @@ impl QuoteError {
             ErrorKind::InvalidInput => 2,
             ErrorKind::BusinessRule => 3,
             ErrorKind::ServiceUnavailable => 4,
+            ErrorKind::Configuration => 5,
         }
     }
 
     /// The one place that writes an error to the log.
     /// Wrong input and an unavailable outside service are warnings (the person
-    /// can fix it or enter the details by hand); a refused business rule is an error. Call this where the error finally stops (not at every step).
+    /// can fix it or enter the details by hand); a refused business rule and a wrong
+    /// set-up are errors. Call this where the error finally stops (not at every step).
     ///
     /// Only the **code** is logged, never the message: messages can repeat what
     /// the customer typed (a phone number, an email), and logs must not hold that.
@@ -124,6 +147,7 @@ impl QuoteError {
         match self.kind() {
             ErrorKind::InvalidInput => warn!(code = self.code(), "input refused"),
             ErrorKind::BusinessRule => error!(code = self.code(), "business rule refused"),
+            ErrorKind::Configuration => error!(code = self.code(), "program set up wrongly"),
             ErrorKind::ServiceUnavailable => {
                 warn!(code = self.code(), "outside service unavailable")
             }

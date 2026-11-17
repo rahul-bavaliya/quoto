@@ -29,6 +29,7 @@ Total: $136.53
 ```bash
 cargo run      # print the demo quotes
 cargo run --example nhtsa_lookup -- <VIN>   # try the real NHTSA lookup (needs the internet)
+cargo run --example db_check   # check the database connection (see "The database")
 cargo test     # run all the unit and scenario tests
 RUST_LOG=debug cargo run   # same, with a detailed log on stderr
 ```
@@ -41,10 +42,38 @@ Type a serial number and a **lookup** fills in the make, model, year and kind of
 - **`ChainedLookup`** asks several lookups in order, so road vehicles and heavy equipment can each have their own. Equipment remembers its `EquipmentSource` (entered by hand, or looked up with whom).
 - Tests never touch the internet. To try the real service by hand: `cargo run --example nhtsa_lookup -- 1HGCM82633A004352`
 
+## The database (PostgreSQL in Docker)
+Quoto will keep quotes, customers and equipment in PostgreSQL (Phase 4). Today there is only the connection set-up; the demo program doesn't use the database yet.
+
+```bash
+cp .env.example .env            # .env is ignored by git
+# edit .env: put a real password in POSTGRES_PASSWORD (make one: openssl rand -base64 24)
+docker compose up -d            # start PostgreSQL (waits until it is healthy)
+cargo run --example db_check    # "Connected to the database at localhost:5432/quoto_dev."
+docker compose down             # stop it; the data stays in a Docker volume
+```
+
+- The database is reachable **only from your own computer** (`127.0.0.1`), and the compose file refuses to start without a password.
+- Quoto reads `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` (required) and `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_SSLMODE` (optional) from the environment. The names are the same ones the Postgres image uses, so compose and Quoto share one `.env`.
+- The password lives in a `Secret`, which prints as `[hidden]`; the connection is the only place that opens it.
+
+## Keeping secrets secret
+A secret is a password, an API key, a token, or a full connection address that contains one.
+
+| Where | What goes there |
+|---|---|
+| **`.env` on your computer** | Local development values. Git ignores it. Never commit it. |
+| **`.env.example`** | Names only, no real values. Safe to commit. |
+| **Codespaces secrets** (GitHub → Settings → Codespaces → Secrets) | Secrets for your Codespace. They show up as environment variables. |
+| **GitHub Actions secrets** (repo → Settings → Secrets and variables → Actions) | Secrets CI needs. CI needs none today (it uses no database and no keys). |
+| **A secret manager** (your cloud's, in Phase 10) | Production secrets, injected as environment variables. |
+
+Rules: no secret in code, in a test, in a log, in an error message, or in a screenshot. If a secret was ever committed, it is not secret any more (git keeps history), so **change it**. Turn on GitHub's secret scanning and push protection for the repo (Settings → Code security). Use a different password for each place (development, production). Tests and demos use made-up values only.
+
 ## Logging and errors
 - **Logging** uses [`tracing`](https://docs.rs/tracing). `quoto::logging::init()` starts it once in `main`. Logs go to **stderr** (the quote text stays on stdout), the level comes from `RUST_LOG` (default `info`), and logs never contain customer details.
-- **Errors** are one enum, `QuoteError` (built with `thiserror`). Each error has a readable message, a stable `code()` (like `INVALID_PHONE`), a `kind()` (`InvalidInput`, `BusinessRule` or `ServiceUnavailable`) and an `exit_code()`. `QuoteResult<T>` is the short name for `Result<T, QuoteError>`.
-- `main` is the one place where errors stop the program: it logs the code, prints the message, and exits with code 2 (wrong input), 3 (business rule) or 4 (an outside service is down).
+- **Errors** are one enum, `QuoteError` (built with `thiserror`). Each error has a readable message, a stable `code()` (like `INVALID_PHONE`), a `kind()` (`InvalidInput`, `BusinessRule`, `ServiceUnavailable` or `Configuration`) and an `exit_code()`. `QuoteResult<T>` is the short name for `Result<T, QuoteError>`.
+- `main` is the one place where errors stop the program: it logs the code, prints the message, and exits with code 2 (wrong input), 3 (business rule), 4 (an outside service is down) or 5 (the program is set up wrongly, e.g. a missing setting).
 
 Before every push:
 ```bash
@@ -59,15 +88,19 @@ GitHub Actions runs the same checks automatically on every push and pull request
 src/
 ├── main.rs              demo program (short: it uses quoto::samples)
 ├── lib.rs               the library's front door
-├── errors/  logging/  money/  province/  samples/  tax/     each is a folder with a mod.rs
+├── errors/  logging/  money/  province/  samples/  secret/  tax/    each is a folder with a mod.rs
+├── database/            mod.rs (connect) + settings (DatabaseSettings, read from the environment)
 ├── customer/            mod.rs (Customer) + address, postal_code, contact, phone_number, email
 ├── equipment/           mod.rs (Equipment) + meter, meter_type, equipment_type, identification,
 │                        equipment_draft, equipment_source
 ├── equipment_lookup/    mod.rs (EquipmentLookup) + in_memory, chain, nhtsa
 └── quote/               mod.rs (Quote) + line_item, line_kind, quote_number, number_machine
 examples/
-└── nhtsa_lookup.rs      try the lookups by hand (needs the internet)
+├── nhtsa_lookup.rs      try the lookups by hand (needs the internet)
+└── db_check.rs          check the database connection (needs docker compose up)
 tests/                   one file per feature, plus quote_scenarios.rs and demo_program.rs
+docker-compose.yml       PostgreSQL for development
+.env.example             the settings Quoto needs (copy to .env)
 ```
 One type per file, grouped into feature folders (each folder's `mod.rs` holds the main type and lists its pieces). All tests live in `tests/` (one file per feature) and only use the public API.
 
@@ -75,7 +108,7 @@ One type per file, grouped into feature folders (each folder's `mod.rs` holds th
 1. ✅ Toy calculator
 2. ✅ Real shapes: structs, enums, `Vec`, `Option`
 3. ✅ Safe money and errors: cents, `Result`, custom errors, tests
-4. ⬜ Save quotes in a database (tax rates as data, with effective dates)
+4. 🚧 Save quotes in a database (PostgreSQL set-up ✅; saving quotes, tax rates as data with effective dates ⬜)
 5. ⬜ A web API
 6. ⬜ Quote → Repair Order
 7. ⬜ Screens for service writers

@@ -1,0 +1,34 @@
+# docker-compose.yml: PostgreSQL for local development (not for production)
+#
+#   cp .env.example .env     # then put a real password in .env
+#   docker compose up -d     # start the database
+#   cargo run --example db_check
+#   docker compose down      # stop it (your data stays in the volume)
+#
+# The password comes from `.env`, which git ignores. It is never written in this file.
+
+services:
+  db:
+    # Pinned to a major version, so an upgrade is a choice we make, not a surprise.
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env (see .env.example)}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (see .env.example)}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env (see .env.example)}
+    ports:
+      # 127.0.0.1 = only this computer can connect. Without it, Docker would
+      # open the port to the whole network.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - quoto_pgdata:/var/lib/postgresql/data
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  quoto_pgdata:
