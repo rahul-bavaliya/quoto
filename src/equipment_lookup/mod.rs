@@ -5,9 +5,11 @@ use crate::errors::QuoteResult;
 
 mod chain;
 mod in_memory;
+mod nhtsa;
 
 pub use chain::ChainedLookup;
 pub use in_memory::InMemoryEquipmentLookup;
+pub use nhtsa::NhtsaLookup;
 
 /// Anything that can look up a machine by its serial number: a catalog in
 /// memory, a government service, a maker's catalog. `Quote` never talks to
