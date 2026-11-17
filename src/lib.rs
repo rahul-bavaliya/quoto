@@ -21,7 +21,7 @@ pub use customer::{Address, Contact, Customer, Email, PhoneNumber, PostalCode};
 pub use equipment::{
     Equipment, EquipmentDraft, EquipmentSource, EquipmentType, Identification, Meter, MeterType,
 };
-pub use equipment_lookup::{ChainedLookup, EquipmentLookup, InMemoryEquipmentLookup};
+pub use equipment_lookup::{ChainedLookup, EquipmentLookup, InMemoryEquipmentLookup, NhtsaLookup};
 pub use errors::{ErrorKind, QuoteError, QuoteResult};
 pub use money::format_money;
 pub use province::Province;
