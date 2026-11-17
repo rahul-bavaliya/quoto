@@ -1,4 +1,4 @@
-// tests/database_provinces.rs: the provinces table and its rate history, in a real database
+// tests/database_provinces.rs: the provinces table, in a real database
 //
 // These need a running database, so they are skipped normally (and in CI). Run them by hand:
 //
@@ -192,10 +192,9 @@ async fn the_provinces_table_cannot_be_emptied_with_truncate() {
 }
 
 // ===== changing a rate (what the admin does) =====
-
 #[tokio::test]
 #[ignore = "needs the database (docker compose up)"]
-async fn changing_a_rate_keeps_the_old_values_in_the_history() {
+async fn a_rate_can_be_changed_in_one_update() {
     let (_turn, pool) = setup().await;
     let mut tx = work(&pool).await;
     sqlx::query(
@@ -205,27 +204,7 @@ async fn changing_a_rate_keeps_the_old_values_in_the_history() {
     .execute(&mut *tx)
     .await
     .unwrap();
-
-    // The province now has the new values ...
     assert_eq!(rates(&mut tx, "SK").await, (Some(5000), Some(7000), None));
-    // ... and the log holds the OLD ones, with their own date and note.
-    let rows = count(
-        &mut tx,
-        "SELECT count(*) FROM province_rate_history WHERE province_code = 'SK'",
-    )
-    .await;
-    assert_eq!(rows, 1);
-    let (gst, pst, hst, from, note): (Option<i32>, Option<i32>, Option<i32>, String, String) =
-        sqlx::query_as(
-            "SELECT gst_rate_thousandths, pst_rate_thousandths, hst_rate_thousandths, \
-             effective_from::text, note FROM province_rate_history WHERE province_code = 'SK'",
-        )
-        .fetch_one(&mut *tx)
-        .await
-        .unwrap();
-    assert_eq!((gst, pst, hst), (Some(5000), Some(6000), None));
-    assert_eq!(from, "2025-04-01");
-    assert_eq!(note, "CRA GST/HST rates by province, checked 2026-11-17");
 }
 
 #[tokio::test]
@@ -242,78 +221,6 @@ async fn a_province_can_switch_from_gst_and_pst_to_hst_in_one_update() {
     .await
     .unwrap();
     assert_eq!(rates(&mut tx, "SK").await, (None, None, Some(11000)));
-    let old_pst: Option<i32> = sqlx::query_scalar(
-        "SELECT pst_rate_thousandths FROM province_rate_history WHERE province_code = 'SK'",
-    )
-    .fetch_one(&mut *tx)
-    .await
-    .unwrap();
-    assert_eq!(old_pst, Some(6000));
-}
-
-#[tokio::test]
-#[ignore = "needs the database (docker compose up)"]
-async fn two_changes_make_two_history_rows() {
-    let (_turn, pool) = setup().await;
-    let mut tx = work(&pool).await;
-    for (pst, from) in [(6500, "2027-01-01"), (7000, "2028-01-01")] {
-        sqlx::query(
-            "UPDATE provinces SET pst_rate_thousandths = $1, effective_from = $2::date, \
-             note = 'test' WHERE code = 'SK'",
-        )
-        .bind(pst)
-        .bind(from)
-        .execute(&mut *tx)
-        .await
-        .unwrap();
-    }
-    let old_psts: Vec<Option<i32>> = sqlx::query_scalar(
-        "SELECT pst_rate_thousandths FROM province_rate_history \
-         WHERE province_code = 'SK' ORDER BY effective_from",
-    )
-    .fetch_all(&mut *tx)
-    .await
-    .unwrap();
-    assert_eq!(old_psts, [Some(6000), Some(6500)]);
-}
-
-#[tokio::test]
-#[ignore = "needs the database (docker compose up)"]
-async fn fixing_a_name_or_changing_only_the_note_writes_no_history() {
-    let (_turn, pool) = setup().await;
-    let mut tx = work(&pool).await;
-    sqlx::query(
-        "UPDATE provinces SET name = 'Saskatchewan (test)', note = 'only a note' WHERE code = 'SK'",
-    )
-    .execute(&mut *tx)
-    .await
-    .unwrap();
-    assert_eq!(
-        count(&mut tx, "SELECT count(*) FROM province_rate_history").await,
-        0
-    );
-}
-
-#[tokio::test]
-#[ignore = "needs the database (docker compose up)"]
-async fn a_refused_change_leaves_no_history_behind() {
-    let (_turn, pool) = setup().await;
-    let mut tx = work(&pool).await;
-    let result = sqlx::query("UPDATE provinces SET hst_rate_thousandths = 13000 WHERE code = 'AB'")
-        .execute(&mut *tx)
-        .await;
-    assert!(result.is_err());
-    // The transaction is spoiled by the error; the log is checked from a fresh one.
-    drop(tx);
-    let mut fresh = work(&pool).await;
-    assert_eq!(
-        count(
-            &mut fresh,
-            "SELECT count(*) FROM province_rate_history WHERE province_code = 'AB'"
-        )
-        .await,
-        0
-    );
 }
 
 #[tokio::test]
@@ -331,33 +238,17 @@ async fn updated_at_moves_when_a_row_is_updated() {
     assert!(moved);
 }
 
-// ===== the history is a log =====
+// ===== the rate history was dropped (migration 0004) =====
 
 #[tokio::test]
 #[ignore = "needs the database (docker compose up)"]
-async fn the_history_cannot_be_edited_or_deleted() {
+async fn there_is_no_rate_history_table_any_more() {
     let (_turn, pool) = setup().await;
-    // The log is empty in a clean database, so each attempt first adds a row by hand
-    // (inside its own transaction, which is rolled back), then tries to touch it.
-    let insert = "INSERT INTO province_rate_history (province_code, gst_rate_thousandths, effective_from, note) \
-                  VALUES ('SK', 5000, '2025-04-01', 'test')";
-    for statement in [
-        "UPDATE province_rate_history SET note = 'edited'",
-        "DELETE FROM province_rate_history",
-        "TRUNCATE province_rate_history",
-    ] {
-        let mut tx = work(&pool).await;
-        sqlx::query(insert).execute(&mut *tx).await.unwrap();
-        let error = sqlx::query(statement).execute(&mut *tx).await.unwrap_err();
-        assert_eq!(sqlstate(error), RESTRICT_VIOLATION, "{statement}");
-    }
-}
-
-#[tokio::test]
-#[ignore = "needs the database (docker compose up)"]
-async fn history_can_only_point_at_a_real_province() {
-    let (_turn, pool) = setup().await;
-    let sql = "INSERT INTO province_rate_history (province_code, gst_rate_thousandths, effective_from, note) \
-               VALUES ('ZZ', 5000, '2025-04-01', 'test')";
-    assert_eq!(refused(&pool, sql).await, "23503"); // foreign key violation
+    let mut tx = work(&pool).await;
+    let tables = count(
+        &mut tx,
+        "SELECT count(*) FROM information_schema.tables WHERE table_name = 'province_rate_history'",
+    )
+    .await;
+    assert_eq!(tables, 0);
 }

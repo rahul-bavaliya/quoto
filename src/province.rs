@@ -1,6 +1,13 @@
-// src/province.rs
+// src/province.rs: a province, its country and its tax rates
+//
+// The pieces live in `src/province/`: `tax` (the tax sum). The tax RATES per province are
+// kept in the database table `provinces` (see `migrations/`).
 
 use crate::country::Country;
+
+mod tax;
+
+pub use tax::calculate_tax;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Province {

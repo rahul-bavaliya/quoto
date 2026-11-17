@@ -64,8 +64,8 @@ docker compose down             # stop it; the data stays in a Docker volume
 
 - The database is reachable **only from your own computer** (`127.0.0.1`), and the compose file refuses to start without a password.
 - Quoto reads `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` (required) and `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_SSLMODE` (optional) from the environment. The names are the same ones the Postgres image uses, so compose and Quoto share one `.env`.
-- **Migrations:** the tables are made by the numbered files in `migrations/`. They only ever go forward, and a file that has been run is **never edited**: a fix is a new file.
-- **Provinces:** one table, `provinces`, holds each province's GST, PST or HST (rates in thousandths of a percent: 5% = `5000`, 9.975% = `9975`). The database itself refuses a province with both GST and HST, with no tax, or with a rate of 0. Provinces are never deleted. When the government changes a rate it is one `UPDATE`; a trigger copies the old rates into `province_rate_history`, a log that can't be edited. Old quotes stay correct because a quote keeps a copy of the rates it used.
+- **Migrations:** the tables are made by the numbered files in `migrations/`. They only ever go forward, and a file that has been run is **never edited**: a fix is a new file. `build.rs` makes Cargo rebuild when a migration file is added.
+- **Provinces:** one table, `provinces`, holds each province's GST, PST or HST (rates in thousandths of a percent: 5% = `5000`, 9.975% = `9975`). The database itself refuses a province with both GST and HST, with no tax, or with a rate of 0. Provinces are never deleted. When the government changes a rate it is one `UPDATE` (provinces change rates rarely, so there is no history table; migration `0004` removed the one `0003` made). Old quotes stay correct because a quote keeps a copy of the rates it used.
 - The database tests change data only inside a transaction that is rolled back.
 - The password lives in a `Secret`, which prints as `[hidden]`; the connection is the only place that opens it.
 
@@ -102,7 +102,8 @@ src/
 ├── lib.rs               the library's front door
 ├── branch.rs            Branch + branch/ (branch_status, location) (a dealership location; its province decides the taxes)
 ├── country.rs           Country (follows from the province)
-├── errors.rs  logging.rs  money.rs  province.rs  samples.rs  secret.rs  tax.rs
+├── errors.rs  logging.rs  money.rs  samples.rs  secret.rs
+├── province.rs          Province + province/ (tax: the tax sum); the rates per province live in the database
 ├── customer.rs          Customer + customer/ (address, postal_code, contact, phone_number, email)
 ├── database.rs          connect + database/ (settings: DatabaseSettings, read from the environment)
 ├── equipment.rs         Equipment + equipment/ (meter, meter_type, equipment_type, identification,
@@ -124,7 +125,7 @@ One type per file. Each feature is a file named after it (`customer.rs` holds `C
 1. ✅ Toy calculator
 2. ✅ Real shapes: structs, enums, `Vec`, `Option`
 3. ✅ Safe money and errors: cents, `Result`, custom errors, tests
-4. 🚧 Save quotes in a database (PostgreSQL set-up ✅; provinces + tax rates table with history ✅; saving quotes ⬜)
+4. 🚧 Save quotes in a database (PostgreSQL set-up ✅; provinces + tax rates table ✅; saving quotes ⬜)
 5. ⬜ A web API
 6. ⬜ Quote → Repair Order
 7. ⬜ Screens for service writers
