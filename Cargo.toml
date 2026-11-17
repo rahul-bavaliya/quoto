@@ -16,4 +16,5 @@ uuid = { version = "1.29.3", default-features = false, features = ["std"] }
 
 [dev-dependencies]
 dotenvy = "0.15.7"
+sea-orm = { version = "2.0.4", default-features = false, features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "with-uuid", "with-chrono", "schema-sync", "entity-registry", "debug-print"] }
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros"] }
