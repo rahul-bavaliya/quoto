@@ -225,3 +225,49 @@ fn next_after_the_last_number_is_refused_not_wrapped() {
         Err(QuoteError::QuoteNumbersExhausted { year: 2026 })
     );
 }
+
+// ===== quote numbers (the ticket machine) =====
+
+#[test]
+fn the_first_press_gives_number_one_of_the_year() {
+    let mut machine = InMemoryQuoteNumbers::new(2026);
+    assert_eq!(
+        machine.next_number().unwrap().to_string(),
+        "Q-2026-00000001"
+    );
+}
+
+#[test]
+fn each_press_gives_the_next_number() {
+    let mut machine = InMemoryQuoteNumbers::new(2026);
+    let first = machine.next_number().unwrap();
+    let second = machine.next_number().unwrap();
+    let third = machine.next_number().unwrap();
+    assert_eq!(first.to_string(), "Q-2026-00000001");
+    assert_eq!(second.to_string(), "Q-2026-00000002");
+    assert_eq!(third.to_string(), "Q-2026-00000003");
+}
+
+#[test]
+fn two_machines_do_not_share_a_count() {
+    let mut one = InMemoryQuoteNumbers::new(2026);
+    let mut other = InMemoryQuoteNumbers::new(2027);
+    one.next_number().unwrap();
+    one.next_number().unwrap();
+    assert_eq!(other.next_number().unwrap().to_string(), "Q-2027-00000001");
+}
+
+#[test]
+fn a_machine_with_a_bad_year_refuses_to_start() {
+    let mut machine = InMemoryQuoteNumbers::new(26);
+    assert!(matches!(
+        machine.next_number(),
+        Err(QuoteError::InvalidQuoteNumber { .. })
+    ));
+}
+
+#[test]
+fn the_sample_machine_starts_at_the_sample_number() {
+    let mut machine = samples::quote_numbers();
+    assert_eq!(machine.next_number().unwrap(), samples::quote_number());
+}

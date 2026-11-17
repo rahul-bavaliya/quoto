@@ -13,10 +13,12 @@ use tracing::debug;
 mod line_item;
 mod line_kind;
 mod quote_number;
+mod quote_numbers;
 
 pub use line_item::LineItem;
 pub use line_kind::LineKind;
 pub use quote_number::QuoteNumber;
+pub use quote_numbers::{InMemoryQuoteNumbers, QuoteNumbers};
 
 pub struct Quote {
     number: QuoteNumber,

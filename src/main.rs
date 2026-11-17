@@ -1,6 +1,6 @@
 // src/main.rs: a small demo program that uses the Quoto library
 
-use quoto::{Quote, QuoteResult, logging, samples};
+use quoto::{Quote, QuoteNumbers, QuoteResult, logging, samples};
 use std::process::ExitCode;
 use tracing::info;
 
@@ -21,16 +21,15 @@ fn show(quote: &Quote) {
 /// The real work. Any `QuoteError` stops it and is handed back to `main`.
 fn run() -> QuoteResult<()> {
     info!("building the demo quotes");
-    // Quote numbers are handed out one after the other: Q-2026-00000001, Q-2026-00000002
-    let first = samples::quote_number();
-    let second = first.next()?;
+    // The machine hands out numbers one after the other: Q-2026-00000001, Q-2026-00000002
+    let mut numbers = samples::quote_numbers();
     show(&samples::demo_quote(
-        first,
+        numbers.next_number()?,
         samples::prairie_farms()?,
         samples::corolla()?,
     )?);
     show(&samples::demo_quote(
-        second,
+        numbers.next_number()?,
         samples::northern_oilfield()?,
         samples::oilfield_truck()?,
     )?);

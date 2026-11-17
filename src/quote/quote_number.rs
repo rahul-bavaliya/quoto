@@ -8,7 +8,7 @@ const MAX_COUNTER: u32 = 99_999_999;
 
 /// A quote number like "Q-2026-00000001": the letter Q, the year, and an
 /// 8-digit counter that starts at 1 and restarts every year.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct QuoteNumber {
     year: u16,
     counter: u32,
