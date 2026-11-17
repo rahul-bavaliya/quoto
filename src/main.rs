@@ -1,7 +1,10 @@
 // src/main.rs: a small demo program that uses the Quoto library
 
 use chrono::Local;
-use quoto::{InMemoryQuoteNumbers, Quote, QuoteNumbers, QuoteResult, logging, samples};
+use quoto::{
+    EquipmentDraft, EquipmentLookup, InMemoryQuoteNumbers, Quote, QuoteNumbers, QuoteResult,
+    logging, samples,
+};
 use std::process::ExitCode;
 use tracing::info;
 
@@ -15,8 +18,23 @@ fn show(quote: &Quote) {
         quote_number = %quote.number(),
         province = quote.customer().province().label(),
         total_cents = quote.total(),
+        equipment_source = %quote.equipment().source(),
         "quote printed"
     );
+}
+
+/// Asks the lookup about a serial number. This is the one place where a failed
+/// lookup stops: it is logged, the person is told, and `None` means "type the
+/// details in by hand", the same as when the lookup simply doesn't know the machine.
+fn lookup_or_none(lookup: &impl EquipmentLookup, serial: &str) -> Option<EquipmentDraft> {
+    match lookup.lookup(serial) {
+        Ok(draft) => draft,
+        Err(error) => {
+            error.log();
+            eprintln!("{error}");
+            None
+        }
+    }
 }
 
 /// The real work. Any `QuoteError` stops it and is handed back to `main`.
@@ -27,11 +45,18 @@ fn run() -> QuoteResult<()> {
     let mut numbers = InMemoryQuoteNumbers::new();
     // The clock is read once, here, and handed down: a quote never looks at it.
     let now = Local::now().naive_local();
+    // The Corolla's serial number is in the demo catalog, so its make and model
+    // come from the lookup. The oilfield truck is not, so it is typed in by hand.
+    let lookup = samples::equipment_lookup();
+    let corolla = match lookup_or_none(&lookup, samples::COROLLA_SERIAL) {
+        Some(draft) => samples::corolla_from(draft)?,
+        None => samples::corolla()?,
+    };
     show(&samples::demo_quote(
         numbers.next_number()?,
         now,
         samples::prairie_farms()?,
-        samples::corolla()?,
+        corolla,
     )?);
     show(&samples::demo_quote(
         numbers.next_number()?,

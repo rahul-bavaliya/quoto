@@ -3,11 +3,15 @@
 use crate::errors::QuoteError;
 use std::fmt;
 
+mod equipment_draft;
+mod equipment_source;
 mod equipment_type;
 mod identification;
 mod meter;
 mod meter_type;
 
+pub use equipment_draft::EquipmentDraft;
+pub use equipment_source::EquipmentSource;
 pub use equipment_type::EquipmentType;
 pub use identification::Identification;
 pub use meter::Meter;
@@ -21,9 +25,11 @@ pub struct Equipment {
     identification: Identification,
     meter: Meter,
     equipment_type: EquipmentType,
+    source: EquipmentSource,
 }
 
 impl Equipment {
+    /// Equipment typed in by the service writer.
     pub fn new(
         make: String,
         model: String,
@@ -45,10 +51,34 @@ impl Equipment {
             identification,
             meter,
             equipment_type,
+            source: EquipmentSource::Manual,
         })
+    }
+
+    /// Equipment built from a lookup's answer plus what only the writer knows:
+    /// the identification (serial and plate) and the meter reading.
+    pub fn from_draft(
+        draft: EquipmentDraft,
+        identification: Identification,
+        meter: Meter,
+    ) -> Result<Self, QuoteError> {
+        let mut equipment = Equipment::new(
+            draft.make,
+            draft.model,
+            draft.model_year,
+            identification,
+            meter,
+            draft.equipment_type,
+        )?;
+        equipment.source = draft.source;
+        Ok(equipment)
     }
     pub fn equipment_type(&self) -> EquipmentType {
         self.equipment_type
+    }
+
+    pub fn source(&self) -> EquipmentSource {
+        self.source
     }
 }
 

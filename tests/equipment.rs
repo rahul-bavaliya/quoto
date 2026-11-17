@@ -145,3 +145,87 @@ fn a_reading_that_is_not_a_number_is_refused() {
         Err(QuoteError::InvalidMeterReading { .. })
     ));
 }
+
+// ===== equipment source and drafts =====
+
+fn corolla_identification() -> Identification {
+    Identification::new(Some(String::from("SERIAL_NUMBER_TEST_1")), None).unwrap()
+}
+
+fn corolla_meter() -> Meter {
+    Meter::new(Some(28156.98), MeterType::Kilometer).unwrap()
+}
+
+fn corolla_draft() -> EquipmentDraft {
+    EquipmentDraft::new(
+        "test catalog",
+        String::from("Toyota"),
+        String::from("Corolla Cross"),
+        Some(2025),
+        EquipmentType::Car,
+    )
+}
+
+#[test]
+fn equipment_typed_in_by_hand_says_so() {
+    assert_eq!(corolla().source(), EquipmentSource::Manual);
+    assert_eq!(corolla().source().to_string(), "entered by hand");
+}
+
+#[test]
+fn equipment_from_a_draft_remembers_which_lookup_supplied_it() {
+    let equipment =
+        Equipment::from_draft(corolla_draft(), corolla_identification(), corolla_meter()).unwrap();
+    assert_eq!(equipment.source(), EquipmentSource::Lookup("test catalog"));
+    assert_eq!(
+        equipment.source().to_string(),
+        "looked up with test catalog"
+    );
+}
+
+#[test]
+fn equipment_from_a_draft_shows_the_same_details_as_equipment_typed_in() {
+    let from_draft =
+        Equipment::from_draft(corolla_draft(), corolla_identification(), corolla_meter()).unwrap();
+    let by_hand = Equipment::new(
+        String::from("Toyota"),
+        String::from("Corolla Cross"),
+        Some(2025),
+        corolla_identification(),
+        corolla_meter(),
+        EquipmentType::Car,
+    )
+    .unwrap();
+    assert_eq!(from_draft.to_string(), by_hand.to_string());
+    assert_eq!(from_draft.equipment_type(), EquipmentType::Car);
+}
+
+#[test]
+fn a_draft_with_a_blank_make_is_refused() {
+    let draft = EquipmentDraft::new(
+        "test catalog",
+        String::from("  "),
+        String::from("Corolla Cross"),
+        None,
+        EquipmentType::Car,
+    );
+    assert_eq!(
+        Equipment::from_draft(draft, corolla_identification(), corolla_meter()),
+        Err(QuoteError::MissingField { field: "make" })
+    );
+}
+
+#[test]
+fn a_draft_with_a_blank_model_is_refused() {
+    let draft = EquipmentDraft::new(
+        "test catalog",
+        String::from("Toyota"),
+        String::new(),
+        None,
+        EquipmentType::Car,
+    );
+    assert_eq!(
+        Equipment::from_draft(draft, corolla_identification(), corolla_meter()),
+        Err(QuoteError::MissingField { field: "model" })
+    );
+}

@@ -153,3 +153,22 @@ fn an_error_works_as_a_standard_error() {
     let error: Box<dyn std::error::Error> = Box::new(QuoteError::MissingIdentification);
     assert!(error.to_string().contains("serial number"));
 }
+
+#[test]
+fn a_failed_lookup_tells_the_person_to_enter_the_details_by_hand() {
+    let error = QuoteError::LookupFailed {
+        provider: "NHTSA vPIC",
+    };
+    assert_eq!(
+        error.to_string(),
+        "Could not look up the details with NHTSA vPIC. Please enter them by hand."
+    );
+}
+
+#[test]
+fn a_failed_lookup_is_a_service_problem_not_a_typo() {
+    let error = QuoteError::LookupFailed { provider: "x" };
+    assert_eq!(error.kind(), ErrorKind::ServiceUnavailable);
+    assert_eq!(error.code(), "LOOKUP_FAILED");
+    assert_eq!(error.exit_code(), 4);
+}

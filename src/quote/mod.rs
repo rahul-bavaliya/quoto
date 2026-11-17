@@ -80,6 +80,10 @@ impl Quote {
         &self.customer
     }
 
+    pub fn equipment(&self) -> &Equipment {
+        &self.equipment
+    }
+
     /// The customer's province decides the taxes (one source of truth).
     fn province(&self) -> &Province {
         self.customer.province()
