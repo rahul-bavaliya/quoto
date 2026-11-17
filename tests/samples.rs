@@ -55,3 +55,29 @@ fn a_demo_quote_shows_the_time_it_is_given() {
     .unwrap();
     assert!(quote.to_string().contains("Date: 2026-11-16 14:30:00"));
 }
+
+#[test]
+fn the_demo_catalog_knows_the_corolla_and_the_tractor() {
+    let catalog = equipment_lookup();
+    assert!(catalog.lookup(COROLLA_SERIAL).unwrap().is_some());
+    assert!(catalog.lookup(TRACTOR_SERIAL).unwrap().is_some());
+}
+
+#[test]
+fn the_demo_catalog_does_not_know_the_oilfield_truck() {
+    let catalog = equipment_lookup();
+    assert_eq!(catalog.lookup("1FT8W3BT0NEC12345"), Ok(None));
+}
+
+#[test]
+fn the_corolla_from_the_catalog_matches_the_one_typed_in() {
+    let draft = equipment_lookup().lookup(COROLLA_SERIAL).unwrap().unwrap();
+    let from_lookup = corolla_from(draft).unwrap();
+    let by_hand = corolla().unwrap();
+    assert_eq!(from_lookup.to_string(), by_hand.to_string());
+    assert_eq!(
+        from_lookup.source(),
+        EquipmentSource::Lookup("demo catalog")
+    );
+    assert_eq!(by_hand.source(), EquipmentSource::Manual);
+}

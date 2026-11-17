@@ -60,3 +60,13 @@ fn each_printed_quote_is_logged_with_its_province_and_total() {
     assert!(stderr.contains("Saskatchewan"));
     assert!(stderr.contains("13653"));
 }
+
+#[test]
+fn each_printed_quote_logs_where_its_equipment_details_came_from() {
+    let output = run_demo(None);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // The Corolla comes from the demo catalog; the oilfield truck is typed in.
+    assert!(stderr.contains("equipment_source=looked up with demo catalog"));
+    assert!(stderr.contains("equipment_source=entered by hand"));
+}

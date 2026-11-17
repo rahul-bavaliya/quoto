@@ -7,6 +7,7 @@
 
 pub mod customer;
 pub mod equipment;
+pub mod equipment_lookup;
 pub mod errors;
 pub mod logging;
 pub mod money;
@@ -17,7 +18,10 @@ pub mod tax;
 
 // The short front door: `use quoto::{Quote, LineItem, ...};`
 pub use customer::{Address, Contact, Customer, Email, PhoneNumber, PostalCode};
-pub use equipment::{Equipment, EquipmentType, Identification, Meter, MeterType};
+pub use equipment::{
+    Equipment, EquipmentDraft, EquipmentSource, EquipmentType, Identification, Meter, MeterType,
+};
+pub use equipment_lookup::{ChainedLookup, EquipmentLookup, InMemoryEquipmentLookup};
 pub use errors::{ErrorKind, QuoteError, QuoteResult};
 pub use money::format_money;
 pub use province::Province;

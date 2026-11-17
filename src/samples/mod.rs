@@ -7,7 +7,10 @@
 // Everything here is invented: no real people, companies or phone numbers.
 
 use crate::customer::{Address, Contact, Customer, Email, PhoneNumber, PostalCode};
-use crate::equipment::{Equipment, EquipmentType, Identification, Meter, MeterType};
+use crate::equipment::{
+    Equipment, EquipmentDraft, EquipmentType, Identification, Meter, MeterType,
+};
+use crate::equipment_lookup::InMemoryEquipmentLookup;
 use crate::errors::QuoteResult;
 use crate::province::Province;
 use crate::quote::{InMemoryQuoteNumbers, LineItem, LineKind, Quote, QuoteNumber};
@@ -78,18 +81,67 @@ pub fn northern_oilfield() -> QuoteResult<Customer> {
 
 /// A car. A fresh one each time: a quote owns its equipment, so two quotes
 /// can't share one.
+/// The serial number of the sample Corolla (the demo catalog knows it).
+pub const COROLLA_SERIAL: &str = "SERIAL_NUMBER_TEST_1";
+
+/// The serial number of the sample tractor (the demo catalog knows it).
+pub const TRACTOR_SERIAL: &str = "DEMO-8R410-0001";
+
+/// The name the demo catalog gives itself as a source.
+const DEMO_CATALOG: &str = "demo catalog";
+
+fn corolla_identification() -> QuoteResult<Identification> {
+    Identification::new(
+        Some(String::from(COROLLA_SERIAL)),
+        Some(String::from("RB97")),
+    )
+}
+
+fn corolla_meter() -> QuoteResult<Meter> {
+    Meter::new(Some(28156.98), MeterType::Kilometer)
+}
+
+/// The Corolla, typed in by hand.
 pub fn corolla() -> QuoteResult<Equipment> {
     Equipment::new(
         String::from("Toyota"),
         String::from("Corolla Cross"),
         Some(2025),
-        Identification::new(
-            Some(String::from("SERIAL_NUMBER_TEST_1")),
-            Some(String::from("RB97")),
-        )?,
-        Meter::new(Some(28156.98), MeterType::Kilometer)?,
+        corolla_identification()?,
+        corolla_meter()?,
         EquipmentType::Car,
     )
+}
+
+/// The Corolla built from a lookup's answer: the writer adds the plate and the meter.
+pub fn corolla_from(draft: EquipmentDraft) -> QuoteResult<Equipment> {
+    Equipment::from_draft(draft, corolla_identification()?, corolla_meter()?)
+}
+
+/// A demo catalog that knows the Corolla and the tractor, and nothing else.
+pub fn equipment_lookup() -> InMemoryEquipmentLookup {
+    let mut lookup = InMemoryEquipmentLookup::new();
+    lookup.add(
+        COROLLA_SERIAL,
+        EquipmentDraft::new(
+            DEMO_CATALOG,
+            String::from("Toyota"),
+            String::from("Corolla Cross"),
+            Some(2025),
+            EquipmentType::Car,
+        ),
+    );
+    lookup.add(
+        TRACTOR_SERIAL,
+        EquipmentDraft::new(
+            DEMO_CATALOG,
+            String::from("John Deere"),
+            String::from("8R 410"),
+            Some(2023),
+            EquipmentType::Tractor,
+        ),
+    );
+    lookup
 }
 
 /// An oilfield service truck.

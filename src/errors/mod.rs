@@ -57,6 +57,10 @@ pub enum QuoteError {
 
     #[error("Meter reading {reading} must be a number that is zero or more.")]
     InvalidMeterReading { reading: f64 },
+
+    // ---- Outside services ----
+    #[error("Could not look up the details with {provider}. Please enter them by hand.")]
+    LookupFailed { provider: &'static str },
 }
 
 /// Who can fix the problem? Screens and APIs use this to pick the right reaction.
@@ -66,18 +70,19 @@ pub enum ErrorKind {
     InvalidInput,
     /// The input is fine on its own, but a business rule says no.
     BusinessRule,
+    /// An outside service didn't answer. Nobody typed anything wrong; try again later or enter by hand.
+    ServiceUnavailable,
 }
 
 impl QuoteError {
     pub fn kind(&self) -> ErrorKind {
-        // Only these two are business rules; everything else is a wrong input.
-        if matches!(
-            self,
-            QuoteError::CreditTooLarge { .. } | QuoteError::QuoteNumbersExhausted { .. }
-        ) {
-            ErrorKind::BusinessRule
-        } else {
-            ErrorKind::InvalidInput
+        match self {
+            QuoteError::CreditTooLarge { .. } | QuoteError::QuoteNumbersExhausted { .. } => {
+                ErrorKind::BusinessRule
+            }
+            QuoteError::LookupFailed { .. } => ErrorKind::ServiceUnavailable,
+            // Everything else is a wrong input.
+            _ => ErrorKind::InvalidInput,
         }
     }
 
@@ -96,6 +101,7 @@ impl QuoteError {
             QuoteError::QuoteNumbersExhausted { .. } => "QUOTE_NUMBERS_EXHAUSTED",
             QuoteError::MissingIdentification => "MISSING_IDENTIFICATION",
             QuoteError::InvalidMeterReading { .. } => "INVALID_METER_READING",
+            QuoteError::LookupFailed { .. } => "LOOKUP_FAILED",
         }
     }
 
@@ -104,12 +110,13 @@ impl QuoteError {
         match self.kind() {
             ErrorKind::InvalidInput => 2,
             ErrorKind::BusinessRule => 3,
+            ErrorKind::ServiceUnavailable => 4,
         }
     }
 
     /// The one place that writes an error to the log.
-    /// Wrong input is a warning (the person can fix it); a refused business
-    /// rule is an error. Call this where the error finally stops (not at every step).
+    /// Wrong input and an unavailable outside service are warnings (the person
+    /// can fix it or enter the details by hand); a refused business rule is an error. Call this where the error finally stops (not at every step).
     ///
     /// Only the **code** is logged, never the message: messages can repeat what
     /// the customer typed (a phone number, an email), and logs must not hold that.
@@ -117,6 +124,9 @@ impl QuoteError {
         match self.kind() {
             ErrorKind::InvalidInput => warn!(code = self.code(), "input refused"),
             ErrorKind::BusinessRule => error!(code = self.code(), "business rule refused"),
+            ErrorKind::ServiceUnavailable => {
+                warn!(code = self.code(), "outside service unavailable")
+            }
         }
     }
 }
