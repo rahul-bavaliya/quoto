@@ -70,8 +70,8 @@ fn a_bad_line_never_reaches_the_quote() {
 #[test]
 fn printed_quote_shows_taxes_and_total() {
     let text = oil_change_quote(Province::Saskatchewan).to_string();
-    assert!(text.contains("Quote Q-2026-0001: Saskatchewan"));
-    assert!(text.contains("Date: 2026-11-16"));
+    assert!(text.contains("Quote Q-2026-00000001: Saskatchewan"));
+    assert!(text.contains("Date: 2026-11-16 09:30:00"));
     assert!(text.contains("GST 5%: $9.90"));
     assert!(text.contains("PST 6%: $11.88"));
     assert!(text.ends_with("Total: $219.78"));

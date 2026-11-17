@@ -6,7 +6,7 @@ use crate::errors::QuoteError;
 use crate::money::format_money;
 use crate::province::Province;
 use crate::tax::calculate_tax;
-use chrono::NaiveDate;
+use chrono::NaiveDateTime;
 use std::fmt;
 use tracing::debug;
 
@@ -20,18 +20,18 @@ pub use quote_number::QuoteNumber;
 
 pub struct Quote {
     number: QuoteNumber,
-    date: NaiveDate,
+    created_at: NaiveDateTime,
     customer: Customer,
     equipment: Equipment,
     items: Vec<LineItem>,
 }
 
 impl Quote {
-    /// The number and the date are handed in, never made here: a quote doesn't
+    /// The number and the date and time are handed in, never made here: a quote doesn't
     /// look at the clock or keep a counter (that keeps it easy to test).
     pub fn new(
         number: QuoteNumber,
-        date: NaiveDate,
+        created_at: NaiveDateTime,
         customer: Customer,
         equipment: Equipment,
     ) -> Self {
@@ -43,7 +43,7 @@ impl Quote {
         );
         Quote {
             number,
-            date,
+            created_at,
             customer,
             equipment,
             items: Vec::new(),
@@ -141,7 +141,7 @@ impl fmt::Display for Quote {
             self.number,
             self.province().label()
         )?;
-        writeln!(f, "Date: {}", self.date)?;
+        writeln!(f, "Date: {}", self.created_at.format("%Y-%m-%d %H:%M:%S"))?;
         writeln!(f, "Customer: {}", self.customer)?;
         writeln!(f, "Contact: {}", self.customer.contact())?;
         writeln!(f, "{}", "-".repeat(20))?;

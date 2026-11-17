@@ -5,7 +5,9 @@ use std::process::ExitCode;
 use tracing::info;
 
 /// Shows a quote to the person, and logs that it happened.
-/// The log holds only the province and the total, never customer details.
+/// DEMO ONLY: it prints the whole quote (with the customer's details) because
+/// the data here is fake. A real server must never print or log a whole quote.
+/// The log holds only the number, province and total, never customer details.
 fn show(quote: &Quote) {
     println!("{quote}");
     info!(
@@ -19,7 +21,7 @@ fn show(quote: &Quote) {
 /// The real work. Any `QuoteError` stops it and is handed back to `main`.
 fn run() -> QuoteResult<()> {
     info!("building the demo quotes");
-    // Quote numbers are handed out one after the other: Q-2026-0001, Q-2026-0002
+    // Quote numbers are handed out one after the other: Q-2026-00000001, Q-2026-00000002
     let first = samples::quote_number();
     let second = first.next()?;
     show(&samples::demo_quote(
