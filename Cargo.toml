@@ -17,3 +17,8 @@ uuid = { version = "1.29.3", default-features = false, features = ["std"] }
 [dev-dependencies]
 dotenvy = "0.15.7"
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros"] }
+
+# Smaller builds: keep the line numbers in error messages and backtraces, but not the full
+# debugger information. (The default made the `target/` folder so big that a Codespace ran out of disk.)
+[profile.dev]
+debug = "line-tables-only"
