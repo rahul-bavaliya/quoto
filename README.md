@@ -64,8 +64,11 @@ curl "http://127.0.0.1:3000/branches?status=active" -H "Authorization: Bearer $K
 | `PUT /branches/{id}` | replace the details (the status is not touched) |
 | `PATCH /branches/{id}/status` | `{"status": "inactive"}` or `{"status": "active"}` |
 
+**Try it in the browser:** with the server running, open <http://127.0.0.1:3000/docs> (in Codespaces: the Ports tab, port 3000, "Open in Browser", then add `/docs`). It lists every call and has a "Try it out" button on each. Click **Authorize** once and paste your `API_KEY`. The same list as data is at `/openapi.json`.
+
 There is **no DELETE** (a branch is never deleted). A failed call answers `{"code": "...", "message": "..."}` with the library's own code; the status is 400 (wrong input), 401 (no or wrong key), 404 (no such branch), 409 (a rule refused it, e.g. a number already used) or 503 (database down).
 
+- **The docs page is the one thing that opens without a key** (`/docs` and `/openapi.json`): a browser can't send a key to load a page, and they show only the shape of the API, never a branch. Everything else, even an address that doesn't exist, needs the key. The list is built from the notes above each handler, so it can't drift from the code. Keep Codespaces port 3000 **Private**, and switch the docs off before the API is ever put on the internet (Phase 10).
 - **Every call needs the key** (`Authorization: Bearer <key>`), even for a route that doesn't exist. This is a stand-in until real login and roles (Phase 9). The key is read from `API_KEY` into a `Secret`, compared in constant time, never logged and never sent back. There is no default key.
 - **It only listens on `127.0.0.1`.** The key travels as plain text, so the API refuses any other address until there is HTTPS (Phase 10).
 - Bodies over 16 KB are refused. A field the call doesn't know (like `status` on create) is refused.
@@ -137,7 +140,7 @@ GitHub Actions runs the same checks automatically on every push and pull request
 src/
 ├── main.rs              starts the web API (and is the one place where errors stop the program)
 ├── lib.rs               the library's front door
-├── api.rs               the web API + api/ (settings, auth, error, branches)
+├── api.rs               the web API + api/ (settings, auth, error, branches, docs)
 ├── branch.rs            Branch + branch/ (location, table: the branches table and its create/read/update) (a dealership location; its province decides the taxes)
 ├── country.rs           Country (follows from the province)
 ├── errors.rs  logging.rs  money.rs  samples.rs  secret.rs

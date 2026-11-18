@@ -295,3 +295,102 @@ fn the_key_is_never_shown_when_the_settings_are_printed() {
     let text = format!("{:?}", settings(&[("API_KEY", KEY)]).unwrap());
     assert!(!text.contains(KEY));
 }
+
+// ===== the documentation page (the only calls that don't need the key) =====
+
+async fn open(uri: &str) -> (StatusCode, String) {
+    let request = Request::builder().uri(uri).body(Body::empty()).unwrap();
+    let response = app().oneshot(request).await.unwrap();
+    let status = response.status();
+    let bytes = to_bytes(response.into_body(), 4 << 20).await.unwrap();
+    (status, String::from_utf8_lossy(&bytes).to_string())
+}
+
+async fn spec() -> Value {
+    let (status, text) = open("/openapi.json").await;
+    assert_eq!(status, StatusCode::OK);
+    serde_json::from_str(&text).unwrap()
+}
+
+#[tokio::test]
+async fn the_docs_page_and_the_list_of_calls_open_without_a_key() {
+    let (status, page) = open("/docs/").await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(page.to_lowercase().contains("swagger"));
+    assert_eq!(open("/openapi.json").await.0, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn everything_else_still_needs_the_key_next_to_the_docs() {
+    for uri in [
+        "/branches",
+        "/nothing-here",
+        "/docs-secret",
+        "/openapi.jsonx",
+    ] {
+        assert_eq!(open(uri).await.0, StatusCode::UNAUTHORIZED, "{uri}");
+    }
+}
+
+#[tokio::test]
+async fn the_list_describes_exactly_the_five_branch_calls_and_no_delete() {
+    let spec = spec().await;
+    let mut calls: Vec<String> = spec["paths"]
+        .as_object()
+        .unwrap()
+        .iter()
+        .flat_map(|(path, methods)| {
+            methods
+                .as_object()
+                .unwrap()
+                .keys()
+                .map(move |method| format!("{} {path}", method.to_uppercase()))
+        })
+        .collect();
+    calls.sort();
+    assert_eq!(
+        calls,
+        [
+            "GET /branches",
+            "GET /branches/{id}",
+            "PATCH /branches/{id}/status",
+            "POST /branches",
+            "PUT /branches/{id}",
+        ]
+    );
+}
+
+#[tokio::test]
+async fn every_described_call_really_exists_and_wants_the_key() {
+    let spec = spec().await;
+    let nil = "00000000-0000-0000-0000-000000000000";
+    for (path, methods) in spec["paths"].as_object().unwrap() {
+        for (method, details) in methods.as_object().unwrap() {
+            let uri = path.replace("{id}", nil);
+            // Without the key: refused, so the call is real and locked.
+            let (status, _) = call(&method.to_uppercase(), &uri, None, None).await;
+            assert_eq!(status, StatusCode::UNAUTHORIZED, "{method} {path}");
+            // The page says the key is needed (the lock icon).
+            assert!(
+                details.get("security").is_some() || spec["security"].is_array(),
+                "{method} {path}"
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn the_page_knows_the_key_goes_in_a_bearer_header() {
+    let spec = spec().await;
+    let scheme = &spec["components"]["securitySchemes"]["api_key"];
+    assert_eq!(scheme["type"], "http");
+    assert_eq!(scheme["scheme"], "bearer");
+    assert_eq!(spec["security"][0], json!({"api_key": []}));
+}
+
+#[tokio::test]
+async fn a_failed_call_is_described_as_code_and_message() {
+    let spec = spec().await;
+    let error = &spec["components"]["schemas"]["ErrorBody"]["properties"];
+    assert!(error.get("code").is_some() && error.get("message").is_some());
+}

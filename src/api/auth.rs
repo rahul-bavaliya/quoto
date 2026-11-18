@@ -8,6 +8,13 @@ use axum::middleware::Next;
 use axum::response::Response;
 use subtle::ConstantTimeEq;
 
+/// The only addresses that open without a key: the documentation page and its list of calls.
+/// They show the shape of the API, never a branch. Everything else, including an address that
+/// doesn't exist, needs the key (so a stranger can't learn which routes exist).
+fn is_public(path: &str) -> bool {
+    path == "/openapi.json" || path == "/docs" || path.starts_with("/docs/")
+}
+
 /// Lets the call through only if it carries `Authorization: Bearer <the key>`.
 /// The two keys are compared in constant time, so the answer time doesn't hint how many
 /// characters were right.
@@ -16,6 +23,9 @@ pub(super) async fn require_key(
     request: Request,
     next: Next,
 ) -> Result<Response, ApiError> {
+    if is_public(request.uri().path()) {
+        return Ok(next.run(request).await);
+    }
     let given = request
         .headers()
         .get(AUTHORIZATION)

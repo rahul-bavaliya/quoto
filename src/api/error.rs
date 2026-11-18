@@ -9,6 +9,7 @@ use axum::http::{StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use tracing::warn;
+use utoipa::ToSchema;
 
 pub(super) enum ApiError {
     /// Something Quoto's own rules refused (wrong input, a branch that doesn't exist...).
@@ -25,9 +26,13 @@ impl From<QuoteError> for ApiError {
     }
 }
 
-#[derive(Serialize)]
-struct ErrorBody {
+/// What every failed call answers.
+#[derive(Serialize, ToSchema)]
+#[schema(example = json!({"code": "UNKNOWN_BRANCH", "message": "There is no branch with that id or number."}))]
+pub(super) struct ErrorBody {
+    /// A stable word for the problem (the same codes the library uses).
     code: &'static str,
+    /// A short sentence for a person.
     message: String,
 }
 

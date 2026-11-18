@@ -112,7 +112,9 @@ pub enum QuoteError {
     RatesDateBeforeCurrent { date: NaiveDate, current: NaiveDate },
 
     // ---- Web API ----
-    #[error("The web API could not start or keep running.")]
+    #[error(
+        "The web API could not start or keep running. Is another copy of Quoto already using its port? (RUST_LOG=debug shows the reason.)"
+    )]
     ServerStartFailed,
 
     // ---- Status and branches ----
