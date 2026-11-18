@@ -14,6 +14,10 @@ use super::equipment::{
     self, EquipmentChanges, EquipmentInput, EquipmentView, NewEquipment, OwnerInput,
 };
 use super::error::ErrorBody;
+use super::quotes::{
+    self, CustomerInput as QuoteCustomerInput, EquipmentInput as QuoteEquipmentInput, LineInput,
+    LineView, NewQuoteInput, QuoteChanges, QuoteView, RejectInput, TotalsView,
+};
 use super::request::StatusInput;
 use axum::Router;
 use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
@@ -43,9 +47,9 @@ impl Modify for BearerKey {
 #[openapi(
     info(
         title = "Quoto API",
-        description = "Branches, customers and equipment for the Quoto quoting and repair-order system. \
+        description = "Branches, customers, equipment and quotes for the Quoto quoting and repair-order system. \
             Nothing is ever erased: a branch or a customer is made inactive, and DELETE on equipment \
-            archives the machine. Customers and machines identify real people and vehicles: \
+            archives the machine, and a quote is never erased. Customers and machines identify real people and vehicles: \
             use made-up ones only until real login exists."
     ),
     paths(
@@ -68,7 +72,17 @@ impl Modify for BearerKey {
         equipment::change,
         equipment::archive,
         equipment::change_status,
-        equipment::change_owner
+        equipment::change_owner,
+        quotes::list,
+        quotes::read,
+        quotes::create,
+        quotes::change,
+        quotes::add_line,
+        quotes::add_customer,
+        quotes::add_equipment,
+        quotes::accept,
+        quotes::reject,
+        quotes::reopen
     ),
     components(schemas(
         BranchChanges,
@@ -83,6 +97,15 @@ impl Modify for BearerKey {
         NewEquipment,
         OwnerInput,
         StatusInput,
+        LineInput,
+        LineView,
+        NewQuoteInput,
+        QuoteChanges,
+        QuoteCustomerInput,
+        QuoteEquipmentInput,
+        QuoteView,
+        RejectInput,
+        TotalsView,
         ErrorBody
     )),
     modifiers(&BearerKey),

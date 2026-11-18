@@ -29,6 +29,28 @@ pub struct Api {
 }
 
 pub async fn clean(db: &DatabaseConnection) {
+    // Quotes first: they point at the test branches, customers and machines (nothing that a quote
+    // points at can be deleted). Every test quote is made at an `API-T-` branch.
+    db.execute_unprepared(
+        "DELETE FROM quote_lines WHERE quote_id IN \
+         (SELECT q.id FROM quotes q JOIN branches b ON b.id = q.branch_id WHERE b.number LIKE 'API-T-%')",
+    )
+    .await
+    .expect("clean up test quote lines");
+    db.execute_unprepared(
+        "DELETE FROM quotes WHERE branch_id IN (SELECT id FROM branches WHERE number LIKE 'API-T-%')",
+    )
+    .await
+    .expect("clean up test quotes");
+    // The API dates a quote by the clock, so the tests used up numbers of the real year. Give them
+    // back: this year's counter goes back to the highest number a remaining quote has.
+    let year = chrono::Local::now().format("%Y").to_string();
+    db.execute_unprepared(&format!(
+        "UPDATE quote_numbers SET last_number = COALESCE((SELECT max(substring(number from 8)::int) \
+         FROM quotes WHERE number LIKE 'Q-{year}-%'), 0) WHERE year = {year}"
+    ))
+    .await
+    .expect("give back the test quote numbers");
     db.execute_unprepared("DELETE FROM branches WHERE number LIKE 'API-T-%'")
         .await
         .expect("clean up test branches");

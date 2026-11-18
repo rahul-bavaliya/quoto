@@ -242,6 +242,13 @@ fn every_error_has_its_own_code() {
             subtotal_cents: 0,
         }
         .code(),
+        QuoteError::LineTooLarge {
+            description: String::new(),
+        }
+        .code(),
+        QuoteError::DescriptionTooLong { max: 1 }.code(),
+        QuoteError::TooManyLines { max: 1 }.code(),
+        QuoteError::InvalidLineKind.code(),
         QuoteError::MissingField { field: "x" }.code(),
         QuoteError::InvalidPhone {
             input: String::new(),
@@ -451,4 +458,21 @@ fn a_reason_that_is_too_long_is_wrong_input() {
     assert_eq!(error.kind(), ErrorKind::InvalidInput);
     assert_eq!(error.code(), "REJECTION_REASON_TOO_LONG");
     assert_eq!(error.exit_code(), 2);
+}
+
+#[test]
+fn the_line_limit_errors_have_the_right_kind() {
+    assert_eq!(
+        QuoteError::TooManyLines { max: 1 }.kind(),
+        ErrorKind::BusinessRule
+    );
+    for error in [
+        QuoteError::LineTooLarge {
+            description: String::new(),
+        },
+        QuoteError::DescriptionTooLong { max: 1 },
+        QuoteError::InvalidLineKind,
+    ] {
+        assert_eq!(error.kind(), ErrorKind::InvalidInput);
+    }
 }

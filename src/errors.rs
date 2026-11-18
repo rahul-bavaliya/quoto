@@ -22,6 +22,18 @@ pub enum QuoteError {
     #[error("{description} unit price can't be negative.")]
     NegativePrice { description: String },
 
+    #[error("{description} is too big: at most {max_quantity} of a kind and {max_price} each.", max_quantity = crate::quote::MAX_QUANTITY, max_price = format_money(crate::quote::MAX_UNIT_PRICE_CENTS))]
+    LineTooLarge { description: String },
+
+    #[error("A line's description can be at most {max} characters.")]
+    DescriptionTooLong { max: usize },
+
+    #[error("A quote can have at most {max} lines.")]
+    TooManyLines { max: usize },
+
+    #[error("A line is a labour, part, fee or credit.")]
+    InvalidLineKind,
+
     #[error(
         "Credit of {} is larger than the subtotal of {}.",
         format_money(*.credit_cents),
@@ -254,6 +266,7 @@ impl QuoteError {
             | QuoteError::DuplicateSerialNumber
             | QuoteError::QuoteAlreadySaved
             | QuoteError::QuoteNotSaved
+            | QuoteError::TooManyLines { .. }
             | QuoteError::QuoteChangedMeanwhile => ErrorKind::BusinessRule,
             QuoteError::LookupFailed { .. }
             | QuoteError::DatabaseUnavailable
@@ -275,6 +288,10 @@ impl QuoteError {
             QuoteError::BadQuantity { .. } => "BAD_QUANTITY",
             QuoteError::NegativePrice { .. } => "NEGATIVE_PRICE",
             QuoteError::CreditTooLarge { .. } => "CREDIT_TOO_LARGE",
+            QuoteError::LineTooLarge { .. } => "LINE_TOO_LARGE",
+            QuoteError::DescriptionTooLong { .. } => "DESCRIPTION_TOO_LONG",
+            QuoteError::TooManyLines { .. } => "TOO_MANY_LINES",
+            QuoteError::InvalidLineKind => "INVALID_LINE_KIND",
             QuoteError::MissingField { .. } => "MISSING_FIELD",
             QuoteError::InvalidPhone { .. } => "INVALID_PHONE",
             QuoteError::InvalidEmail { .. } => "INVALID_EMAIL",

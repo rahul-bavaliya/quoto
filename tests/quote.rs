@@ -621,3 +621,84 @@ fn text_that_is_not_a_quote_number_is_refused() {
         );
     }
 }
+
+// ===== line limits (Day 53) =====
+
+fn line(description: &str, quantity: f64, price: i64) -> QuoteResult<LineItem> {
+    LineItem::new(description.to_string(), quantity, price, LineKind::Part)
+}
+
+#[test]
+fn a_line_with_no_number_for_a_quantity_is_refused() {
+    for quantity in [f64::NAN, f64::NEG_INFINITY, 0.0, -1.0] {
+        assert!(matches!(
+            line("Filter", quantity, 100),
+            Err(QuoteError::BadQuantity { .. })
+        ));
+    }
+    // infinity is not "a number of items" either: it is too big
+    assert!(matches!(
+        line("Filter", f64::INFINITY, 100),
+        Err(QuoteError::LineTooLarge { .. })
+    ));
+}
+
+#[test]
+fn a_line_too_big_to_add_up_safely_is_refused_and_the_limits_themselves_are_allowed() {
+    assert!(matches!(
+        line("Filter", MAX_QUANTITY + 1.0, 100),
+        Err(QuoteError::LineTooLarge { .. })
+    ));
+    assert!(matches!(
+        line("Filter", 1.0, MAX_UNIT_PRICE_CENTS + 1),
+        Err(QuoteError::LineTooLarge { .. })
+    ));
+    let biggest = line("Filter", MAX_QUANTITY, MAX_UNIT_PRICE_CENTS).unwrap();
+    assert_eq!(biggest.line_total(), 100_000_000_000_000);
+    // ...and a quote of many of the biggest still adds up without overflowing
+    let mut quote = quick_quote(Province::Saskatchewan);
+    for _ in 0..MAX_LINES {
+        quote
+            .add_item(line("Filter", MAX_QUANTITY, MAX_UNIT_PRICE_CENTS).unwrap())
+            .unwrap();
+    }
+    assert_eq!(quote.subtotal(), 200 * 100_000_000_000_000);
+}
+
+#[test]
+fn a_description_is_trimmed_not_blank_and_not_too_long() {
+    assert_eq!(
+        line("  Oil filter  ", 1.0, 100).unwrap().description(),
+        "Oil filter"
+    );
+    for blank in ["", "   ", "\t\n"] {
+        assert!(matches!(
+            line(blank, 1.0, 100),
+            Err(QuoteError::MissingField {
+                field: "description"
+            })
+        ));
+    }
+    assert!(line(&"x".repeat(MAX_DESCRIPTION_CHARS), 1.0, 100).is_ok());
+    assert!(matches!(
+        line(&"x".repeat(MAX_DESCRIPTION_CHARS + 1), 1.0, 100),
+        Err(QuoteError::DescriptionTooLong {
+            max: MAX_DESCRIPTION_CHARS
+        })
+    ));
+    // counted in characters, not bytes
+    assert!(line(&"é".repeat(MAX_DESCRIPTION_CHARS), 1.0, 100).is_ok());
+}
+
+#[test]
+fn a_quote_holds_at_most_its_limit_of_lines() {
+    let mut quote = quick_quote(Province::Saskatchewan);
+    for _ in 0..MAX_LINES {
+        quote.add_item(line("Filter", 1.0, 100).unwrap()).unwrap();
+    }
+    assert!(matches!(
+        quote.add_item(line("One more", 1.0, 100).unwrap()),
+        Err(QuoteError::TooManyLines { max: MAX_LINES })
+    ));
+    assert_eq!(quote.items().len(), MAX_LINES);
+}

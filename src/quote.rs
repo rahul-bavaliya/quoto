@@ -31,6 +31,12 @@ pub(crate) use table::{QuoteLineTable, QuoteNumberTable, QuoteTable};
 /// The prices on a quote are good for this many days after the quote date.
 const VALID_FOR_DAYS: u64 = 30;
 
+/// Limits that keep a quote readable and its totals from overflowing.
+pub const MAX_QUANTITY: f64 = 1_000_000.0;
+pub const MAX_UNIT_PRICE_CENTS: i64 = 100_000_000;
+pub const MAX_DESCRIPTION_CHARS: usize = 200;
+pub const MAX_LINES: usize = 200;
+
 pub struct Quote {
     /// The database's id. Empty until this quote is loaded from the database:
     /// a new one never makes its own id.
@@ -130,6 +136,9 @@ impl Quote {
     /// price they decided on must not move (a rejected quote can be reopened).
     pub fn add_item(&mut self, mut item: LineItem) -> Result<(), QuoteError> {
         self.ensure_pending()?;
+        if self.items.len() >= MAX_LINES {
+            return Err(QuoteError::TooManyLines { max: MAX_LINES });
+        }
         let subtotal_after = self.subtotal() + item.line_total();
         if matches!(item.kind(), LineKind::Credit) && subtotal_after < 0 {
             return Err(QuoteError::CreditTooLarge {
