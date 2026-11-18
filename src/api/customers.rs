@@ -3,7 +3,8 @@
 //   GET   /customers?status=active&limit=50&offset=0   a page of customers, ordered by name
 //   GET   /customers/{id}                              read one
 //   POST  /customers                                   create (a new customer is always active)
-//   PUT   /customers/{id}                              replace the details (the status is not touched)
+//   PUT   /customers/{id}                              replace ALL the details (the status is not touched)
+//   PATCH /customers/{id}                              change only the details that are sent
 //   PATCH /customers/{id}/status                       {"status": "inactive"} or {"status": "active"}
 //
 // There is no DELETE: a customer is never deleted, only made inactive.
@@ -12,7 +13,7 @@
 // The JSON is only translated here; every rule is the library's.
 
 use super::AppState;
-use super::branches::{StatusInput, body};
+use super::branches::{StatusInput, body, changes, merge};
 use super::error::{ApiError, ErrorBody};
 use crate::customer::{
     Address, Contact, Customer, Email, PhoneNumber, PostalCode, create_customer, get_customer,
@@ -26,6 +27,7 @@ use axum::extract::rejection::{JsonRejection, QueryRejection};
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
@@ -80,6 +82,25 @@ impl CustomerInput {
         )?;
         Customer::new(self.name, self.company, self.designation, contact, address)
     }
+}
+
+/// Only for the docs page: any of the fields of a customer. (The call itself reads the body as a
+/// plain object and checks it with `CustomerInput`.)
+#[derive(ToSchema)]
+#[schema(example = json!({"phone": "306-555-0199", "email": null}))]
+#[allow(dead_code)]
+pub(super) struct CustomerChanges {
+    name: Option<String>,
+    company: Option<String>,
+    designation: Option<String>,
+    phone: Option<String>,
+    alternate_phone: Option<String>,
+    email: Option<String>,
+    address_line1: Option<String>,
+    address_line2: Option<String>,
+    city: Option<String>,
+    province: Option<String>,
+    postal_code: Option<String>,
 }
 
 /// What a caller gets back.
@@ -199,7 +220,8 @@ pub(super) async fn create(
     Ok((StatusCode::CREATED, Json(CustomerView::from(&saved))))
 }
 
-/// Replace a customer's details. Their status is not changed.
+/// Replace ALL of a customer's details (every required field must be sent). Their status is not
+/// changed. To change only some, use PATCH.
 #[utoipa::path(put, path = "/customers/{id}", tag = "customers", request_body = CustomerInput,
     params(("id" = String, Path, description = "The customer id.")),
     responses(
@@ -221,6 +243,35 @@ pub(super) async fn replace(
     let updated = update_customer(
         &state.db,
         &new_details.with_id(id).with_status(current.status()),
+    )
+    .await?;
+    Ok(Json(CustomerView::from(&updated)))
+}
+
+/// Change only the details that are sent; the rest stays as it is. Send `null` to clear an optional
+/// field (`company`, `email`...). The status is not changed here.
+#[utoipa::path(patch, path = "/customers/{id}", tag = "customers", request_body = CustomerChanges,
+    params(("id" = String, Path, description = "The customer id.")),
+    responses(
+        (status = 200, description = "The customer as saved.", body = CustomerView),
+        (status = 400, description = "The body is empty or wrong, or a rule refused a value.", body = ErrorBody),
+        (status = 404, description = "No customer has that id.", body = ErrorBody),
+        (status = 401, description = "No key, or the wrong one.", body = ErrorBody),
+        (status = 503, description = "The database is not available.", body = ErrorBody),
+    ))]
+pub(super) async fn change(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    input: Result<Json<Map<String, Value>>, JsonRejection>,
+) -> Result<Json<CustomerView>, ApiError> {
+    let id = customer_id(&id)?;
+    let changes = changes(input)?;
+    let current = get_customer(&state.db, id).await?;
+    let customer =
+        merge::<CustomerInput>(&CustomerView::from(&current), changes)?.into_customer()?;
+    let updated = update_customer(
+        &state.db,
+        &customer.with_id(id).with_status(current.status()),
     )
     .await?;
     Ok(Json(CustomerView::from(&updated)))

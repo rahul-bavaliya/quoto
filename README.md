@@ -61,7 +61,8 @@ curl "http://127.0.0.1:3000/branches?status=active" -H "Authorization: Bearer $K
 | `GET /branches?status=active` | list (all of them without `?status`; `active` or `inactive`) |
 | `GET /branches/{id}` | read one |
 | `POST /branches` | create (always `active`) |
-| `PUT /branches/{id}` | replace the details (the status is not touched) |
+| `PUT /branches/{id}` | replace **all** the details (every required field must be sent; the status is not touched) |
+| `PATCH /branches/{id}` | change **only the fields you send**; the rest stays as it is |
 | `PATCH /branches/{id}/status` | `{"status": "inactive"}` or `{"status": "active"}` |
 
 **Customers** work the same way (`/customers`, `/customers/{id}`, `/customers/{id}/status`), with these differences:
@@ -71,10 +72,16 @@ curl "http://127.0.0.1:3000/branches?status=active" -H "Authorization: Bearer $K
 | `GET /customers?status=active&limit=50&offset=0` | list, ordered by name, **one page at a time** (`limit` defaults to 50 and is held between 1 and 200; `offset` defaults to 0). A query string it doesn't understand answers `400 INVALID_QUERY` |
 | `GET /customers/{id}` | read one |
 | `POST /customers` | create (always `active`; two customers may share a name) |
-| `PUT /customers/{id}` | replace the details (what is left out is cleared; the status is not touched) |
+| `PUT /customers/{id}` | replace **all** the details (what is left out is cleared; the status is not touched) |
+| `PATCH /customers/{id}` | change **only the fields you send**; the rest stays as it is |
 | `PATCH /customers/{id}/status` | `{"status": "inactive"}` or `{"status": "active"}` |
 
 A customer is never deleted either. An **inactive customer can't be put on a new quote** (`CUSTOMER_INACTIVE`, 409). Customers are people's details: **use made-up people only until real login exists (Phase 9).**
+
+**PATCH, the partial change** (the same for every record from now on): leave a field out and it is not touched; send `null` to clear an optional field (`"company": null`); `null` for a required field (name, phone, city...) is refused, and so are `id`, `status`, `country` and unknown fields. An empty body `{}` is refused as "nothing to change". The sent fields are laid over the saved record and the result goes through the same checks as a POST, so a refused PATCH changes nothing.
+```bash
+curl -X PATCH http://127.0.0.1:3000/customers/<id> -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' -d '{"email": null, "phone": "306-555-0199"}'
+```
 
 **Try it in the browser:** with the server running, open <http://127.0.0.1:3000/docs> (in Codespaces: the Ports tab, port 3000, "Open in Browser", then add `/docs`). It lists every call and has a "Try it out" button on each. Click **Authorize** once and paste your `API_KEY`. The same list as data is at `/openapi.json`.
 

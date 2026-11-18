@@ -8,8 +8,8 @@
 // key to load a page, and they show only the *shape* of the API, never a branch. The calls you
 // try from the page still need the key (use the "Authorize" button and paste it once).
 
-use super::branches::{self, BranchInput, BranchView, StatusInput};
-use super::customers::{self, CustomerInput, CustomerView};
+use super::branches::{self, BranchChanges, BranchInput, BranchView, StatusInput};
+use super::customers::{self, CustomerChanges, CustomerInput, CustomerView};
 use super::error::ErrorBody;
 use axum::Router;
 use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
@@ -48,16 +48,20 @@ impl Modify for BearerKey {
         branches::read,
         branches::create,
         branches::replace,
+        branches::change,
         branches::change_status,
         customers::list,
         customers::read,
         customers::create,
         customers::replace,
+        customers::change,
         customers::change_status
     ),
     components(schemas(
+        BranchChanges,
         BranchInput,
         BranchView,
+        CustomerChanges,
         CustomerInput,
         CustomerView,
         StatusInput,

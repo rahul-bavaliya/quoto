@@ -43,12 +43,19 @@ pub fn router(db: DatabaseConnection, key: Secret) -> Router {
     };
     Router::new()
         .route("/branches", get(branches::list).post(branches::create))
-        .route("/branches/{id}", get(branches::read).put(branches::replace))
+        .route(
+            "/branches/{id}",
+            get(branches::read)
+                .put(branches::replace)
+                .patch(branches::change),
+        )
         .route("/branches/{id}/status", patch(branches::change_status))
         .route("/customers", get(customers::list).post(customers::create))
         .route(
             "/customers/{id}",
-            get(customers::read).put(customers::replace),
+            get(customers::read)
+                .put(customers::replace)
+                .patch(customers::change),
         )
         .route("/customers/{id}/status", patch(customers::change_status))
         .merge(docs::routes())
