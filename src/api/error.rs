@@ -3,12 +3,12 @@
 // Every failure has the same shape: {"code": "...", "message": "..."}. The code is the stable
 // `QuoteError::code()`. Nothing about the database, the key or the request body is ever sent back.
 
+use super::log::ErrorCode;
 use crate::errors::{ErrorKind, QuoteError};
 use axum::Json;
-use axum::http::{StatusCode, header};
+use axum::http::{HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
-use tracing::warn;
 use utoipa::ToSchema;
 
 pub(super) enum ApiError {
@@ -52,36 +52,28 @@ fn status_of(error: &QuoteError) -> StatusCode {
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        match self {
-            ApiError::Quote(error) => {
-                error.log(); // the code only, never the message
-                let status = status_of(&error);
-                let body = ErrorBody {
-                    code: error.code(),
-                    message: error.to_string(),
-                };
-                (status, Json(body)).into_response()
-            }
-            ApiError::BadBody => {
-                let body = ErrorBody {
-                    code: "INVALID_REQUEST_BODY",
-                    message: String::from("The request body is not valid JSON for this call."),
-                };
-                (StatusCode::BAD_REQUEST, Json(body)).into_response()
-            }
-            ApiError::Unauthorized => {
-                warn!("api key missing or refused");
-                let body = ErrorBody {
-                    code: "UNAUTHORIZED",
-                    message: String::from("A valid API key is needed."),
-                };
-                (
-                    StatusCode::UNAUTHORIZED,
-                    [(header::WWW_AUTHENTICATE, "Bearer")],
-                    Json(body),
-                )
-                    .into_response()
-            }
+        let (status, code, message) = match &self {
+            ApiError::Quote(error) => (status_of(error), error.code(), error.to_string()),
+            ApiError::BadBody => (
+                StatusCode::BAD_REQUEST,
+                "INVALID_REQUEST_BODY",
+                String::from("The request body is not valid JSON for this call."),
+            ),
+            ApiError::Unauthorized => (
+                StatusCode::UNAUTHORIZED,
+                "UNAUTHORIZED",
+                String::from("A valid API key is needed."),
+            ),
+        };
+        let mut response = (status, Json(ErrorBody { code, message })).into_response();
+        if matches!(self, ApiError::Unauthorized) {
+            response
+                .headers_mut()
+                .insert(header::WWW_AUTHENTICATE, HeaderValue::from_static("Bearer"));
         }
+        // The one place that writes the error to the log is `log::log_request`: it reads this
+        // code, so a failed call is one line, not two.
+        response.extensions_mut().insert(ErrorCode(code));
+        response
     }
 }

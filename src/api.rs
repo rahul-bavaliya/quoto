@@ -1,7 +1,7 @@
 // src/api.rs: the web API (REST + JSON, built on axum)
 //
 // The pieces live in `src/api/`: `settings` (address and key), `auth` (the key check),
-// `error` (what a failed call returns), `branches` (the branch calls) and `docs` (the Swagger
+// `error` (what a failed call returns), `log` (the one log line per call), `branches` (the branch calls) and `docs` (the Swagger
 // page at /docs). Every call needs the API key (`Authorization: Bearer <key>`); only the
 // documentation addresses don't.
 
@@ -9,6 +9,7 @@ mod auth;
 mod branches;
 mod docs;
 mod error;
+mod log;
 mod settings;
 
 pub use settings::ApiSettings;
@@ -17,7 +18,7 @@ use crate::errors::{QuoteError, QuoteResult};
 use crate::secret::Secret;
 use axum::Router;
 use axum::extract::DefaultBodyLimit;
-use axum::middleware::from_fn_with_state;
+use axum::middleware::{from_fn, from_fn_with_state};
 use axum::routing::{get, patch};
 use sea_orm::DatabaseConnection;
 use std::sync::Arc;
@@ -47,6 +48,8 @@ pub fn router(db: DatabaseConnection, key: Secret) -> Router {
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         // Added last, so it runs first: nothing is read or answered without the key.
         .layer(from_fn_with_state(state.clone(), auth::require_key))
+        // Outermost, so every call is logged, including the ones the key check turns away.
+        .layer(from_fn(log::log_request))
         .with_state(state)
 }
 
