@@ -164,7 +164,7 @@ fn customer_id(text: &str) -> QuoteResult<Uuid> {
 }
 
 /// List a page of customers, ordered by name.
-#[utoipa::path(get, path = "/customers", tag = "customers", params(ListQuery),
+#[utoipa::path(get, path = "/customers", operation_id = "list_customers", tag = "customers", params(ListQuery),
     responses(
         (status = 200, description = "A page of customers.", body = Vec<CustomerView>),
         (status = 400, description = "The status is not 'active' or 'inactive', or the query is not valid.", body = ErrorBody),
@@ -187,7 +187,7 @@ pub(super) async fn list(
 }
 
 /// Read one customer.
-#[utoipa::path(get, path = "/customers/{id}", tag = "customers",
+#[utoipa::path(get, path = "/customers/{id}", operation_id = "read_customer", tag = "customers",
     params(("id" = String, Path, description = "The customer id.")),
     responses(
         (status = 200, description = "The customer.", body = CustomerView),
@@ -204,7 +204,7 @@ pub(super) async fn read(
 }
 
 /// Create a customer. A new customer is always active.
-#[utoipa::path(post, path = "/customers", tag = "customers", request_body = CustomerInput,
+#[utoipa::path(post, path = "/customers", operation_id = "create_customer", tag = "customers", request_body = CustomerInput,
     responses(
         (status = 201, description = "The customer as saved, with their id.", body = CustomerView),
         (status = 400, description = "The body is wrong, or a rule refused a value.", body = ErrorBody),
@@ -222,7 +222,7 @@ pub(super) async fn create(
 
 /// Replace ALL of a customer's details (every required field must be sent). Their status is not
 /// changed. To change only some, use PATCH.
-#[utoipa::path(put, path = "/customers/{id}", tag = "customers", request_body = CustomerInput,
+#[utoipa::path(put, path = "/customers/{id}", operation_id = "replace_customer", tag = "customers", request_body = CustomerInput,
     params(("id" = String, Path, description = "The customer id.")),
     responses(
         (status = 200, description = "The customer as saved.", body = CustomerView),
@@ -250,7 +250,7 @@ pub(super) async fn replace(
 
 /// Change only the details that are sent; the rest stays as it is. Send `null` to clear an optional
 /// field (`company`, `email`...). The status is not changed here.
-#[utoipa::path(patch, path = "/customers/{id}", tag = "customers", request_body = CustomerChanges,
+#[utoipa::path(patch, path = "/customers/{id}", operation_id = "change_customer", tag = "customers", request_body = CustomerChanges,
     params(("id" = String, Path, description = "The customer id.")),
     responses(
         (status = 200, description = "The customer as saved.", body = CustomerView),
@@ -278,7 +278,7 @@ pub(super) async fn change(
 }
 
 /// Make a customer active or inactive. (A customer is never deleted.)
-#[utoipa::path(patch, path = "/customers/{id}/status", tag = "customers", request_body = StatusInput,
+#[utoipa::path(patch, path = "/customers/{id}/status", operation_id = "change_customer_status", tag = "customers", request_body = StatusInput,
     params(("id" = String, Path, description = "The customer id.")),
     responses(
         (status = 200, description = "The customer with their new status.", body = CustomerView),
