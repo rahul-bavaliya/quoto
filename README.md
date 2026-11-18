@@ -34,7 +34,7 @@ Total: $136.53
 
 ## Run it
 ```bash
-cargo run      # print the demo quotes
+cargo run      # only starts the logger for now (Quoto is a library; the screens come later)
 cargo run --example nhtsa_lookup -- <VIN>   # try the real NHTSA lookup (needs the internet)
 cargo run --example db_check   # check the database connection (see "The database")
 cargo test     # run all the unit and scenario tests
@@ -45,12 +45,12 @@ RUST_LOG=debug cargo run   # same, with a detailed log on stderr
 Type a serial number and a **lookup** fills in the make, model, year and kind of machine. The service writer then adds the plate and the meter reading, and `Equipment::from_draft` checks everything.
 - `EquipmentLookup` is the promise: `lookup(serial)` gives `Ok(Some(draft))` (found), `Ok(None)` (not known) or `Err` (the service is down). In every case but "found", the details are typed in by hand.
 - **`NhtsaLookup`** asks the US government's free [vPIC](https://vpic.nhtsa.dot.gov/api/) service. It knows road vehicles with a 17-character VIN and only trusts a clean decode. Only the VIN leaves your computer.
-- **`InMemoryEquipmentLookup`** is a small catalog of made-up machines for the demo and the tests (it knows a tractor, which NHTSA does not).
+- **`InMemoryEquipmentLookup`** is a small catalog of made-up machines for the tests and the lookup example (it knows a tractor, which NHTSA does not).
 - **`ChainedLookup`** asks several lookups in order, so road vehicles and heavy equipment can each have their own. Equipment remembers its `EquipmentSource` (entered by hand, or looked up with whom).
 - Tests never touch the internet. To try the real service by hand: `cargo run --example nhtsa_lookup -- 1HGCM82633A004352`
 
 ## The database (PostgreSQL in Docker)
-Quoto will keep quotes, customers and equipment in PostgreSQL (Phase 4). The database has its first tables (the provinces with their tax rates, and the branches); the demo program doesn't use the database yet.
+Quoto will keep quotes, customers and equipment in PostgreSQL (Phase 4). The database has its first tables (the provinces with their tax rates, and the branches); nothing else uses the database yet.
 
 ```bash
 cp .env.example .env            # .env is ignored by git
@@ -88,9 +88,9 @@ A secret is a password, an API key, a token, or a full connection address that c
 Rules: no secret in code, in a test, in a log, in an error message, or in a screenshot. If a secret was ever committed, it is not secret any more (git keeps history), so **change it**. Turn on GitHub's secret scanning and push protection for the repo (Settings → Code security). Use a different password for each place (development, production). Tests and demos use made-up values only.
 
 ## Logging and errors
-- **Logging** uses [`tracing`](https://docs.rs/tracing). `quoto::logging::init()` starts it once in `main`. Logs go to **stderr** (the quote text stays on stdout), the level comes from `RUST_LOG` (default `info`), and logs never contain customer details.
+- **Logging** uses [`tracing`](https://docs.rs/tracing). `quoto::logging::init()` starts it once in `main`. Logs go to **stderr**, the level comes from `RUST_LOG` (default `info`), and logs never contain customer details.
 - **Errors** are one enum, `QuoteError` (built with `thiserror`). Each error has a readable message, a stable `code()` (like `INVALID_PHONE`), a `kind()` (`InvalidInput`, `BusinessRule`, `ServiceUnavailable` or `Configuration`) and an `exit_code()`. `QuoteResult<T>` is the short name for `Result<T, QuoteError>`.
-- `main` is the one place where errors stop the program: it logs the code, prints the message, and exits with code 2 (wrong input), 3 (business rule), 4 (an outside service is down) or 5 (the program is set up wrongly, e.g. a missing setting).
+- The programs in `examples/` are the places where errors stop a run: they log the code, print the message, and exit with code 2 (wrong input), 3 (business rule), 4 (an outside service is down) or 5 (the program is set up wrongly, e.g. a missing setting).
 
 Before every push:
 ```bash
@@ -103,7 +103,7 @@ GitHub Actions runs the same checks automatically on every push and pull request
 ## Project layout
 ```
 src/
-├── main.rs              demo program (short: it uses quoto::samples)
+├── main.rs              starts the logger and nothing else (Quoto is a library for now)
 ├── lib.rs               the library's front door
 ├── branch.rs            Branch + branch/ (location, table: the branches table and its create/read/update) (a dealership location; its province decides the taxes)
 ├── country.rs           Country (follows from the province)
@@ -120,7 +120,7 @@ examples/
 ├── nhtsa_lookup.rs      try the lookups by hand (needs the internet)
 ├── db_check.rs          check the database connection (needs docker compose up)
 └── db_setup.rs          build / update the database tables and add the provinces (needs docker compose up)
-tests/                   one file per feature, plus quote_scenarios.rs and demo_program.rs
+tests/                   one file per feature, plus quote_scenarios.rs
 docker-compose.yml       PostgreSQL for development
 .env.example             the settings Quoto needs (copy to .env)
 ```

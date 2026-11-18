@@ -1,96 +1,10 @@
-// src/main.rs: a small demo program that uses the Quoto library
+// src/main.rs: the program's front door. Quoto is a library for now (see `src/lib.rs`);
+// the screens and the web API come in later phases, so this only starts the logger.
 
-use chrono::{Days, Local};
-use quoto::{
-    EquipmentDraft, EquipmentLookup, InMemoryQuoteNumbers, Province, Quote, QuoteNumbers,
-    QuoteResult, logging, samples,
-};
-use std::process::ExitCode;
+use quoto::logging;
 use tracing::info;
 
-/// Shows a quote to the person, and logs that it happened.
-/// DEMO ONLY: it prints the whole quote (with the customer's details) because
-/// the data here is fake. A real server must never print or log a whole quote.
-/// The log holds only the number, province and total, never customer details.
-fn show(quote: &Quote) {
-    println!("{quote}");
-    info!(
-        quote_number = %quote.number(),
-        province = quote.province().label(),
-        total_cents = quote.total(),
-        equipment_source = %quote.equipment().map_or(String::from("none"), |e| e.source().to_string()),
-        status = quote.status().label(),
-        "quote printed"
-    );
-}
-
-/// Asks the lookup about a serial number. This is the one place where a failed
-/// lookup stops: it is logged, the person is told, and `None` means "type the
-/// details in by hand", the same as when the lookup simply doesn't know the machine.
-fn lookup_or_none(lookup: &impl EquipmentLookup, serial: &str) -> Option<EquipmentDraft> {
-    match lookup.lookup(serial) {
-        Ok(draft) => draft,
-        Err(error) => {
-            error.log();
-            eprintln!("{error}");
-            None
-        }
-    }
-}
-
-/// The real work. Any `QuoteError` stops it and is handed back to `main`.
-fn run() -> QuoteResult<()> {
-    info!("building the demo quotes");
-    // The machine hands out numbers one after the other, for the current year:
-    // Q-<year>-00000001, Q-<year>-00000002
-    let mut numbers = InMemoryQuoteNumbers::new();
-    // The clock is read once, here, and handed down: a quote never looks at it.
-    let now = Local::now().naive_local();
-    // The Corolla's serial number is in the demo catalog, so its make and model
-    // come from the lookup. The oilfield truck is not, so it is typed in by hand.
-    let lookup = samples::equipment_lookup();
-    let corolla = match lookup_or_none(&lookup, samples::COROLLA_SERIAL) {
-        Some(draft) => samples::corolla_from(draft)?,
-        None => samples::corolla()?,
-    };
-    let mut first = samples::demo_quote(
-        numbers.next_number()?,
-        now,
-        samples::branch_in(Province::Saskatchewan)?,
-        samples::prairie_farms()?,
-        corolla,
-    )?;
-    // The Corolla is promised three days after the quote date. The truck's quote
-    // has no promise date yet (it shows "to be confirmed").
-    first.set_promise_date(now.date() + Days::new(3))?;
-    // The customer says yes. Today's date is handed in, like the clock above.
-    first.accept(now.date())?;
-    show(&first);
-
-    let mut second = samples::demo_quote(
-        numbers.next_number()?,
-        now,
-        samples::branch_in(Province::Alberta)?,
-        samples::northern_oilfield()?,
-        samples::oilfield_truck()?,
-    )?;
-    // The customer says no, and why (the reason is shown on the quote, never logged).
-    second.reject("Found a lower price elsewhere")?;
-    show(&second);
-    info!("done");
-    Ok(())
-}
-
-/// The one place where errors stop the program: log it, tell the person,
-/// and exit with a code that says what kind of problem it was.
-fn main() -> ExitCode {
+fn main() {
     logging::init();
-    match run() {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(error) => {
-            error.log();
-            eprintln!("Quoto could not finish: {error}");
-            ExitCode::from(error.exit_code())
-        }
-    }
+    info!("Quoto started. Nothing to run yet: use `cargo test` (the library has no screen).");
 }
