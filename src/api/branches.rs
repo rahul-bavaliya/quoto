@@ -11,7 +11,7 @@
 // is the library's, the same as for any other caller.
 
 use super::AppState;
-use super::error::ApiError;
+use super::error::{ApiError, ErrorBody};
 use crate::branch::{
     Branch, Location, create_branch, get_branch, list_branches, set_branch_status, update_branch,
 };
@@ -24,22 +24,31 @@ use axum::extract::rejection::JsonRejection;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 /// What a caller sends to create or replace a branch. Unknown fields are refused (so a caller
 /// can't slip in a `status` or an `id` and think it worked).
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
+#[schema(example = json!({
+    "number": "001", "name": "Regina Branch",
+    "address_line1": "1 Industrial Rd", "address_line2": "Unit 4", "city": "Regina",
+    "province": "SK", "postal_code": "S4P 3Y2", "phone": "306-555-0100",
+    "latitude": 50.4452, "longitude": -104.6189
+}))]
 pub(super) struct BranchInput {
     number: String,
     name: String,
     address_line1: String,
     address_line2: Option<String>,
     city: String,
-    /// The two-letter code: "SK", "AB".
+    /// The two-letter code. Only "SK" and "AB" are known so far.
     province: String,
     postal_code: String,
+    /// Any usual way of writing a 10-digit phone number.
     phone: String,
+    /// Give both latitude and longitude, or neither.
     latitude: Option<f64>,
     longitude: Option<f64>,
 }
@@ -71,8 +80,9 @@ impl BranchInput {
 }
 
 /// What a caller gets back.
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub(super) struct BranchView {
+    /// Given by the database when the branch is created.
     id: String,
     number: String,
     name: String,
@@ -85,6 +95,7 @@ pub(super) struct BranchView {
     phone: String,
     latitude: Option<f64>,
     longitude: Option<f64>,
+    /// "active" or "inactive".
     status: &'static str,
 }
 
@@ -109,14 +120,18 @@ impl From<&Branch> for BranchView {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub(super) struct ListQuery {
+    /// Only the branches with this status: "active" or "inactive". Leave out for all.
     status: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
+#[schema(example = json!({"status": "inactive"}))]
 pub(super) struct StatusInput {
+    /// "active" or "inactive".
     status: String,
 }
 
@@ -132,6 +147,14 @@ fn branch_id(text: &str) -> QuoteResult<Uuid> {
     Uuid::parse_str(text).map_err(|_| QuoteError::UnknownBranch)
 }
 
+/// List the branches, ordered by number.
+#[utoipa::path(get, path = "/branches", tag = "branches", params(ListQuery),
+    responses(
+        (status = 200, description = "The branches.", body = Vec<BranchView>),
+        (status = 400, description = "The status is not 'active' or 'inactive'.", body = ErrorBody),
+        (status = 401, description = "No key, or the wrong one.", body = ErrorBody),
+        (status = 503, description = "The database is not available.", body = ErrorBody),
+    ))]
 pub(super) async fn list(
     State(state): State<AppState>,
     Query(query): Query<ListQuery>,
@@ -145,6 +168,15 @@ pub(super) async fn list(
     Ok(Json(branches.iter().map(BranchView::from).collect()))
 }
 
+/// Read one branch.
+#[utoipa::path(get, path = "/branches/{id}", tag = "branches",
+    params(("id" = String, Path, description = "The branch id.")),
+    responses(
+        (status = 200, description = "The branch.", body = BranchView),
+        (status = 404, description = "No branch has that id.", body = ErrorBody),
+        (status = 401, description = "No key, or the wrong one.", body = ErrorBody),
+        (status = 503, description = "The database is not available.", body = ErrorBody),
+    ))]
 pub(super) async fn read(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -153,6 +185,15 @@ pub(super) async fn read(
     Ok(Json(BranchView::from(&branch)))
 }
 
+/// Create a branch. A new branch is always active.
+#[utoipa::path(post, path = "/branches", tag = "branches", request_body = BranchInput,
+    responses(
+        (status = 201, description = "The branch as saved, with its id.", body = BranchView),
+        (status = 400, description = "The body is wrong, or a rule refused a value.", body = ErrorBody),
+        (status = 409, description = "Another branch already has that number.", body = ErrorBody),
+        (status = 401, description = "No key, or the wrong one.", body = ErrorBody),
+        (status = 503, description = "The database is not available.", body = ErrorBody),
+    ))]
 pub(super) async fn create(
     State(state): State<AppState>,
     input: Result<Json<BranchInput>, JsonRejection>,
@@ -162,6 +203,17 @@ pub(super) async fn create(
     Ok((StatusCode::CREATED, Json(BranchView::from(&saved))))
 }
 
+/// Replace a branch's details. Its status is not changed.
+#[utoipa::path(put, path = "/branches/{id}", tag = "branches", request_body = BranchInput,
+    params(("id" = String, Path, description = "The branch id.")),
+    responses(
+        (status = 200, description = "The branch as saved.", body = BranchView),
+        (status = 400, description = "The body is wrong, or a rule refused a value.", body = ErrorBody),
+        (status = 404, description = "No branch has that id.", body = ErrorBody),
+        (status = 409, description = "Another branch already has that number.", body = ErrorBody),
+        (status = 401, description = "No key, or the wrong one.", body = ErrorBody),
+        (status = 503, description = "The database is not available.", body = ErrorBody),
+    ))]
 pub(super) async fn replace(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -179,6 +231,16 @@ pub(super) async fn replace(
     Ok(Json(BranchView::from(&updated)))
 }
 
+/// Make a branch active or inactive. (A branch is never deleted.)
+#[utoipa::path(patch, path = "/branches/{id}/status", tag = "branches", request_body = StatusInput,
+    params(("id" = String, Path, description = "The branch id.")),
+    responses(
+        (status = 200, description = "The branch with its new status.", body = BranchView),
+        (status = 400, description = "The status is not 'active' or 'inactive'.", body = ErrorBody),
+        (status = 404, description = "No branch has that id.", body = ErrorBody),
+        (status = 401, description = "No key, or the wrong one.", body = ErrorBody),
+        (status = 503, description = "The database is not available.", body = ErrorBody),
+    ))]
 pub(super) async fn change_status(
     State(state): State<AppState>,
     Path(id): Path<String>,

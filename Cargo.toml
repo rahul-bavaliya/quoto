@@ -17,6 +17,8 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 ureq = "3"
 uuid = { version = "1.29.3", default-features = false, features = ["std"] }
+utoipa = "6"
+utoipa-swagger-ui = { version = "10", features = ["axum", "vendored"] }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
