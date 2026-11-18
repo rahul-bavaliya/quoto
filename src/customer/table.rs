@@ -2,7 +2,7 @@
 //
 // Create, read and update are here. **There is no delete, on purpose**: a customer is never
 // deleted (old quotes point at them). When they are finished with, `set_customer_status` makes
-// them `Inactive`. The table is built from the struct in `row` by `database::sync`; the rules
+// them `Inactive`. The table is built by a migration; the struct in `row` says how it is read; the rules
 // (a name is not blank, a phone / email / postal code are real, the province is known, the
 // status is a known word) are checked in Rust when a `Customer` is built and again when a row
 // is read.

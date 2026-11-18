@@ -1,7 +1,7 @@
 // src/province/table.rs: the `provinces` table in the database
 //
-// The table is described by a Rust struct (`row`): `database::sync` builds it, and adding a field
-// adds the column (a removed field leaves its column behind: sync never drops). The functions below
+// The table is built by a migration (`database/migrations/`); the Rust struct (`row`) says how the
+// code reads it. Adding a field means a new migration too (a test fails if they drift). The functions below
 // are the only code that touches the raw rows; everyone else gets `TaxRates`, which checks the rules
 // the table does not. There is no delete function on purpose: a province is never deleted.
 

@@ -1,12 +1,14 @@
-// src/database.rs: the connection to PostgreSQL, and building its tables
+// src/database.rs: the connection to PostgreSQL, and changing its tables (migrations)
 
 use crate::errors::{QuoteError, QuoteResult};
 use crate::{branch, customer, equipment, province};
 use sea_orm::sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sea_orm::{DatabaseConnection, SqlxPostgresConnector};
+use sea_orm_migration::MigratorTrait;
 use std::time::Duration;
 use tracing::debug;
 
+mod migrations;
 mod settings;
 
 pub use settings::DatabaseSettings;
@@ -43,11 +45,20 @@ pub async fn connect(settings: &DatabaseSettings) -> QuoteResult<DatabaseConnect
     Ok(SqlxPostgresConnector::from_sqlx_postgres_pool(pool))
 }
 
-/// Makes the database match the Rust structs: creates a missing table, adds a missing column.
-/// It never drops anything (a field removed from a struct leaves its column behind), and
-/// running it twice is safe. For learning and development: it changes the database when the
-/// program starts and writes no migration file, so before real customer data it is replaced by
-/// reviewable migrations. It needs a database user that is allowed to create tables.
+/// Brings the database up to date: runs every migration it has not run yet, in order (see
+/// `migrations.rs`). Running it again does nothing. It is the one way the tables change. It needs
+/// a database user that is allowed to create and change tables.
+pub async fn migrate(db: &DatabaseConnection) -> QuoteResult<()> {
+    migrations::Migrator::up(db, None).await.map_err(|cause| {
+        debug!(%cause, "database migration failed");
+        QuoteError::DatabaseSetupFailed
+    })
+}
+
+/// Makes the database match the Rust structs by creating a missing table or column. It never
+/// drops anything. This is NOT how the server's database is built (that is `migrate`): it is
+/// kept as the reference the tests compare the migrations against, so a struct and its table
+/// can't drift apart unnoticed.
 pub async fn sync(db: &DatabaseConnection) -> QuoteResult<()> {
     db.get_schema_builder()
         .register(province::ProvinceTable)

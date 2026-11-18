@@ -20,7 +20,7 @@ async fn setup() -> (tokio::sync::MutexGuard<'static, ()>, DatabaseConnection) {
     dotenvy::dotenv().ok();
     let settings = DatabaseSettings::from_env().expect("database settings (see .env.example)");
     let db = database::connect(&settings).await.expect("database");
-    database::sync(&db).await.expect("sync");
+    database::migrate(&db).await.expect("migrate");
     (turn, db)
 }
 

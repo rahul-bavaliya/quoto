@@ -45,7 +45,7 @@ RUST_LOG=debug cargo run   # same, with a detailed log on stderr
 REST + JSON, built on [`axum`](https://docs.rs/axum). Today it has the **branch**, **customer** and **equipment** calls.
 
 ```bash
-docker compose up -d && cargo run --example db_setup   # the database and its tables (once)
+docker compose up -d && cargo run --example db_setup   # the database and its tables (once; run it again after pulling a new migration)
 # put a key in .env:  API_KEY=<output of: openssl rand -base64 32>
 cargo run                                              # "the API is listening address=127.0.0.1:3000"
 ```
@@ -123,7 +123,7 @@ cp .env.example .env            # .env is ignored by git
 # edit .env: put a real password in POSTGRES_PASSWORD (make one: openssl rand -base64 24)
 docker compose up -d            # start PostgreSQL (waits until it is healthy)
 cargo run --example db_check    # "Connected to the database at localhost:5432/quoto_dev."
-cargo run --example db_setup    # build / update the tables and add the 13 provinces (safe to run again)
+cargo run --example db_setup    # run the new migrations and add the 13 provinces (safe to run again)
 cargo test -- --ignored         # also run the tests that need the database
 docker compose down             # stop it; the data stays in a Docker volume
 ```
@@ -142,18 +142,18 @@ docker compose down             # stop it; the data stays in a Docker volume
 ```
 
 - The first start is slow: it downloads Rust, installs `cargo-watch` and compiles. The tool and the build files are kept in Docker volumes, so later starts are quick.
-- Each start runs `db_setup` once (it never drops anything), so a new table is created for you. A hot reload does not run it again: after a change that adds a table, run `./dev restart`.
+- Each start runs `db_setup` once (it only runs new migrations and never drops anything), so a new table is created for you. A hot reload does not run it again: after a change that adds a table, run `./dev restart`.
 - The server stays on `127.0.0.1:3000` (the container uses host networking, because the server refuses any other address). `.env` is read when the container starts; no secret is written in the compose file or in an image.
 - Changing `.env` (for example a new `API_KEY`) needs `./dev restart`; hot reload watches only `src/`, `Cargo.toml` and `Cargo.lock`.
 - This is for development: the container has the compiler and the source and runs as root. Do not use it for production.
 - Quoto reads `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` (required) and `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_SSLMODE` (optional) from the environment. The names are the same ones the Postgres image uses, so compose and Quoto share one `.env`.
-- **No SQL files:** the tables are built from Rust structs (SeaORM, "entity first"): `database::sync` creates a missing table and adds a missing column when it is run (`cargo run --example db_setup`; the web server itself does not build tables, so run it after pulling a change that adds a table). It **never drops** anything (a field removed from a struct leaves its column behind) and writes no migration file, so it is for learning and development. **Before real customer data it must be replaced by reviewable migrations.**
+- **Migrations:** the tables are changed only by **migrations**: numbered steps in `src/database/migrations/` (written in Rust with SeaORM's table builder, no hand-written SQL). `cargo run --example db_setup` runs the ones the database has not had yet (the database remembers them in a table called `seaql_migrations`) and adds any missing province; running it again does nothing. Rules: **never edit a migration that is merged, add a new one after it**; add it to the END of the list in `migrations.rs`; migrations only go forward (no `down`), so a step that drops or rewrites data is written by a person and reviewed in the pull request. The Rust structs say how the code *reads* a table, so a change to a table is two things: a migration and the struct. A test (`tests/database_migrations.rs`, run by hand) builds one empty database from the migrations and one from the structs and fails if they differ. `database::sync` is kept only as that reference; nothing else uses it. The first migration (`m20261118_000001_baseline`) recreates today's four tables with `IF NOT EXISTS`, so a database built earlier by `sync` adopts it with no change and keeps its rows. The migration user must be allowed to create and change tables.
 - **The rules live in Rust, not in the database:** `TaxRate` (above 0% and at most 100%) and `TaxRates` (a GST with an optional PST, **or** an HST alone; never both, never neither) refuse a wrong combination, when it is built and when a row is read. The table itself has no such rules, so only Quoto should write to it. There is no delete function: a province is never deleted.
 - **Provinces:** one table, `provinces`, holds each province's GST, PST or HST (rates in thousandths of a percent: 5% = `5000`, 9.975% = `9975`). `seed_provinces` adds the 13 starting rows (CRA table, checked 2026-11-17) and never puts back a rate that someone changed. When the government changes a rate, `change_rates(...)` is one update (a note is required and the new date can't be before the current one); there is no history table, because rates change rarely and a quote keeps a copy of the rates it used.
 - **Branches:** the `branches` table has create, read (by id, by number, or a list) and update, and **no delete**: a branch is never deleted, `set_branch_status` makes it `Inactive` (or `Active` again). A new branch is `Active`. Its number must be unique. An inactive branch still loads, but cannot start a new quote.
 - **`Status`** (`active` / `inactive`) is the one "is it in use?" status for records that are never deleted (a branch now; customers, machines and users later). It is not a workflow: a quote's steps (pending, accepted...) and a repair order's steps keep their own enums.
 - **Only Saskatchewan and Alberta can be loaded from a row for now**, because `Province` has only those two values; the enum grows to all 13 later.
-- **If your dev database was built by the old `.sql` files**, reset it once: `docker compose down -v && docker compose up -d && cargo run --example db_setup` (this deletes the dev data).
+- **If your dev database was built by the very old `.sql` files** (before Day 36), reset it once: `docker compose down -v && docker compose up -d && cargo run --example db_setup` (this deletes the dev data).
 - The database tests change data only inside a transaction that is rolled back.
 - The password lives in a `Secret`, which prints as `[hidden]`; the connection is the only place that opens it.
 
@@ -196,7 +196,7 @@ src/
 ├── status.rs            Status (active / inactive) for every record that is never deleted
 ├── province.rs          Province + province/ (tax: the sum and the rate rules; table: the provinces table)
 ├── customer.rs          Customer + customer/ (address, postal_code, contact, phone_number, email, table: the customers table and its create/read/list/update/status)
-├── database.rs          connect + sync + database/ (settings: DatabaseSettings, read from the environment)
+├── database.rs          connect + migrate + sync (the test reference) + database/ (settings: DatabaseSettings; migrations: the numbered steps)
 ├── equipment.rs         Equipment + equipment/ (meter, meter_type, equipment_type, identification,
 │                        equipment_draft, equipment_source, table: the equipment table and its calls)
 ├── equipment_lookup.rs  EquipmentLookup + equipment_lookup/ (in_memory, chain, nhtsa)
@@ -205,7 +205,7 @@ src/
 examples/
 ├── nhtsa_lookup.rs      try the lookups by hand (needs the internet)
 ├── db_check.rs          check the database connection (needs docker compose up)
-└── db_setup.rs          build / update the database tables and add the provinces (needs docker compose up)
+└── db_setup.rs          run the migrations and add the provinces (needs docker compose up)
 tests/                   one file per feature, plus quote_scenarios.rs; the two big ones are folders:
 ├── api/                 the API without a database (access, branches, customers, equipment, patch, settings, docs, support)
 └── database_api/        the API with a database, run by hand (branches, customers, equipment, patch, logging, support)
