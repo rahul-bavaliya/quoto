@@ -116,7 +116,7 @@ pub const COROLLA_SERIAL: &str = "SERIAL_NUMBER_TEST_1";
 pub const TRACTOR_SERIAL: &str = "DEMO-8R410-0001";
 
 /// The name the demo catalog gives itself as a source.
-const DEMO_CATALOG: &str = "demo catalog";
+use crate::equipment::DEMO_CATALOG;
 
 fn corolla_identification() -> QuoteResult<Identification> {
     Identification::new(

@@ -13,8 +13,8 @@
 // The JSON is only translated here; every rule is the library's.
 
 use super::AppState;
-use super::branches::{StatusInput, body, changes, merge};
 use super::error::{ApiError, ErrorBody};
+use super::request::{StatusInput, body, changes, merge, page_size};
 use crate::customer::{
     Address, Contact, Customer, Email, PhoneNumber, PostalCode, create_customer, get_customer,
     list_customers, set_customer_status, update_customer,
@@ -30,10 +30,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
-
-/// A page is this long unless the caller asks for fewer or more (at most `MAX_PAGE`).
-const DEFAULT_PAGE: u64 = 50;
-const MAX_PAGE: u64 = 200;
 
 /// What a caller sends to create or replace a customer. Unknown fields are refused (so a caller
 /// can't slip in a `status` or an `id` and think it worked).
@@ -181,7 +177,7 @@ pub(super) async fn list(
         .as_deref()
         .map(Status::from_label)
         .transpose()?;
-    let limit = query.limit.unwrap_or(DEFAULT_PAGE).clamp(1, MAX_PAGE);
+    let limit = page_size(query.limit);
     let customers = list_customers(&state.db, status, limit, query.offset.unwrap_or(0)).await?;
     Ok(Json(customers.iter().map(CustomerView::from).collect()))
 }

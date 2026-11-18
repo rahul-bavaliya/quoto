@@ -302,3 +302,78 @@ fn the_owner_id_is_never_printed() {
         corolla().to_string()
     );
 }
+
+// ===== status, readers, tidying =====
+
+#[test]
+fn a_new_machine_is_active_and_can_be_archived_on_a_copy() {
+    let machine = corolla();
+    assert_eq!(machine.status(), Status::Active);
+    assert!(machine.is_active());
+    let archived = corolla().with_status(Status::Inactive);
+    assert!(!archived.is_active());
+    assert!(machine.is_active());
+}
+
+#[test]
+fn the_readers_give_back_what_was_given() {
+    let machine = corolla();
+    assert_eq!(machine.make(), "Toyota");
+    assert_eq!(machine.model(), "Corolla Cross");
+    assert_eq!(machine.model_year(), Some(2025));
+    assert_eq!(
+        machine.identification().serial_number(),
+        Some("SERIAL_NUMBER_TEST_1")
+    );
+    assert_eq!(machine.identification().plate(), Some("RB97"));
+    assert_eq!(machine.meter().reading(), Some(28156.98));
+    assert_eq!(machine.meter().meter_type(), MeterType::Kilometer);
+    assert_eq!(machine.customer_id(), None);
+}
+
+#[test]
+fn a_serial_number_is_trimmed_and_upper_cased_and_blanks_mean_none() {
+    let tidy =
+        Identification::new(Some(String::from("  ab-12 ")), Some(String::from(" X1 "))).unwrap();
+    assert_eq!(tidy.serial_number(), Some("AB-12"));
+    assert_eq!(tidy.plate(), Some("X1"));
+    let only_plate =
+        Identification::new(Some(String::from("   ")), Some(String::from("X1"))).unwrap();
+    assert_eq!(only_plate.serial_number(), None);
+    assert!(Identification::new(Some(String::from("  ")), None).is_err());
+    assert!(Identification::new(None, Some(String::new())).is_err());
+}
+
+#[test]
+fn meter_types_and_equipment_types_are_read_from_text_in_any_case() {
+    assert_eq!(MeterType::from_code("KM").unwrap(), MeterType::Kilometer);
+    assert_eq!(MeterType::from_code("mi").unwrap(), MeterType::Mile);
+    assert_eq!(MeterType::from_code("Hr").unwrap(), MeterType::Hour);
+    assert!(matches!(
+        MeterType::from_code("parsecs"),
+        Err(QuoteError::InvalidMeterType { .. })
+    ));
+    for kind in [
+        EquipmentType::Car,
+        EquipmentType::Truck,
+        EquipmentType::Tractor,
+        EquipmentType::Trailer,
+        EquipmentType::Other,
+    ] {
+        assert_eq!(
+            EquipmentType::from_label(&kind.label().to_uppercase()).unwrap(),
+            kind
+        );
+    }
+    assert!(matches!(
+        EquipmentType::from_label("spaceship"),
+        Err(QuoteError::InvalidEquipmentType { .. })
+    ));
+}
+
+#[test]
+fn an_owner_can_be_given_to_a_machine_before_it_is_saved() {
+    let owner = uuid::Uuid::from_u128(7);
+    let machine = corolla().with_customer_id(owner);
+    assert_eq!(machine.customer_id(), Some(owner));
+}

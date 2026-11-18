@@ -96,6 +96,18 @@ fn a_machine_needs_a_customer_first() {
 }
 
 #[test]
+fn an_archived_machine_cannot_go_on_a_quote() {
+    let mut quote = quick_quote();
+    quote.attach_customer(customer()).unwrap();
+    let archived = machine().with_status(Status::Inactive);
+    assert!(matches!(
+        quote.attach_equipment(archived),
+        Err(QuoteError::EquipmentInactive)
+    ));
+    assert!(quote.equipment().is_none());
+}
+
+#[test]
 fn the_machine_can_be_added_after_the_customer() {
     let mut quote = quick_quote();
     quote.attach_customer(customer()).unwrap();

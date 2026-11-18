@@ -12,9 +12,14 @@ pub struct Identification {
 
 impl Identification {
     pub fn new(serial_number: Option<String>, plate: Option<String>) -> Result<Self, QuoteError> {
-        // A blank string is the same as nothing
-        let serial_number = serial_number.filter(|s| !s.trim().is_empty());
-        let plate = plate.filter(|p| !p.trim().is_empty());
+        // A blank string is the same as nothing. Spaces around a value are not part of it, and a
+        // serial number is kept in capitals, so "abc123" and "ABC123 " are the same machine.
+        let serial_number = serial_number
+            .map(|s| s.trim().to_uppercase())
+            .filter(|s| !s.is_empty());
+        let plate = plate
+            .map(|p| p.trim().to_string())
+            .filter(|p| !p.is_empty());
 
         if serial_number.is_none() && plate.is_none() {
             return Err(QuoteError::MissingIdentification);

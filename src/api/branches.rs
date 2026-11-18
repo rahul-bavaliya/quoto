@@ -13,6 +13,7 @@
 
 use super::AppState;
 use super::error::{ApiError, ErrorBody};
+use super::request::{StatusInput, body, changes, merge};
 use crate::branch::{
     Branch, Location, create_branch, get_branch, list_branches, set_branch_status, update_branch,
 };
@@ -24,7 +25,6 @@ use axum::Json;
 use axum::extract::rejection::{JsonRejection, QueryRejection};
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use utoipa::{IntoParams, ToSchema};
@@ -146,55 +146,6 @@ pub(super) struct BranchChanges {
     phone: Option<String>,
     latitude: Option<f64>,
     longitude: Option<f64>,
-}
-
-#[derive(Deserialize, ToSchema)]
-#[serde(deny_unknown_fields)]
-#[schema(example = json!({"status": "inactive"}))]
-pub(super) struct StatusInput {
-    /// "active" or "inactive".
-    pub(super) status: String,
-}
-
-/// A body that isn't the expected JSON is one plain answer, not serde's wording.
-pub(super) fn body<T>(input: Result<Json<T>, JsonRejection>) -> Result<T, ApiError> {
-    input
-        .map(|Json(value)| value)
-        .map_err(|_| ApiError::BadBody)
-}
-
-/// The parts of a view that are not part of an input: a PATCH can't change them.
-const NOT_INPUT: [&str; 3] = ["id", "country", "status"];
-
-/// The body of a PATCH: a JSON object with at least one field. (An empty one changes nothing, so
-/// it is refused as a mistake.) Checked before the database is touched.
-pub(super) fn changes(
-    input: Result<Json<Map<String, Value>>, JsonRejection>,
-) -> Result<Map<String, Value>, ApiError> {
-    let changes = body(input)?;
-    if changes.is_empty() {
-        return Err(ApiError::BadBody);
-    }
-    Ok(changes)
-}
-
-/// Lays the sent fields over the saved ones and reads the result as a whole input, so a PATCH
-/// goes through exactly the same rules as a POST or a PUT. A field that is left out keeps its
-/// saved value; `null` clears an optional field and is refused for a required one; a field that
-/// isn't an input (an `id`, a `status`...) is refused.
-pub(super) fn merge<T: DeserializeOwned>(
-    saved: &impl Serialize,
-    changes: Map<String, Value>,
-) -> Result<T, ApiError> {
-    let mut merged = match serde_json::to_value(saved) {
-        Ok(Value::Object(fields)) => fields,
-        _ => Map::new(), // can't happen; and an empty one fails below instead of saving anything
-    };
-    for key in NOT_INPUT {
-        merged.remove(key);
-    }
-    merged.extend(changes);
-    serde_json::from_value(Value::Object(merged)).map_err(|_| ApiError::BadBody)
 }
 
 /// An id that isn't a UUID can't be a branch: the same answer as an id nobody has.

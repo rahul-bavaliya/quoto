@@ -34,7 +34,9 @@ pub use customer::{
 };
 pub use database::DatabaseSettings;
 pub use equipment::{
-    Equipment, EquipmentDraft, EquipmentSource, EquipmentType, Identification, Meter, MeterType,
+    Equipment, EquipmentDraft, EquipmentFilter, EquipmentSource, EquipmentType, Identification,
+    Meter, MeterType, OwnerFilter, create_equipment, get_equipment, list_equipment,
+    set_equipment_owner, set_equipment_status, update_equipment,
 };
 pub use equipment_lookup::{ChainedLookup, EquipmentLookup, InMemoryEquipmentLookup, NhtsaLookup};
 pub use errors::{ErrorKind, QuoteError, QuoteResult};

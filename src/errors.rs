@@ -78,7 +78,7 @@ pub enum QuoteError {
     #[error("This quote already has a {what}.")]
     AlreadyAttached { what: &'static str },
 
-    #[error("Add the customer before the equipment: a machine always belongs to a customer.")]
+    #[error("Add the customer before the equipment on a quote.")]
     EquipmentNeedsCustomer,
 
     #[error("This equipment belongs to a different customer.")]
@@ -153,6 +153,32 @@ pub enum QuoteError {
     #[error("Meter reading {reading} must be a number that is zero or more.")]
     InvalidMeterReading { reading: f64 },
 
+    #[error("'{value}' is not a meter type. Use 'km', 'mi' or 'hr'.")]
+    InvalidMeterType { value: String },
+
+    #[error("'{value}' is not an equipment type. Use car, truck, tractor, trailer or other.")]
+    InvalidEquipmentType { value: String },
+
+    #[error("The equipment's source is not one Quoto knows.")]
+    InvalidEquipmentSource,
+
+    #[error("There is no equipment with that id.")]
+    UnknownEquipment,
+
+    #[error("This equipment is already saved. To change it, use update.")]
+    EquipmentAlreadySaved,
+
+    #[error("This equipment is not saved yet, so it can't be updated. Create it first.")]
+    EquipmentNotSaved,
+
+    #[error("This equipment is archived, so it can't be put on a new quote. Restore it first.")]
+    EquipmentInactive,
+
+    #[error(
+        "Equipment with this serial number already exists. Find it in the equipment list by serial number and change its owner instead of entering it again."
+    )]
+    DuplicateSerialNumber,
+
     // ---- Outside services ----
     #[error("Could not look up the details with {provider}. Please enter them by hand.")]
     LookupFailed { provider: &'static str },
@@ -203,7 +229,11 @@ impl QuoteError {
             | QuoteError::BranchNotSaved
             | QuoteError::CustomerAlreadySaved
             | QuoteError::CustomerNotSaved
-            | QuoteError::CustomerInactive => ErrorKind::BusinessRule,
+            | QuoteError::CustomerInactive
+            | QuoteError::EquipmentAlreadySaved
+            | QuoteError::EquipmentNotSaved
+            | QuoteError::EquipmentInactive
+            | QuoteError::DuplicateSerialNumber => ErrorKind::BusinessRule,
             QuoteError::LookupFailed { .. }
             | QuoteError::DatabaseUnavailable
             | QuoteError::DatabaseSetupFailed
@@ -257,6 +287,14 @@ impl QuoteError {
             QuoteError::BranchNotSaved => "BRANCH_NOT_SAVED",
             QuoteError::MissingIdentification => "MISSING_IDENTIFICATION",
             QuoteError::InvalidMeterReading { .. } => "INVALID_METER_READING",
+            QuoteError::InvalidMeterType { .. } => "INVALID_METER_TYPE",
+            QuoteError::InvalidEquipmentType { .. } => "INVALID_EQUIPMENT_TYPE",
+            QuoteError::InvalidEquipmentSource => "INVALID_EQUIPMENT_SOURCE",
+            QuoteError::UnknownEquipment => "UNKNOWN_EQUIPMENT",
+            QuoteError::EquipmentAlreadySaved => "EQUIPMENT_ALREADY_SAVED",
+            QuoteError::EquipmentNotSaved => "EQUIPMENT_NOT_SAVED",
+            QuoteError::EquipmentInactive => "EQUIPMENT_INACTIVE",
+            QuoteError::DuplicateSerialNumber => "DUPLICATE_SERIAL_NUMBER",
             QuoteError::LookupFailed { .. } => "LOOKUP_FAILED",
             QuoteError::DatabaseUnavailable => "DATABASE_UNAVAILABLE",
             QuoteError::DatabaseSetupFailed => "DATABASE_SETUP_FAILED",

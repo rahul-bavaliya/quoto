@@ -41,7 +41,9 @@ pub(super) struct ErrorBody {
 /// The HTTP status for a Quoto error: its kind decides, except two cases that have a better word.
 fn status_of(error: &QuoteError) -> StatusCode {
     match error {
-        QuoteError::UnknownBranch | QuoteError::UnknownCustomer => StatusCode::NOT_FOUND,
+        QuoteError::UnknownBranch | QuoteError::UnknownCustomer | QuoteError::UnknownEquipment => {
+            StatusCode::NOT_FOUND
+        }
         QuoteError::DuplicateBranchNumber { .. } => StatusCode::CONFLICT,
         _ => match error.kind() {
             ErrorKind::InvalidInput => StatusCode::BAD_REQUEST,

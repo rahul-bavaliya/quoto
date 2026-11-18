@@ -133,6 +133,26 @@ fn a_failed_database_set_up_is_a_service_problem() {
 }
 
 #[test]
+fn the_equipment_errors_have_the_right_kind() {
+    for error in [
+        QuoteError::EquipmentAlreadySaved,
+        QuoteError::EquipmentNotSaved,
+        QuoteError::EquipmentInactive,
+        QuoteError::DuplicateSerialNumber,
+    ] {
+        assert_eq!(error.kind(), ErrorKind::BusinessRule);
+    }
+    for error in [
+        QuoteError::UnknownEquipment,
+        QuoteError::InvalidEquipmentSource,
+        QuoteError::InvalidMeterType { value: "x".into() },
+        QuoteError::InvalidEquipmentType { value: "x".into() },
+    ] {
+        assert_eq!(error.kind(), ErrorKind::InvalidInput);
+    }
+}
+
+#[test]
 fn the_customer_save_errors_are_business_rules_and_a_missing_customer_is_wrong_input() {
     for error in [
         QuoteError::CustomerAlreadySaved,
@@ -257,6 +277,14 @@ fn every_error_has_its_own_code() {
         QuoteError::CustomerAlreadySaved.code(),
         QuoteError::CustomerNotSaved.code(),
         QuoteError::CustomerInactive.code(),
+        QuoteError::InvalidMeterType { value: "x".into() }.code(),
+        QuoteError::InvalidEquipmentType { value: "x".into() }.code(),
+        QuoteError::InvalidEquipmentSource.code(),
+        QuoteError::UnknownEquipment.code(),
+        QuoteError::EquipmentAlreadySaved.code(),
+        QuoteError::EquipmentNotSaved.code(),
+        QuoteError::EquipmentInactive.code(),
+        QuoteError::DuplicateSerialNumber.code(),
         QuoteError::ServerStartFailed.code(),
         QuoteError::DuplicateBranchNumber { number: "x".into() }.code(),
         QuoteError::BranchAlreadySaved.code(),

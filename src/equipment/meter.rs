@@ -25,6 +25,17 @@ impl Meter {
 }
 
 /// e.g. "28156.98 km", or "not recorded" when there's no reading
+impl Meter {
+    /// The reading, if one was taken.
+    pub fn reading(&self) -> Option<f64> {
+        self.meter
+    }
+
+    pub fn meter_type(&self) -> MeterType {
+        self.meter_type
+    }
+}
+
 impl fmt::Display for Meter {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.meter {

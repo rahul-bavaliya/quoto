@@ -1,6 +1,7 @@
 // src/equipment.rs
 
 use crate::errors::QuoteError;
+use crate::status::Status;
 use std::fmt;
 use uuid::Uuid;
 
@@ -10,13 +11,20 @@ mod equipment_type;
 mod identification;
 mod meter;
 mod meter_type;
+mod table;
 
 pub use equipment_draft::EquipmentDraft;
 pub use equipment_source::EquipmentSource;
+pub(crate) use equipment_source::{DEMO_CATALOG, NHTSA_VPIC};
 pub use equipment_type::EquipmentType;
 pub use identification::Identification;
 pub use meter::Meter;
 pub use meter_type::MeterType;
+pub(crate) use table::EquipmentTable;
+pub use table::{
+    EquipmentFilter, OwnerFilter, create_equipment, get_equipment, list_equipment,
+    set_equipment_owner, set_equipment_status, update_equipment,
+};
 
 #[derive(Debug, PartialEq)]
 pub struct Equipment {
@@ -33,6 +41,9 @@ pub struct Equipment {
     meter: Meter,
     equipment_type: EquipmentType,
     source: EquipmentSource,
+    /// Whether the machine is in use. A machine is never erased: "deleting" it archives it
+    /// (`Inactive`), and it can be restored.
+    status: Status,
 }
 
 impl Equipment {
@@ -61,6 +72,7 @@ impl Equipment {
             meter,
             equipment_type,
             source: EquipmentSource::Manual,
+            status: Status::default(),
         })
     }
 
@@ -102,6 +114,41 @@ impl Equipment {
     pub fn with_customer_id(mut self, customer_id: Uuid) -> Self {
         self.customer_id = Some(customer_id);
         self
+    }
+
+    /// Attaches the status the database holds. Used when loading from the database.
+    pub fn with_status(mut self, status: Status) -> Self {
+        self.status = status;
+        self
+    }
+
+    pub fn make(&self) -> &str {
+        &self.make
+    }
+
+    pub fn model(&self) -> &str {
+        &self.model
+    }
+
+    pub fn model_year(&self) -> Option<i64> {
+        self.model_year
+    }
+
+    pub fn identification(&self) -> &Identification {
+        &self.identification
+    }
+
+    pub fn meter(&self) -> &Meter {
+        &self.meter
+    }
+
+    pub fn status(&self) -> Status {
+        self.status
+    }
+
+    /// Only an active (not archived) machine can be put on a new quote.
+    pub fn is_active(&self) -> bool {
+        self.status == Status::Active
     }
 
     pub fn equipment_type(&self) -> EquipmentType {
