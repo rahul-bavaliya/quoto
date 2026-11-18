@@ -5,6 +5,10 @@
 #   cargo run --example db_check
 #   docker compose down      # stop it (your data stays in the volume)
 #
+# The web server can run here too, with hot reload (it restarts when you save a file in `src/`).
+# It is a "dev" profile, so a plain `docker compose up -d` still starts only the database.
+# Easy way: `./dev start | stop | restart | logs | status | down` (see the README).
+#
 # The password comes from `.env`, which git ignores. It is never written in this file.
 
 services:
@@ -30,5 +34,46 @@ services:
       timeout: 3s
       retries: 10
 
+  # The web server for development only: it compiles your code and restarts on every save.
+  # Never use this for production (it has the compiler, the source and a root user inside).
+  api:
+    profiles: ["dev"]
+    image: rust:1.97-bookworm # pinned, like the database
+    init: true # so Ctrl-C / stop reaches the server and it shuts down cleanly
+    stop_grace_period: 10s
+    working_dir: /app
+    # `host` networking: the server stays on the loopback address (127.0.0.1:3000) like on your
+    # computer, because it refuses any other address. Nothing is opened to the network.
+    network_mode: host
+    depends_on:
+      db:
+        condition: service_healthy
+    # The secrets (database password, API key) are read from `.env` when the container starts.
+    # They are not written in this file or in any image.
+    env_file: .env
+    environment:
+      CARGO_TARGET_DIR: /cache/target # build files stay in a volume, not in your folder
+      PATH: /opt/tools/bin:/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    volumes:
+      - .:/app
+      - quoto_cargo_registry:/usr/local/cargo/registry
+      - quoto_cargo_target:/cache/target
+      - quoto_tools:/opt/tools
+    security_opt:
+      - no-new-privileges:true
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        # First start only (kept in a volume): the tool that restarts the server on a change.
+        command -v cargo-watch >/dev/null || cargo install cargo-watch --locked --root /opt/tools
+        # Make sure the tables exist (it never drops anything), then watch and run.
+        cargo run --locked --example db_setup
+        exec cargo watch --why -w src -w Cargo.toml -w Cargo.lock -x "run --locked"
+
 volumes:
   quoto_pgdata:
+  quoto_cargo_registry:
+  quoto_cargo_target:
+  quoto_tools:
