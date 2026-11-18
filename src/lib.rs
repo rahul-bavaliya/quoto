@@ -19,9 +19,13 @@ pub mod province;
 pub mod quote;
 pub mod samples;
 pub mod secret;
+pub mod status;
 
 // The short front door: `use quoto::{Quote, LineItem, ...};`
-pub use branch::{Branch, BranchStatus, Location};
+pub use branch::{
+    Branch, Location, branch_by_number, create_branch, get_branch, list_branches,
+    set_branch_status, update_branch,
+};
 pub use country::Country;
 pub use customer::{Address, Contact, Customer, Email, PhoneNumber, PostalCode};
 pub use database::DatabaseSettings;
@@ -38,3 +42,4 @@ pub use quote::{
     InMemoryQuoteNumbers, LineItem, LineKind, Quote, QuoteNumber, QuoteNumbers, QuoteStatus,
 };
 pub use secret::Secret;
+pub use status::Status;

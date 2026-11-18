@@ -133,6 +133,22 @@ fn a_failed_database_set_up_is_a_service_problem() {
 }
 
 #[test]
+fn the_branch_save_errors_are_business_rules_and_a_missing_branch_is_wrong_input() {
+    for error in [
+        QuoteError::DuplicateBranchNumber { number: "1".into() },
+        QuoteError::BranchAlreadySaved,
+        QuoteError::BranchNotSaved,
+    ] {
+        assert_eq!(error.kind(), ErrorKind::BusinessRule);
+    }
+    assert_eq!(QuoteError::UnknownBranch.kind(), ErrorKind::InvalidInput);
+    assert_eq!(
+        QuoteError::InvalidStatus { value: "x".into() }.kind(),
+        ErrorKind::InvalidInput
+    );
+}
+
+#[test]
 fn the_tax_errors_are_wrong_input() {
     let date = chrono::NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
     for error in [
@@ -215,6 +231,11 @@ fn every_error_has_its_own_code() {
         QuoteError::InvalidLocation.code(),
         QuoteError::BranchInactive.code(),
         QuoteError::DatabaseSetupFailed.code(),
+        QuoteError::InvalidStatus { value: "x".into() }.code(),
+        QuoteError::UnknownBranch.code(),
+        QuoteError::DuplicateBranchNumber { number: "x".into() }.code(),
+        QuoteError::BranchAlreadySaved.code(),
+        QuoteError::BranchNotSaved.code(),
         QuoteError::InvalidTaxRate { value: 0 }.code(),
         QuoteError::InvalidTaxSystem.code(),
         QuoteError::UnknownProvince { code: "x".into() }.code(),

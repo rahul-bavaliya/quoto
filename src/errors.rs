@@ -111,6 +111,22 @@ pub enum QuoteError {
     #[error("The new rates start on {date}, which is before the current rates ({current}).")]
     RatesDateBeforeCurrent { date: NaiveDate, current: NaiveDate },
 
+    // ---- Status and branches ----
+    #[error("'{value}' is not a status. Use 'active' or 'inactive'.")]
+    InvalidStatus { value: String },
+
+    #[error("There is no branch with that id or number.")]
+    UnknownBranch,
+
+    #[error("A branch with the number {number} already exists.")]
+    DuplicateBranchNumber { number: String },
+
+    #[error("This branch is already saved. To change it, use update.")]
+    BranchAlreadySaved,
+
+    #[error("This branch is not saved yet, so it can't be updated. Create it first.")]
+    BranchNotSaved,
+
     // ---- Equipment ----
     #[error("A serial number or a plate is required to identify the unit.")]
     MissingIdentification,
@@ -162,7 +178,10 @@ impl QuoteError {
             | QuoteError::EquipmentNeedsCustomer
             | QuoteError::EquipmentNotOwnedByCustomer
             | QuoteError::QuoteIncomplete { .. }
-            | QuoteError::BranchInactive => ErrorKind::BusinessRule,
+            | QuoteError::BranchInactive
+            | QuoteError::DuplicateBranchNumber { .. }
+            | QuoteError::BranchAlreadySaved
+            | QuoteError::BranchNotSaved => ErrorKind::BusinessRule,
             QuoteError::LookupFailed { .. }
             | QuoteError::DatabaseUnavailable
             | QuoteError::DatabaseSetupFailed => ErrorKind::ServiceUnavailable,
@@ -203,6 +222,11 @@ impl QuoteError {
             QuoteError::InvalidTaxSystem => "INVALID_TAX_SYSTEM",
             QuoteError::UnknownProvince { .. } => "UNKNOWN_PROVINCE",
             QuoteError::RatesDateBeforeCurrent { .. } => "RATES_DATE_BEFORE_CURRENT",
+            QuoteError::InvalidStatus { .. } => "INVALID_STATUS",
+            QuoteError::UnknownBranch => "UNKNOWN_BRANCH",
+            QuoteError::DuplicateBranchNumber { .. } => "DUPLICATE_BRANCH_NUMBER",
+            QuoteError::BranchAlreadySaved => "BRANCH_ALREADY_SAVED",
+            QuoteError::BranchNotSaved => "BRANCH_NOT_SAVED",
             QuoteError::MissingIdentification => "MISSING_IDENTIFICATION",
             QuoteError::InvalidMeterReading { .. } => "INVALID_METER_READING",
             QuoteError::LookupFailed { .. } => "LOOKUP_FAILED",
