@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# dev: start, stop and restart the development server (with hot reload) in Docker.
+#
+#   ./dev start      start the database and the server (it restarts itself when you save in src/)
+#   ./dev stop       stop the server (the database keeps running)
+#   ./dev restart    restart the server by hand
+#   ./dev logs       follow the server's messages (Ctrl-C leaves it running)
+#   ./dev status     what is running
+#   ./dev down       stop everything (your data stays in the volume)
+#
+# The first start is slow (it downloads the Rust tools and compiles). Later starts are quick.
+# Needs a `.env` (see `.env.example`). The server listens on 127.0.0.1:3000 only.
+
+set -euo pipefail
+cd "$(dirname "$0")"
+
+compose() { docker compose --profile dev "$@"; }
+
+case "${1:-}" in
+  start)   compose up -d db api && echo "Started. Follow it with: ./dev logs" ;;
+  stop)    compose stop api ;;
+  restart) compose restart api ;;
+  logs)    compose logs -f --tail=50 api ;;
+  status)  compose ps ;;
+  down)    compose down ;;
+  *)
+    echo "Usage: ./dev start | stop | restart | logs | status | down" >&2
+    exit 2
+    ;;
+esac

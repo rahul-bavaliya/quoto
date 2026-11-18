@@ -129,6 +129,23 @@ docker compose down             # stop it; the data stays in a Docker volume
 ```
 
 - The database is reachable **only from your own computer** (`127.0.0.1`), and the compose file refuses to start without a password.
+
+### Run the server in Docker with hot reload (development only)
+
+```bash
+./dev start      # database + server; the server restarts by itself when you save a file in src/
+./dev logs       # watch it (Ctrl-C leaves it running)
+./dev restart    # restart the server by hand
+./dev stop       # stop the server (the database keeps running)
+./dev status     # what is running
+./dev down       # stop everything; the data stays in the Docker volume
+```
+
+- The first start is slow: it downloads Rust, installs `cargo-watch` and compiles. The tool and the build files are kept in Docker volumes, so later starts are quick.
+- Each start runs `db_setup` once (it never drops anything), so a new table is created for you. A hot reload does not run it again: after a change that adds a table, run `./dev restart`.
+- The server stays on `127.0.0.1:3000` (the container uses host networking, because the server refuses any other address). `.env` is read when the container starts; no secret is written in the compose file or in an image.
+- Changing `.env` (for example a new `API_KEY`) needs `./dev restart`; hot reload watches only `src/`, `Cargo.toml` and `Cargo.lock`.
+- This is for development: the container has the compiler and the source and runs as root. Do not use it for production.
 - Quoto reads `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` (required) and `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_SSLMODE` (optional) from the environment. The names are the same ones the Postgres image uses, so compose and Quoto share one `.env`.
 - **No SQL files:** the tables are built from Rust structs (SeaORM, "entity first"): `database::sync` creates a missing table and adds a missing column when it is run (`cargo run --example db_setup`; the web server itself does not build tables, so run it after pulling a change that adds a table). It **never drops** anything (a field removed from a struct leaves its column behind) and writes no migration file, so it is for learning and development. **Before real customer data it must be replaced by reviewable migrations.**
 - **The rules live in Rust, not in the database:** `TaxRate` (above 0% and at most 100%) and `TaxRates` (a GST with an optional PST, **or** an HST alone; never both, never neither) refuse a wrong combination, when it is built and when a row is read. The table itself has no such rules, so only Quoto should write to it. There is no delete function: a province is never deleted.
