@@ -133,6 +133,14 @@ fn a_failed_database_set_up_is_a_service_problem() {
 }
 
 #[test]
+fn a_server_that_cannot_start_is_an_unavailable_service() {
+    assert_eq!(
+        QuoteError::ServerStartFailed.kind(),
+        ErrorKind::ServiceUnavailable
+    );
+}
+
+#[test]
 fn the_branch_save_errors_are_business_rules_and_a_missing_branch_is_wrong_input() {
     for error in [
         QuoteError::DuplicateBranchNumber { number: "1".into() },
@@ -233,6 +241,7 @@ fn every_error_has_its_own_code() {
         QuoteError::DatabaseSetupFailed.code(),
         QuoteError::InvalidStatus { value: "x".into() }.code(),
         QuoteError::UnknownBranch.code(),
+        QuoteError::ServerStartFailed.code(),
         QuoteError::DuplicateBranchNumber { number: "x".into() }.code(),
         QuoteError::BranchAlreadySaved.code(),
         QuoteError::BranchNotSaved.code(),

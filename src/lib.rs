@@ -6,6 +6,7 @@
 // `tests/` and use only the public API. Anything marked `pub` here can be
 // used by `main.rs`, by those tests, and later by the web API.
 
+pub mod api;
 pub mod branch;
 pub mod country;
 pub mod customer;
