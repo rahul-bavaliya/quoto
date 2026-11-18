@@ -1,6 +1,6 @@
 // src/samples.rs: made-up sample data, in ONE place
 //
-// The demo program (`main.rs`), the unit tests and the scenario tests all
+// The tests and the examples all
 // need the same pretend customers, machines and quote lines. They live here
 // so a change (like a new `Equipment::new` input) is made once, not three times.
 //
@@ -205,26 +205,8 @@ pub fn oil_change_lines() -> QuoteResult<Vec<LineItem>> {
         .collect()
 }
 
-/// The oil-change job plus two credits (the demo program's job).
-pub fn demo_lines() -> QuoteResult<Vec<LineItem>> {
-    let mut lines = oil_change_lines()?;
-    lines.push(LineItem::new(
-        String::from("Loyalty discount"),
-        1.0,
-        2500,
-        LineKind::Credit,
-    )?);
-    lines.push(LineItem::new(
-        String::from("Goodwill - 3 day wait"),
-        1.0,
-        5000,
-        LineKind::Credit,
-    )?);
-    Ok(lines)
-}
-
 /// The date every sample quote is written on. A fixed date (not today's),
-/// so the demo and the tests print the same text every day.
+/// so the tests print the same text every day.
 pub fn quote_time() -> NaiveDateTime {
     NaiveDate::from_ymd_opt(2026, 11, 16)
         .and_then(|day| day.and_hms_opt(9, 30, 0))
@@ -248,23 +230,6 @@ pub fn oil_change_quote(province: Province) -> QuoteResult<Quote> {
     quote.attach_customer(customer_in(province)?)?;
     quote.attach_equipment(corolla()?)?;
     for item in oil_change_lines()? {
-        quote.add_item(item)?;
-    }
-    Ok(quote)
-}
-
-/// A demo quote: the given number, branch, customer and unit, with the demo lines.
-pub fn demo_quote(
-    number: QuoteNumber,
-    time: NaiveDateTime,
-    branch: Branch,
-    customer: Customer,
-    equipment: Equipment,
-) -> QuoteResult<Quote> {
-    let mut quote = Quote::new(number, time, branch)?;
-    quote.attach_customer(customer)?;
-    quote.attach_equipment(equipment)?;
-    for item in demo_lines()? {
         quote.add_item(item)?;
     }
     Ok(quote)
