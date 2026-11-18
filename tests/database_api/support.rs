@@ -45,7 +45,7 @@ pub async fn setup() -> Api {
     dotenvy::dotenv().ok();
     let settings = DatabaseSettings::from_env().expect("database settings (see .env.example)");
     let db = database::connect(&settings).await.expect("database");
-    database::sync(&db).await.expect("sync");
+    database::migrate(&db).await.expect("migrate");
     clean(&db).await;
     Api {
         app: router(db.clone(), Secret::new(KEY.to_string())),

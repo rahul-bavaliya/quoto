@@ -2,7 +2,7 @@
 //
 // Create, read and update are here. **There is no delete, on purpose**: a branch is never
 // deleted (old quotes point at it). When it is not in use, `set_branch_status` makes it
-// `Inactive`. The table is built from the struct in `row` by `database::sync`; the rules
+// `Inactive`. The table is built by a migration; the struct in `row` says how it is read; the rules
 // (a number is not blank, a phone and postal code are real, the map location is both numbers
 // or neither, the status is a known word) are checked in Rust when a `Branch` is built and
 // again when a row is read.
