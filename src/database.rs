@@ -1,7 +1,7 @@
 // src/database.rs: the connection to PostgreSQL, and building its tables
 
 use crate::errors::{QuoteError, QuoteResult};
-use crate::province;
+use crate::{branch, province};
 use sea_orm::sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sea_orm::{DatabaseConnection, SqlxPostgresConnector};
 use std::time::Duration;
@@ -51,6 +51,7 @@ pub async fn connect(settings: &DatabaseSettings) -> QuoteResult<DatabaseConnect
 pub async fn sync(db: &DatabaseConnection) -> QuoteResult<()> {
     db.get_schema_builder()
         .register(province::ProvinceTable)
+        .register(branch::BranchTable)
         .sync(db)
         .await
         .map_err(|cause| {

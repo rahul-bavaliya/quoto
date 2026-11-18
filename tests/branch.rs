@@ -165,7 +165,7 @@ fn a_location_off_the_map_is_refused() {
 
 #[test]
 fn a_new_branch_is_active() {
-    assert_eq!(regina().status(), BranchStatus::Active);
+    assert_eq!(regina().status(), Status::Active);
     assert!(regina().is_active());
 }
 
@@ -173,7 +173,7 @@ fn a_new_branch_is_active() {
 fn a_branch_that_is_not_in_use_becomes_inactive() {
     let mut branch = regina();
     branch.deactivate();
-    assert_eq!(branch.status(), BranchStatus::Inactive);
+    assert_eq!(branch.status(), Status::Inactive);
     assert!(!branch.is_active());
 }
 
@@ -190,7 +190,7 @@ fn deactivating_twice_changes_nothing() {
     let mut branch = regina();
     branch.deactivate();
     branch.deactivate();
-    assert_eq!(branch.status(), BranchStatus::Inactive);
+    assert_eq!(branch.status(), Status::Inactive);
 }
 
 #[test]
@@ -204,15 +204,15 @@ fn deactivating_keeps_everything_else() {
 
 #[test]
 fn a_branch_loaded_from_the_database_can_come_back_inactive() {
-    let branch = regina().with_status(BranchStatus::Inactive);
+    let branch = regina().with_status(Status::Inactive);
     assert!(!branch.is_active());
 }
 
 #[test]
 fn the_status_words_kept_in_the_database() {
-    assert_eq!(BranchStatus::Active.label(), "active");
-    assert_eq!(BranchStatus::Inactive.label(), "inactive");
-    assert_eq!(BranchStatus::Inactive.to_string(), "inactive");
+    assert_eq!(Status::Active.label(), "active");
+    assert_eq!(Status::Inactive.label(), "inactive");
+    assert_eq!(Status::Inactive.to_string(), "inactive");
 }
 
 // ===== id (given by the database, never made by Quoto) =====

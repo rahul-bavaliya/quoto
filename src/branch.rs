@@ -1,16 +1,23 @@
 // src/branch.rs: a dealership location. It operates quotes, and its province decides the taxes.
+//
+// The pieces live in `src/branch/`: `location` (the map point) and `table` (the `branches` table:
+// create, read, update and set the status; never delete).
 
 use crate::country::Country;
 use crate::customer::{Address, PhoneNumber};
 use crate::errors::{QuoteError, QuoteResult};
 use crate::province::Province;
+use crate::status::Status;
 use uuid::Uuid;
 
-mod branch_status;
 mod location;
+mod table;
 
-pub use branch_status::BranchStatus;
 pub use location::Location;
+pub(crate) use table::BranchTable;
+pub use table::{
+    branch_by_number, create_branch, get_branch, list_branches, set_branch_status, update_branch,
+};
 
 /// One of the dealership's locations. An admin sets branches up; a writer never
 /// types one on a quote. A quote is always made at a branch.
@@ -31,7 +38,7 @@ pub struct Branch {
     phone: PhoneNumber,
     /// Where the branch is on the map. Optional: not every branch has it.
     location: Option<Location>,
-    status: BranchStatus,
+    status: Status,
 }
 
 impl Branch {
@@ -59,7 +66,7 @@ impl Branch {
             address,
             phone,
             location: None,
-            status: BranchStatus::Active,
+            status: Status::default(),
         })
     }
 
@@ -81,27 +88,27 @@ impl Branch {
     }
 
     /// Sets the status. Used when loading from the database (a new branch is active).
-    pub fn with_status(mut self, status: BranchStatus) -> Self {
+    pub fn with_status(mut self, status: Status) -> Self {
         self.status = status;
         self
     }
 
     /// The branch is no longer in use. It is kept (old quotes point at it) but it can't start new quotes.
     pub fn deactivate(&mut self) {
-        self.status = BranchStatus::Inactive;
+        self.status = Status::Inactive;
     }
 
     /// The branch is in use again.
     pub fn activate(&mut self) {
-        self.status = BranchStatus::Active;
+        self.status = Status::Active;
     }
 
-    pub fn status(&self) -> BranchStatus {
+    pub fn status(&self) -> Status {
         self.status
     }
 
     pub fn is_active(&self) -> bool {
-        self.status == BranchStatus::Active
+        self.status == Status::Active
     }
 
     pub fn number(&self) -> &str {

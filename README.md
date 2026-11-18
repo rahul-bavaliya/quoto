@@ -50,7 +50,7 @@ Type a serial number and a **lookup** fills in the make, model, year and kind of
 - Tests never touch the internet. To try the real service by hand: `cargo run --example nhtsa_lookup -- 1HGCM82633A004352`
 
 ## The database (PostgreSQL in Docker)
-Quoto will keep quotes, customers and equipment in PostgreSQL (Phase 4). The database has its first tables (the provinces and their tax rates); the demo program doesn't use the database yet.
+Quoto will keep quotes, customers and equipment in PostgreSQL (Phase 4). The database has its first tables (the provinces with their tax rates, and the branches); the demo program doesn't use the database yet.
 
 ```bash
 cp .env.example .env            # .env is ignored by git
@@ -67,6 +67,9 @@ docker compose down             # stop it; the data stays in a Docker volume
 - **No SQL files:** the tables are built from Rust structs (SeaORM, "entity first"): `database::sync` creates a missing table and adds a missing column when the program starts. It **never drops** anything (a field removed from a struct leaves its column behind) and writes no migration file, so it is for learning and development. **Before real customer data it must be replaced by reviewable migrations.**
 - **The rules live in Rust, not in the database:** `TaxRate` (above 0% and at most 100%) and `TaxRates` (a GST with an optional PST, **or** an HST alone; never both, never neither) refuse a wrong combination, when it is built and when a row is read. The table itself has no such rules, so only Quoto should write to it. There is no delete function: a province is never deleted.
 - **Provinces:** one table, `provinces`, holds each province's GST, PST or HST (rates in thousandths of a percent: 5% = `5000`, 9.975% = `9975`). `seed_provinces` adds the 13 starting rows (CRA table, checked 2026-11-17) and never puts back a rate that someone changed. When the government changes a rate, `change_rates(...)` is one update (a note is required and the new date can't be before the current one); there is no history table, because rates change rarely and a quote keeps a copy of the rates it used.
+- **Branches:** the `branches` table has create, read (by id, by number, or a list) and update, and **no delete**: a branch is never deleted, `set_branch_status` makes it `Inactive` (or `Active` again). A new branch is `Active`. Its number must be unique. An inactive branch still loads, but cannot start a new quote.
+- **`Status`** (`active` / `inactive`) is the one "is it in use?" status for records that are never deleted (a branch now; customers, machines and users later). It is not a workflow: a quote's steps (pending, accepted...) and a repair order's steps keep their own enums.
+- **Only Saskatchewan and Alberta can be loaded from a row for now**, because `Province` has only those two values; the enum grows to all 13 later.
 - **If your dev database was built by the old `.sql` files**, reset it once: `docker compose down -v && docker compose up -d && cargo run --example db_setup` (this deletes the dev data).
 - The database tests change data only inside a transaction that is rolled back.
 - The password lives in a `Secret`, which prints as `[hidden]`; the connection is the only place that opens it.
@@ -102,9 +105,10 @@ GitHub Actions runs the same checks automatically on every push and pull request
 src/
 ├── main.rs              demo program (short: it uses quoto::samples)
 ├── lib.rs               the library's front door
-├── branch.rs            Branch + branch/ (branch_status, location) (a dealership location; its province decides the taxes)
+├── branch.rs            Branch + branch/ (location, table: the branches table and its create/read/update) (a dealership location; its province decides the taxes)
 ├── country.rs           Country (follows from the province)
 ├── errors.rs  logging.rs  money.rs  samples.rs  secret.rs
+├── status.rs            Status (active / inactive) for every record that is never deleted
 ├── province.rs          Province + province/ (tax: the sum and the rate rules; table: the provinces table)
 ├── customer.rs          Customer + customer/ (address, postal_code, contact, phone_number, email)
 ├── database.rs          connect + sync + database/ (settings: DatabaseSettings, read from the environment)
