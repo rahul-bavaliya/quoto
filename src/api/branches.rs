@@ -3,7 +3,8 @@
 //   GET   /branches?status=active   list (all of them without ?status)
 //   GET   /branches/{id}            read one
 //   POST  /branches                 create (a new branch is always active)
-//   PUT   /branches/{id}            replace the details (the status is not touched)
+//   PUT   /branches/{id}            replace ALL the details (the status is not touched)
+//   PATCH /branches/{id}            change only the details that are sent (the rest stays as it is)
 //   PATCH /branches/{id}/status     {"status": "inactive"} or {"status": "active"}
 //
 // There is no DELETE: a branch is never deleted, only made inactive.
@@ -23,7 +24,9 @@ use axum::Json;
 use axum::extract::rejection::{JsonRejection, QueryRejection};
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
@@ -127,6 +130,24 @@ pub(super) struct ListQuery {
     status: Option<String>,
 }
 
+/// Only for the docs page: any of the fields of a branch. (The call itself reads the body as a
+/// plain object and checks it with `BranchInput`.)
+#[derive(ToSchema)]
+#[schema(example = json!({"phone": "306-555-0199", "address_line2": null}))]
+#[allow(dead_code)]
+pub(super) struct BranchChanges {
+    number: Option<String>,
+    name: Option<String>,
+    address_line1: Option<String>,
+    address_line2: Option<String>,
+    city: Option<String>,
+    province: Option<String>,
+    postal_code: Option<String>,
+    phone: Option<String>,
+    latitude: Option<f64>,
+    longitude: Option<f64>,
+}
+
 #[derive(Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 #[schema(example = json!({"status": "inactive"}))]
@@ -140,6 +161,40 @@ pub(super) fn body<T>(input: Result<Json<T>, JsonRejection>) -> Result<T, ApiErr
     input
         .map(|Json(value)| value)
         .map_err(|_| ApiError::BadBody)
+}
+
+/// The parts of a view that are not part of an input: a PATCH can't change them.
+const NOT_INPUT: [&str; 3] = ["id", "country", "status"];
+
+/// The body of a PATCH: a JSON object with at least one field. (An empty one changes nothing, so
+/// it is refused as a mistake.) Checked before the database is touched.
+pub(super) fn changes(
+    input: Result<Json<Map<String, Value>>, JsonRejection>,
+) -> Result<Map<String, Value>, ApiError> {
+    let changes = body(input)?;
+    if changes.is_empty() {
+        return Err(ApiError::BadBody);
+    }
+    Ok(changes)
+}
+
+/// Lays the sent fields over the saved ones and reads the result as a whole input, so a PATCH
+/// goes through exactly the same rules as a POST or a PUT. A field that is left out keeps its
+/// saved value; `null` clears an optional field and is refused for a required one; a field that
+/// isn't an input (an `id`, a `status`...) is refused.
+pub(super) fn merge<T: DeserializeOwned>(
+    saved: &impl Serialize,
+    changes: Map<String, Value>,
+) -> Result<T, ApiError> {
+    let mut merged = match serde_json::to_value(saved) {
+        Ok(Value::Object(fields)) => fields,
+        _ => Map::new(), // can't happen; and an empty one fails below instead of saving anything
+    };
+    for key in NOT_INPUT {
+        merged.remove(key);
+    }
+    merged.extend(changes);
+    serde_json::from_value(Value::Object(merged)).map_err(|_| ApiError::BadBody)
 }
 
 /// An id that isn't a UUID can't be a branch: the same answer as an id nobody has.
@@ -204,7 +259,8 @@ pub(super) async fn create(
     Ok((StatusCode::CREATED, Json(BranchView::from(&saved))))
 }
 
-/// Replace a branch's details. Its status is not changed.
+/// Replace ALL of a branch's details (every required field must be sent). Its status is not changed.
+/// To change only some, use PATCH.
 #[utoipa::path(put, path = "/branches/{id}", tag = "branches", request_body = BranchInput,
     params(("id" = String, Path, description = "The branch id.")),
     responses(
@@ -229,6 +285,32 @@ pub(super) async fn replace(
         &new_details.with_id(id).with_status(current.status()),
     )
     .await?;
+    Ok(Json(BranchView::from(&updated)))
+}
+
+/// Change only the details that are sent; the rest stays as it is. Send `null` to clear an optional
+/// field (`address_line2`, or both `latitude` and `longitude`). The status is not changed here.
+#[utoipa::path(patch, path = "/branches/{id}", tag = "branches", request_body = BranchChanges,
+    params(("id" = String, Path, description = "The branch id.")),
+    responses(
+        (status = 200, description = "The branch as saved.", body = BranchView),
+        (status = 400, description = "The body is empty or wrong, or a rule refused a value.", body = ErrorBody),
+        (status = 404, description = "No branch has that id.", body = ErrorBody),
+        (status = 409, description = "Another branch already has that number.", body = ErrorBody),
+        (status = 401, description = "No key, or the wrong one.", body = ErrorBody),
+        (status = 503, description = "The database is not available.", body = ErrorBody),
+    ))]
+pub(super) async fn change(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    input: Result<Json<Map<String, Value>>, JsonRejection>,
+) -> Result<Json<BranchView>, ApiError> {
+    let id = branch_id(&id)?;
+    let changes = changes(input)?;
+    let current = get_branch(&state.db, id).await?;
+    let branch = merge::<BranchInput>(&BranchView::from(&current), changes)?.into_branch()?;
+    let updated =
+        update_branch(&state.db, &branch.with_id(id).with_status(current.status())).await?;
     Ok(Json(BranchView::from(&updated)))
 }
 
