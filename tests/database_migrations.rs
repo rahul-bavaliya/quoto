@@ -12,6 +12,18 @@
 use quoto::*;
 use sea_orm::{ConnectionTrait, DatabaseConnection, Statement};
 
+/// The tables made before the quote tables, and all of them.
+const OLD_TABLES: [&str; 4] = ["provinces", "branches", "customers", "equipment"];
+const ALL_TABLES: [&str; 7] = [
+    "provinces",
+    "branches",
+    "customers",
+    "equipment",
+    "quote_numbers",
+    "quotes",
+    "quote_lines",
+];
+
 fn settings_for(database: &str) -> DatabaseSettings {
     dotenvy::dotenv().ok();
     let database = database.to_string();
@@ -67,24 +79,33 @@ impl Throwaway {
 
 /// Everything about the tables that a mistake could change: columns (type, nullable, default),
 /// indexes and constraints. Names of indexes are left out, so only what they do is compared.
-async fn shape(db: &DatabaseConnection) -> Vec<String> {
+/// Foreign keys are left out: the structs don't declare them (the quote tests check them).
+async fn shape(db: &DatabaseConnection, tables: &[&str]) -> Vec<String> {
+    let list = tables
+        .iter()
+        .map(|table| format!("'{table}'"))
+        .collect::<Vec<_>>()
+        .join(",");
     let queries = [
         "SELECT table_name || '.' || column_name || ' ' || data_type || ' null=' || is_nullable \
          || ' default=' || coalesce(column_default, '-') \
          FROM information_schema.columns \
-         WHERE table_schema = 'public' AND table_name IN ('provinces','branches','customers','equipment') \
+         WHERE table_schema = 'public' AND table_name IN ({list}) \
          ORDER BY 1",
         "SELECT tablename || ' ' || regexp_replace(indexdef, 'INDEX \\S+ ON', 'INDEX ON') \
-         FROM pg_indexes WHERE schemaname = 'public' AND tablename IN ('provinces','branches','customers','equipment') \
+         FROM pg_indexes WHERE schemaname = 'public' AND tablename IN ({list}) \
          ORDER BY 1",
         "SELECT conrelid::regclass::text || ' ' || contype::text || ' ' || pg_get_constraintdef(oid) \
          FROM pg_constraint WHERE connamespace = 'public'::regnamespace \
-         AND conrelid::regclass::text IN ('provinces','branches','customers','equipment') ORDER BY 1",
+         AND contype <> 'f' AND conrelid::regclass::text IN ({list}) ORDER BY 1",
     ];
     let mut lines = Vec::new();
     for sql in queries {
         let rows = db
-            .query_all_raw(Statement::from_string(db.get_database_backend(), sql))
+            .query_all_raw(Statement::from_string(
+                db.get_database_backend(),
+                sql.replace("{list}", &list),
+            ))
             .await
             .expect("look at the tables");
         for row in rows {
@@ -114,8 +135,8 @@ async fn the_migrations_build_exactly_the_tables_the_structs_describe() {
     database::migrate(&by_migrations.db).await.expect("migrate");
     database::sync(&by_structs.db).await.expect("sync");
 
-    let from_migrations = shape(&by_migrations.db).await;
-    let from_structs = shape(&by_structs.db).await;
+    let from_migrations = shape(&by_migrations.db, &ALL_TABLES).await;
+    let from_structs = shape(&by_structs.db, &ALL_TABLES).await;
     by_migrations.finish().await;
     by_structs.finish().await;
 
@@ -131,14 +152,14 @@ async fn the_migrations_build_exactly_the_tables_the_structs_describe() {
 async fn running_the_migrations_again_changes_nothing() {
     let place = Throwaway::new("again").await;
     database::migrate(&place.db).await.expect("first run");
-    let first = shape(&place.db).await;
+    let first = shape(&place.db, &ALL_TABLES).await;
     database::migrate(&place.db).await.expect("second run");
-    let second = shape(&place.db).await;
+    let second = shape(&place.db, &ALL_TABLES).await;
     let remembered = migrations_run(&place.db).await;
     place.finish().await;
 
     assert_eq!(first, second);
-    assert_eq!(remembered, 1); // the baseline, remembered once
+    assert_eq!(remembered, 2); // the two steps so far, each remembered once
 }
 
 #[tokio::test]
@@ -147,6 +168,12 @@ async fn a_database_built_before_migrations_existed_adopts_them_and_keeps_its_ro
     let place = Throwaway::new("adopt").await;
     // The old way: tables built from the structs, with a row in one of them.
     database::sync(&place.db).await.expect("sync");
+    // (sync also builds the quote tables now; an old database doesn't have them yet.)
+    place
+        .db
+        .execute_unprepared("DROP TABLE quote_lines, quotes, quote_numbers")
+        .await
+        .expect("drop the quote tables");
     place
         .db
         .execute_unprepared(
@@ -155,10 +182,10 @@ async fn a_database_built_before_migrations_existed_adopts_them_and_keeps_its_ro
         )
         .await
         .expect("insert");
-    let before = shape(&place.db).await;
+    let before = shape(&place.db, &OLD_TABLES).await;
 
     database::migrate(&place.db).await.expect("migrate");
-    let after = shape(&place.db).await;
+    let after = shape(&place.db, &OLD_TABLES).await;
     let kept = place
         .db
         .query_one_raw(Statement::from_string(

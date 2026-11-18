@@ -14,7 +14,7 @@ mod location;
 mod table;
 
 pub use location::Location;
-pub(crate) use table::BranchTable;
+pub(crate) use table::{BranchTable, branch_from_copy, get_branch_with_copy};
 pub use table::{
     branch_by_number, create_branch, get_branch, list_branches, set_branch_status, update_branch,
 };

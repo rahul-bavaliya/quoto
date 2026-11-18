@@ -20,11 +20,11 @@ pub use equipment_type::EquipmentType;
 pub use identification::Identification;
 pub use meter::Meter;
 pub use meter_type::MeterType;
-pub(crate) use table::EquipmentTable;
 pub use table::{
     EquipmentFilter, OwnerFilter, create_equipment, get_equipment, list_equipment,
     set_equipment_owner, set_equipment_status, update_equipment,
 };
+pub(crate) use table::{EquipmentTable, equipment_from_copy, get_equipment_with_copy};
 
 #[derive(Debug, PartialEq)]
 pub struct Equipment {

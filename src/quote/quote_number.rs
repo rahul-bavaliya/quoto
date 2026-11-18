@@ -27,6 +27,40 @@ impl QuoteNumber {
         Ok(QuoteNumber { year, counter })
     }
 
+    /// Reads a number written as "Q-2026-00000001" (what `Display` prints). Anything else, including
+    /// a year or counter out of range, is refused.
+    pub fn parse(input: &str) -> Result<Self, QuoteError> {
+        let refuse = || QuoteError::InvalidQuoteNumber {
+            input: input.to_string(),
+        };
+        let mut parts = input.split('-');
+        let (Some("Q"), Some(year), Some(counter), None) =
+            (parts.next(), parts.next(), parts.next(), parts.next())
+        else {
+            return Err(refuse());
+        };
+        // Exactly 4 and 8 digits, so "Q-2026-1" and "Q-+2026-..." are not numbers.
+        let digits = |text: &str, length: usize| {
+            text.len() == length && text.bytes().all(|byte| byte.is_ascii_digit())
+        };
+        if !digits(year, 4) || !digits(counter, 8) {
+            return Err(refuse());
+        }
+        let year = year.parse().map_err(|_| refuse())?;
+        let counter = counter.parse().map_err(|_| refuse())?;
+        QuoteNumber::new(year, counter).map_err(|_| refuse())
+    }
+
+    /// The year in the number.
+    pub fn year(&self) -> u16 {
+        self.year
+    }
+
+    /// The counter in the number (1 for the first quote of the year).
+    pub fn counter(&self) -> u32 {
+        self.counter
+    }
+
     /// The first quote of a year.
     pub fn first_of_year(year: u16) -> Result<Self, QuoteError> {
         QuoteNumber::new(year, 1)

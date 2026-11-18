@@ -133,6 +133,22 @@ fn a_failed_database_set_up_is_a_service_problem() {
 }
 
 #[test]
+fn the_saved_quote_errors_have_the_right_kind() {
+    for error in [
+        QuoteError::QuoteAlreadySaved,
+        QuoteError::QuoteNotSaved,
+        QuoteError::QuoteChangedMeanwhile,
+    ] {
+        assert_eq!(error.kind(), ErrorKind::BusinessRule);
+    }
+    assert_eq!(QuoteError::UnknownQuote.kind(), ErrorKind::InvalidInput);
+    assert_eq!(
+        QuoteError::StoredQuoteDamaged.kind(),
+        ErrorKind::ServiceUnavailable
+    );
+}
+
+#[test]
 fn the_equipment_errors_have_the_right_kind() {
     for error in [
         QuoteError::EquipmentAlreadySaved,
@@ -285,6 +301,11 @@ fn every_error_has_its_own_code() {
         QuoteError::EquipmentNotSaved.code(),
         QuoteError::EquipmentInactive.code(),
         QuoteError::DuplicateSerialNumber.code(),
+        QuoteError::UnknownQuote.code(),
+        QuoteError::QuoteAlreadySaved.code(),
+        QuoteError::QuoteNotSaved.code(),
+        QuoteError::QuoteChangedMeanwhile.code(),
+        QuoteError::StoredQuoteDamaged.code(),
         QuoteError::ServerStartFailed.code(),
         QuoteError::DuplicateBranchNumber { number: "x".into() }.code(),
         QuoteError::BranchAlreadySaved.code(),

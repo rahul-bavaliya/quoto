@@ -14,13 +14,18 @@
 
 use sea_orm_migration::prelude::*;
 
+mod columns;
 mod m20261118_000001_baseline;
+mod m20261118_000002_quotes;
 
 pub struct Migrator;
 
 #[async_trait::async_trait]
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
-        vec![Box::new(m20261118_000001_baseline::Migration)]
+        vec![
+            Box::new(m20261118_000001_baseline::Migration),
+            Box::new(m20261118_000002_quotes::Migration),
+        ]
     }
 }

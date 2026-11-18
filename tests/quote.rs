@@ -582,3 +582,42 @@ fn line_ids_never_change_the_printed_quote_or_the_totals() {
     assert_eq!(with_ids.total(), plain.total());
     assert!(!with_ids.to_string().contains(&line_id().to_string()));
 }
+
+// ===== reading a number back =====
+
+#[test]
+fn a_quote_number_is_read_back_from_its_printed_form() {
+    for (year, counter) in [(2026, 1), (2026, 42), (1000, 99_999_999), (9999, 1)] {
+        let number = QuoteNumber::new(year, counter).unwrap();
+        let back = QuoteNumber::parse(&number.to_string()).unwrap();
+        assert_eq!(back, number);
+        assert_eq!((back.year(), back.counter()), (year, counter));
+    }
+}
+
+#[test]
+fn text_that_is_not_a_quote_number_is_refused() {
+    for text in [
+        "",
+        "Q-2026-1",
+        "Q-2026-000000001",
+        "Q-26-00000001",
+        "q-2026-00000001",
+        "Q-2026-0000000a",
+        "Q-+026-00000001",
+        "Q-2026-00000000",
+        "Q-0999-00000001",
+        "Q-2026-00000001-",
+        " Q-2026-00000001",
+        "X-2026-00000001",
+        "Q2026-00000001",
+    ] {
+        assert!(
+            matches!(
+                QuoteNumber::parse(text),
+                Err(QuoteError::InvalidQuoteNumber { .. })
+            ),
+            "{text:?}"
+        );
+    }
+}
