@@ -16,6 +16,8 @@ pub(super) enum ApiError {
     Quote(QuoteError),
     /// The body is not the JSON this call expects.
     BadBody,
+    /// The query string (the part after `?`) is not what this call expects.
+    BadQuery,
     /// No key, or the wrong one.
     Unauthorized,
 }
@@ -39,7 +41,7 @@ pub(super) struct ErrorBody {
 /// The HTTP status for a Quoto error: its kind decides, except two cases that have a better word.
 fn status_of(error: &QuoteError) -> StatusCode {
     match error {
-        QuoteError::UnknownBranch => StatusCode::NOT_FOUND,
+        QuoteError::UnknownBranch | QuoteError::UnknownCustomer => StatusCode::NOT_FOUND,
         QuoteError::DuplicateBranchNumber { .. } => StatusCode::CONFLICT,
         _ => match error.kind() {
             ErrorKind::InvalidInput => StatusCode::BAD_REQUEST,
@@ -58,6 +60,11 @@ impl IntoResponse for ApiError {
                 StatusCode::BAD_REQUEST,
                 "INVALID_REQUEST_BODY",
                 String::from("The request body is not valid JSON for this call."),
+            ),
+            ApiError::BadQuery => (
+                StatusCode::BAD_REQUEST,
+                "INVALID_QUERY",
+                String::from("The query string is not valid for this call."),
             ),
             ApiError::Unauthorized => (
                 StatusCode::UNAUTHORIZED,

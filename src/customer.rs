@@ -1,7 +1,12 @@
 // src/customer.rs: who the quote is for
+//
+// The pieces live in `src/customer/`: the checked value types (`address`, `contact`, `email`,
+// `phone_number`, `postal_code`) and `table` (the `customers` table: create, read, update and set
+// the status; never delete).
 
 use crate::errors::QuoteError;
 use crate::province::Province;
+use crate::status::Status;
 use std::fmt;
 use uuid::Uuid;
 
@@ -10,12 +15,17 @@ mod contact;
 mod email;
 mod phone_number;
 mod postal_code;
+mod table;
 
 pub use address::Address;
 pub use contact::Contact;
 pub use email::Email;
 pub use phone_number::PhoneNumber;
 pub use postal_code::PostalCode;
+pub(crate) use table::CustomerTable;
+pub use table::{
+    create_customer, get_customer, list_customers, set_customer_status, update_customer,
+};
 
 /// A customer: a person, optionally at a company (e.g. "Jane Smith,
 /// Service Manager at Prairie Farms Ltd.").
@@ -29,6 +39,9 @@ pub struct Customer {
     designation: Option<String>,
     contact: Contact,
     address: Address,
+    /// Never deleted: a customer who is finished with is made `Inactive` (old quotes keep
+    /// pointing at them).
+    status: Status,
 }
 
 impl Customer {
@@ -51,6 +64,7 @@ impl Customer {
             designation,
             contact,
             address,
+            status: Status::default(),
         })
     }
 
@@ -65,8 +79,39 @@ impl Customer {
         self
     }
 
+    /// Attaches the status the database holds. Used when loading from the database.
+    pub fn with_status(mut self, status: Status) -> Self {
+        self.status = status;
+        self
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn company(&self) -> Option<&str> {
+        self.company.as_deref()
+    }
+
+    pub fn designation(&self) -> Option<&str> {
+        self.designation.as_deref()
+    }
+
     pub fn contact(&self) -> &Contact {
         &self.contact
+    }
+
+    pub fn address(&self) -> &Address {
+        &self.address
+    }
+
+    pub fn status(&self) -> Status {
+        self.status
+    }
+
+    /// Only an active customer can be put on a new quote.
+    pub fn is_active(&self) -> bool {
+        self.status == Status::Active
     }
 
     /// The customer's province decides the quote's taxes (one source of truth).

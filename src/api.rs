@@ -1,12 +1,13 @@
 // src/api.rs: the web API (REST + JSON, built on axum)
 //
 // The pieces live in `src/api/`: `settings` (address and key), `auth` (the key check),
-// `error` (what a failed call returns), `log` (the one log line per call), `branches` (the branch calls) and `docs` (the Swagger
+// `error` (what a failed call returns), `log` (the one log line per call), `branches` (the branch calls), `customers` (the customer calls) and `docs` (the Swagger
 // page at /docs). Every call needs the API key (`Authorization: Bearer <key>`); only the
 // documentation addresses don't.
 
 mod auth;
 mod branches;
+mod customers;
 mod docs;
 mod error;
 mod log;
@@ -44,6 +45,12 @@ pub fn router(db: DatabaseConnection, key: Secret) -> Router {
         .route("/branches", get(branches::list).post(branches::create))
         .route("/branches/{id}", get(branches::read).put(branches::replace))
         .route("/branches/{id}/status", patch(branches::change_status))
+        .route("/customers", get(customers::list).post(customers::create))
+        .route(
+            "/customers/{id}",
+            get(customers::read).put(customers::replace),
+        )
+        .route("/customers/{id}/status", patch(customers::change_status))
         .merge(docs::routes())
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         // Added last, so it runs first: nothing is read or answered without the key.

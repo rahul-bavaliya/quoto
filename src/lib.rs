@@ -28,7 +28,10 @@ pub use branch::{
     set_branch_status, update_branch,
 };
 pub use country::Country;
-pub use customer::{Address, Contact, Customer, Email, PhoneNumber, PostalCode};
+pub use customer::{
+    Address, Contact, Customer, Email, PhoneNumber, PostalCode, create_customer, get_customer,
+    list_customers, set_customer_status, update_customer,
+};
 pub use database::DatabaseSettings;
 pub use equipment::{
     Equipment, EquipmentDraft, EquipmentSource, EquipmentType, Identification, Meter, MeterType,
