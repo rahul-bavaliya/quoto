@@ -554,3 +554,23 @@ async fn a_patch_for_an_id_that_is_not_a_uuid_is_a_record_nobody_has() {
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert_eq!(answer["code"], "UNKNOWN_CUSTOMER");
 }
+
+#[tokio::test]
+async fn every_call_has_its_own_operation_id() {
+    // The docs page keeps each call's answer under its operation id. Two calls sharing one
+    // (both lists were called "list") made the customers panel show the branches answer.
+    let spec = spec().await;
+    let mut ids: Vec<String> = Vec::new();
+    for (path, methods) in spec["paths"].as_object().unwrap() {
+        for (method, details) in methods.as_object().unwrap() {
+            let id = details["operationId"]
+                .as_str()
+                .unwrap_or_else(|| panic!("{method} {path} has no operation id"));
+            ids.push(id.to_string());
+        }
+    }
+    let mut unique = ids.clone();
+    unique.sort();
+    unique.dedup();
+    assert_eq!(unique.len(), ids.len(), "shared operation ids in {ids:?}");
+}

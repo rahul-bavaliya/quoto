@@ -203,7 +203,7 @@ fn branch_id(text: &str) -> QuoteResult<Uuid> {
 }
 
 /// List the branches, ordered by number.
-#[utoipa::path(get, path = "/branches", tag = "branches", params(ListQuery),
+#[utoipa::path(get, path = "/branches", operation_id = "list_branches", tag = "branches", params(ListQuery),
     responses(
         (status = 200, description = "The branches.", body = Vec<BranchView>),
         (status = 400, description = "The status is not 'active' or 'inactive'.", body = ErrorBody),
@@ -225,7 +225,7 @@ pub(super) async fn list(
 }
 
 /// Read one branch.
-#[utoipa::path(get, path = "/branches/{id}", tag = "branches",
+#[utoipa::path(get, path = "/branches/{id}", operation_id = "read_branch", tag = "branches",
     params(("id" = String, Path, description = "The branch id.")),
     responses(
         (status = 200, description = "The branch.", body = BranchView),
@@ -242,7 +242,7 @@ pub(super) async fn read(
 }
 
 /// Create a branch. A new branch is always active.
-#[utoipa::path(post, path = "/branches", tag = "branches", request_body = BranchInput,
+#[utoipa::path(post, path = "/branches", operation_id = "create_branch", tag = "branches", request_body = BranchInput,
     responses(
         (status = 201, description = "The branch as saved, with its id.", body = BranchView),
         (status = 400, description = "The body is wrong, or a rule refused a value.", body = ErrorBody),
@@ -261,7 +261,7 @@ pub(super) async fn create(
 
 /// Replace ALL of a branch's details (every required field must be sent). Its status is not changed.
 /// To change only some, use PATCH.
-#[utoipa::path(put, path = "/branches/{id}", tag = "branches", request_body = BranchInput,
+#[utoipa::path(put, path = "/branches/{id}", operation_id = "replace_branch", tag = "branches", request_body = BranchInput,
     params(("id" = String, Path, description = "The branch id.")),
     responses(
         (status = 200, description = "The branch as saved.", body = BranchView),
@@ -290,7 +290,7 @@ pub(super) async fn replace(
 
 /// Change only the details that are sent; the rest stays as it is. Send `null` to clear an optional
 /// field (`address_line2`, or both `latitude` and `longitude`). The status is not changed here.
-#[utoipa::path(patch, path = "/branches/{id}", tag = "branches", request_body = BranchChanges,
+#[utoipa::path(patch, path = "/branches/{id}", operation_id = "change_branch", tag = "branches", request_body = BranchChanges,
     params(("id" = String, Path, description = "The branch id.")),
     responses(
         (status = 200, description = "The branch as saved.", body = BranchView),
@@ -315,7 +315,7 @@ pub(super) async fn change(
 }
 
 /// Make a branch active or inactive. (A branch is never deleted.)
-#[utoipa::path(patch, path = "/branches/{id}/status", tag = "branches", request_body = StatusInput,
+#[utoipa::path(patch, path = "/branches/{id}/status", operation_id = "change_branch_status", tag = "branches", request_body = StatusInput,
     params(("id" = String, Path, description = "The branch id.")),
     responses(
         (status = 200, description = "The branch with its new status.", body = BranchView),
