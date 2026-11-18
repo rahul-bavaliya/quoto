@@ -13,8 +13,8 @@
 // The JSON is only translated here; every rule is the library's.
 
 use super::AppState;
-use super::branches::{StatusInput, body, changes, merge};
 use super::error::{ApiError, ErrorBody};
+use super::request::{StatusInput, body, changes, merge};
 use crate::customer::{
     Address, Contact, Customer, Email, PhoneNumber, PostalCode, create_customer, get_customer,
     list_customers, set_customer_status, update_customer,

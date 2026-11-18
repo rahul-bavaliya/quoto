@@ -8,9 +8,10 @@
 // key to load a page, and they show only the *shape* of the API, never a branch. The calls you
 // try from the page still need the key (use the "Authorize" button and paste it once).
 
-use super::branches::{self, BranchChanges, BranchInput, BranchView, StatusInput};
+use super::branches::{self, BranchChanges, BranchInput, BranchView};
 use super::customers::{self, CustomerChanges, CustomerInput, CustomerView};
 use super::error::ErrorBody;
+use super::request::StatusInput;
 use axum::Router;
 use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
 use utoipa::{Modify, OpenApi};

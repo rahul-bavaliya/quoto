@@ -93,7 +93,7 @@ There is **no DELETE** (a branch or customer is never deleted). A failed call an
 - Bodies over 16 KB are refused. A field the call doesn't know (like `status` on create) is refused.
 - The JSON is only translated: every rule (phone, postal code, province, unique number) is the library's, the same as for any other caller.
 - `cargo run` does not build the tables; run `cargo run --example db_setup` first (the API answers 503 until the tables exist).
-- Tests: `tests/api.rs` (no database) and `tests/database_api.rs` (`--ignored`; they remove their own `API-T-` branches and customers because nothing can be deleted through the API).
+- Tests: `tests/api/` (no database) and `tests/database_api/` (`--ignored`; they remove their own `API-T-` branches and customers because nothing can be deleted through the API). Run one with `cargo test --test api` or `cargo test --test database_api -- --ignored`.
 
 ## Looking up equipment
 Type a serial number and a **lookup** fills in the make, model, year and kind of machine. The service writer then adds the plate and the meter reading, and `Equipment::from_draft` checks everything.
@@ -160,7 +160,7 @@ GitHub Actions runs the same checks automatically on every push and pull request
 src/
 ├── main.rs              starts the web API (and is the one place where errors stop the program)
 ├── lib.rs               the library's front door
-├── api.rs               the web API + api/ (settings, auth, error, log, branches, customers, docs)
+├── api.rs               the web API + api/ (settings, auth, error, log, request, branches, customers, docs)
 ├── branch.rs            Branch + branch/ (location, table: the branches table and its create/read/update) (a dealership location; its province decides the taxes)
 ├── country.rs           Country (follows from the province)
 ├── errors.rs  logging.rs  money.rs  samples.rs  secret.rs
@@ -171,12 +171,15 @@ src/
 ├── equipment.rs         Equipment + equipment/ (meter, meter_type, equipment_type, identification,
 │                        equipment_draft, equipment_source)
 ├── equipment_lookup.rs  EquipmentLookup + equipment_lookup/ (in_memory, chain, nhtsa)
-└── quote.rs             Quote + quote/ (line_item, line_kind, quote_number, quote_status, number_machine)
+└── quote.rs             Quote + quote/ (line_item, line_kind, quote_number, quote_status, number_machine,
+                         totals: the math, print: the text)
 examples/
 ├── nhtsa_lookup.rs      try the lookups by hand (needs the internet)
 ├── db_check.rs          check the database connection (needs docker compose up)
 └── db_setup.rs          build / update the database tables and add the provinces (needs docker compose up)
-tests/                   one file per feature, plus quote_scenarios.rs
+tests/                   one file per feature, plus quote_scenarios.rs; the two big ones are folders:
+├── api/                 the API without a database (access, branches, customers, patch, settings, docs, support)
+└── database_api/        the API with a database, run by hand (branches, customers, patch, logging, support)
 docker-compose.yml       PostgreSQL for development
 .env.example             the settings Quoto needs (copy to .env)
 ```

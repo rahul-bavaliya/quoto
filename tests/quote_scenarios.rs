@@ -78,6 +78,35 @@ fn printed_quote_shows_taxes_and_total() {
 }
 
 #[test]
+fn printed_quote_shows_every_line_and_every_total_in_order() {
+    // Worked out by hand: parts 25.00 + 51.00 + 32.00 = 108.00, labour 0.5 x 160.00 = 80.00,
+    // fee 10.00, no credits; subtotal 198.00.
+    let text = oil_change_quote(Province::Saskatchewan).to_string();
+    let wanted = [
+        "[PART] Oil Filter: 1 x $25.00 = $25.00",
+        "[LABOUR] Oil Change Labour: 0.5 x $160.00 = $80.00",
+        "[PART] Engine Oil: 6 x $8.50 = $51.00",
+        "[FEE] Shop Supplies: 1 x $10.00 = $10.00",
+        "[PART] Air Filter: 1 x $32.00 = $32.00",
+        "Labour Total: $80.00",
+        "Parts Total: $108.00",
+        "Fees Total: $10.00",
+        "Credit Total: $0.00",
+        "Subtotal: $198.00",
+        "GST 5%: $9.90",
+        "PST 6%: $11.88",
+        "Total: $219.78",
+    ];
+    let mut from = 0;
+    for line in wanted {
+        let found = text[from..]
+            .find(&format!("\n{line}"))
+            .unwrap_or_else(|| panic!("`{line}` is missing or out of order in:\n{text}"));
+        from += found + 1;
+    }
+}
+
+#[test]
 fn printed_alberta_quote_has_no_pst_line() {
     let text = oil_change_quote(Province::Alberta).to_string();
     assert!(!text.contains("PST"));

@@ -1,9 +1,16 @@
 // src/api.rs: the web API (REST + JSON, built on axum)
 //
-// The pieces live in `src/api/`: `settings` (address and key), `auth` (the key check),
-// `error` (what a failed call returns), `log` (the one log line per call), `branches` (the branch calls), `customers` (the customer calls) and `docs` (the Swagger
-// page at /docs). Every call needs the API key (`Authorization: Bearer <key>`); only the
-// documentation addresses don't.
+// The pieces live in `src/api/`:
+//   settings   the address and the key
+//   auth       the key check
+//   error      what a failed call returns
+//   log        the one log line per call
+//   request    what calls with a body share (body, PATCH merge, status body)
+//   branches   the branch calls
+//   customers  the customer calls
+//   docs       the Swagger page at /docs
+// Every call needs the API key (`Authorization: Bearer <key>`); only the documentation
+// addresses don't.
 
 mod auth;
 mod branches;
@@ -11,6 +18,7 @@ mod customers;
 mod docs;
 mod error;
 mod log;
+mod request;
 mod settings;
 
 pub use settings::ApiSettings;
