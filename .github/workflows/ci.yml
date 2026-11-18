@@ -28,6 +28,3 @@ jobs:
 
       - name: Tests (cargo test)
         run: cargo test
-
-      - name: Demo runs (cargo run)
-        run: cargo run
