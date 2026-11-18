@@ -42,7 +42,7 @@ RUST_LOG=debug cargo run   # same, with a detailed log on stderr
 ```
 
 ## The web API
-REST + JSON, built on [`axum`](https://docs.rs/axum). Today it has the **branch** calls only.
+REST + JSON, built on [`axum`](https://docs.rs/axum). Today it has the **branch** and **customer** calls.
 
 ```bash
 docker compose up -d && cargo run --example db_setup   # the database and its tables (once)
@@ -64,9 +64,21 @@ curl "http://127.0.0.1:3000/branches?status=active" -H "Authorization: Bearer $K
 | `PUT /branches/{id}` | replace the details (the status is not touched) |
 | `PATCH /branches/{id}/status` | `{"status": "inactive"}` or `{"status": "active"}` |
 
+**Customers** work the same way (`/customers`, `/customers/{id}`, `/customers/{id}/status`), with these differences:
+
+| Call | Does |
+|---|---|
+| `GET /customers?status=active&limit=50&offset=0` | list, ordered by name, **one page at a time** (`limit` defaults to 50 and is held between 1 and 200; `offset` defaults to 0). A query string it doesn't understand answers `400 INVALID_QUERY` |
+| `GET /customers/{id}` | read one |
+| `POST /customers` | create (always `active`; two customers may share a name) |
+| `PUT /customers/{id}` | replace the details (what is left out is cleared; the status is not touched) |
+| `PATCH /customers/{id}/status` | `{"status": "inactive"}` or `{"status": "active"}` |
+
+A customer is never deleted either. An **inactive customer can't be put on a new quote** (`CUSTOMER_INACTIVE`, 409). Customers are people's details: **use made-up people only until real login exists (Phase 9).**
+
 **Try it in the browser:** with the server running, open <http://127.0.0.1:3000/docs> (in Codespaces: the Ports tab, port 3000, "Open in Browser", then add `/docs`). It lists every call and has a "Try it out" button on each. Click **Authorize** once and paste your `API_KEY`. The same list as data is at `/openapi.json`.
 
-There is **no DELETE** (a branch is never deleted). A failed call answers `{"code": "...", "message": "..."}` with the library's own code; the status is 400 (wrong input), 401 (no or wrong key), 404 (no such branch), 409 (a rule refused it, e.g. a number already used) or 503 (database down).
+There is **no DELETE** (a branch or customer is never deleted). A failed call answers `{"code": "...", "message": "..."}` with the library's own code; the status is 400 (wrong input), 401 (no or wrong key), 404 (no such branch or customer), 409 (a rule refused it, e.g. a number already used) or 503 (database down).
 
 - **The docs page is the one thing that opens without a key** (`/docs` and `/openapi.json`): a browser can't send a key to load a page, and they show only the shape of the API, never a branch. Everything else, even an address that doesn't exist, needs the key. The list is built from the notes above each handler, so it can't drift from the code. Keep Codespaces port 3000 **Private**, and switch the docs off before the API is ever put on the internet (Phase 10).
 - **Every call needs the key** (`Authorization: Bearer <key>`), even for a route that doesn't exist. This is a stand-in until real login and roles (Phase 9). The key is read from `API_KEY` into a `Secret`, compared in constant time, never logged and never sent back. There is no default key.
@@ -74,7 +86,7 @@ There is **no DELETE** (a branch is never deleted). A failed call answers `{"cod
 - Bodies over 16 KB are refused. A field the call doesn't know (like `status` on create) is refused.
 - The JSON is only translated: every rule (phone, postal code, province, unique number) is the library's, the same as for any other caller.
 - `cargo run` does not build the tables; run `cargo run --example db_setup` first (the API answers 503 until the tables exist).
-- Tests: `tests/api.rs` (no database) and `tests/database_api.rs` (`--ignored`; they remove their own `API-T-` branches because a branch can't be deleted through the API).
+- Tests: `tests/api.rs` (no database) and `tests/database_api.rs` (`--ignored`; they remove their own `API-T-` branches and customers because nothing can be deleted through the API).
 
 ## Looking up equipment
 Type a serial number and a **lookup** fills in the make, model, year and kind of machine. The service writer then adds the plate and the meter reading, and `Equipment::from_draft` checks everything.
@@ -85,7 +97,7 @@ Type a serial number and a **lookup** fills in the make, model, year and kind of
 - Tests never touch the internet. To try the real service by hand: `cargo run --example nhtsa_lookup -- 1HGCM82633A004352`
 
 ## The database (PostgreSQL in Docker)
-Quoto will keep quotes, customers and equipment in PostgreSQL (Phase 4). The database has its first tables (the provinces with their tax rates, and the branches); nothing else uses the database yet.
+Quoto will keep quotes, customers and equipment in PostgreSQL (Phase 4). The database has its first tables (the provinces with their tax rates, the branches, and the customers); nothing else uses the database yet.
 
 ```bash
 cp .env.example .env            # .env is ignored by git
@@ -141,13 +153,13 @@ GitHub Actions runs the same checks automatically on every push and pull request
 src/
 ├── main.rs              starts the web API (and is the one place where errors stop the program)
 ├── lib.rs               the library's front door
-├── api.rs               the web API + api/ (settings, auth, error, branches, docs)
+├── api.rs               the web API + api/ (settings, auth, error, log, branches, customers, docs)
 ├── branch.rs            Branch + branch/ (location, table: the branches table and its create/read/update) (a dealership location; its province decides the taxes)
 ├── country.rs           Country (follows from the province)
 ├── errors.rs  logging.rs  money.rs  samples.rs  secret.rs
 ├── status.rs            Status (active / inactive) for every record that is never deleted
 ├── province.rs          Province + province/ (tax: the sum and the rate rules; table: the provinces table)
-├── customer.rs          Customer + customer/ (address, postal_code, contact, phone_number, email)
+├── customer.rs          Customer + customer/ (address, postal_code, contact, phone_number, email, table: the customers table and its create/read/list/update/status)
 ├── database.rs          connect + sync + database/ (settings: DatabaseSettings, read from the environment)
 ├── equipment.rs         Equipment + equipment/ (meter, meter_type, equipment_type, identification,
 │                        equipment_draft, equipment_source)

@@ -240,3 +240,16 @@ fn the_error_messages_never_contain_customer_details() {
     assert!(!message.contains("Jane"));
     assert!(!message.contains("555"));
 }
+
+#[test]
+fn an_inactive_customer_cannot_be_put_on_a_new_quote() {
+    let mut quote = quick_quote();
+    let inactive = customer().with_status(Status::Inactive);
+    assert_eq!(
+        quote.attach_customer(inactive),
+        Err(QuoteError::CustomerInactive)
+    );
+    // Nothing changed: the quote still has no customer, and an active one is fine.
+    assert!(quote.customer().is_none());
+    assert!(quote.attach_customer(customer()).is_ok());
+}

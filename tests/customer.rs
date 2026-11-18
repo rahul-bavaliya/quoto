@@ -291,3 +291,60 @@ fn customers_with_the_same_details_are_the_same_only_if_the_id_matches() {
     assert_ne!(a, other);
     assert_ne!(a, unsaved);
 }
+
+// ===== status and readers =====
+
+fn jane() -> Customer {
+    Customer::new(
+        String::from("Jane Smith"),
+        Some(String::from("Prairie Farms Ltd.")),
+        Some(String::from("Service Manager")),
+        Contact::new(
+            PhoneNumber::parse("306-555-0142").unwrap(),
+            Some(PhoneNumber::parse("306-555-0143").unwrap()),
+            Some(Email::parse("jane@prairiefarms.ca").unwrap()),
+        ),
+        sample_address(),
+    )
+    .unwrap()
+}
+
+#[test]
+fn a_new_customer_is_active() {
+    let customer = jane();
+    assert_eq!(customer.status(), Status::Active);
+    assert!(customer.is_active());
+}
+
+#[test]
+fn a_customer_can_be_made_inactive_and_active_again_without_changing_anything_else() {
+    let off = jane().with_status(Status::Inactive);
+    assert_eq!(off.status(), Status::Inactive);
+    assert!(!off.is_active());
+    assert_eq!(off.name(), "Jane Smith");
+    let on = off.with_status(Status::Active);
+    assert_eq!(on, jane());
+}
+
+#[test]
+fn a_customer_can_be_read_back_piece_by_piece() {
+    let customer = jane();
+    assert_eq!(customer.name(), "Jane Smith");
+    assert_eq!(customer.company(), Some("Prairie Farms Ltd."));
+    assert_eq!(customer.designation(), Some("Service Manager"));
+    assert_eq!(customer.contact().phone().to_string(), "+1-306-555-0142");
+    assert_eq!(
+        customer.contact().alternate_phone().unwrap().to_string(),
+        "+1-306-555-0143"
+    );
+    assert_eq!(
+        customer.contact().email().unwrap().to_string(),
+        "jane@prairiefarms.ca"
+    );
+    assert_eq!(customer.address().city(), "Regina");
+}
+
+#[test]
+fn an_inactive_customer_differs_from_an_active_one() {
+    assert_ne!(jane(), jane().with_status(Status::Inactive));
+}

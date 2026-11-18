@@ -133,6 +133,18 @@ fn a_failed_database_set_up_is_a_service_problem() {
 }
 
 #[test]
+fn the_customer_save_errors_are_business_rules_and_a_missing_customer_is_wrong_input() {
+    for error in [
+        QuoteError::CustomerAlreadySaved,
+        QuoteError::CustomerNotSaved,
+        QuoteError::CustomerInactive,
+    ] {
+        assert_eq!(error.kind(), ErrorKind::BusinessRule);
+    }
+    assert_eq!(QuoteError::UnknownCustomer.kind(), ErrorKind::InvalidInput);
+}
+
+#[test]
 fn a_server_that_cannot_start_is_an_unavailable_service() {
     assert_eq!(
         QuoteError::ServerStartFailed.kind(),
@@ -241,6 +253,10 @@ fn every_error_has_its_own_code() {
         QuoteError::DatabaseSetupFailed.code(),
         QuoteError::InvalidStatus { value: "x".into() }.code(),
         QuoteError::UnknownBranch.code(),
+        QuoteError::UnknownCustomer.code(),
+        QuoteError::CustomerAlreadySaved.code(),
+        QuoteError::CustomerNotSaved.code(),
+        QuoteError::CustomerInactive.code(),
         QuoteError::ServerStartFailed.code(),
         QuoteError::DuplicateBranchNumber { number: "x".into() }.code(),
         QuoteError::BranchAlreadySaved.code(),

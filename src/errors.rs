@@ -117,6 +117,19 @@ pub enum QuoteError {
     )]
     ServerStartFailed,
 
+    // ---- Customers ----
+    #[error("There is no customer with that id.")]
+    UnknownCustomer,
+
+    #[error("This customer is already saved. To change it, use update.")]
+    CustomerAlreadySaved,
+
+    #[error("This customer is not saved yet, so it can't be updated. Create it first.")]
+    CustomerNotSaved,
+
+    #[error("This customer is inactive, so it can't be put on a new quote.")]
+    CustomerInactive,
+
     // ---- Status and branches ----
     #[error("'{value}' is not a status. Use 'active' or 'inactive'.")]
     InvalidStatus { value: String },
@@ -187,7 +200,10 @@ impl QuoteError {
             | QuoteError::BranchInactive
             | QuoteError::DuplicateBranchNumber { .. }
             | QuoteError::BranchAlreadySaved
-            | QuoteError::BranchNotSaved => ErrorKind::BusinessRule,
+            | QuoteError::BranchNotSaved
+            | QuoteError::CustomerAlreadySaved
+            | QuoteError::CustomerNotSaved
+            | QuoteError::CustomerInactive => ErrorKind::BusinessRule,
             QuoteError::LookupFailed { .. }
             | QuoteError::DatabaseUnavailable
             | QuoteError::DatabaseSetupFailed
@@ -230,6 +246,10 @@ impl QuoteError {
             QuoteError::UnknownProvince { .. } => "UNKNOWN_PROVINCE",
             QuoteError::RatesDateBeforeCurrent { .. } => "RATES_DATE_BEFORE_CURRENT",
             QuoteError::ServerStartFailed => "SERVER_START_FAILED",
+            QuoteError::UnknownCustomer => "UNKNOWN_CUSTOMER",
+            QuoteError::CustomerAlreadySaved => "CUSTOMER_ALREADY_SAVED",
+            QuoteError::CustomerNotSaved => "CUSTOMER_NOT_SAVED",
+            QuoteError::CustomerInactive => "CUSTOMER_INACTIVE",
             QuoteError::InvalidStatus { .. } => "INVALID_STATUS",
             QuoteError::UnknownBranch => "UNKNOWN_BRANCH",
             QuoteError::DuplicateBranchNumber { .. } => "DUPLICATE_BRANCH_NUMBER",

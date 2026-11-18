@@ -9,6 +9,7 @@
 // try from the page still need the key (use the "Authorize" button and paste it once).
 
 use super::branches::{self, BranchInput, BranchView, StatusInput};
+use super::customers::{self, CustomerInput, CustomerView};
 use super::error::ErrorBody;
 use axum::Router;
 use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
@@ -38,17 +39,30 @@ impl Modify for BearerKey {
 #[openapi(
     info(
         title = "Quoto API",
-        description = "Branches for the Quoto quoting and repair-order system. \
-            A branch is never deleted: it is made inactive instead."
+        description = "Branches and customers for the Quoto quoting and repair-order system. \
+            Nothing is ever deleted: a branch or a customer is made inactive instead. \
+            Customers are people's details: use made-up people only until real login exists."
     ),
     paths(
         branches::list,
         branches::read,
         branches::create,
         branches::replace,
-        branches::change_status
+        branches::change_status,
+        customers::list,
+        customers::read,
+        customers::create,
+        customers::replace,
+        customers::change_status
     ),
-    components(schemas(BranchInput, BranchView, StatusInput, ErrorBody)),
+    components(schemas(
+        BranchInput,
+        BranchView,
+        CustomerInput,
+        CustomerView,
+        StatusInput,
+        ErrorBody
+    )),
     modifiers(&BearerKey),
     security(("api_key" = []))
 )]

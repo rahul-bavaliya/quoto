@@ -20,7 +20,7 @@ use crate::errors::{QuoteError, QuoteResult};
 use crate::province::Province;
 use crate::status::Status;
 use axum::Json;
-use axum::extract::rejection::JsonRejection;
+use axum::extract::rejection::{JsonRejection, QueryRejection};
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -132,11 +132,11 @@ pub(super) struct ListQuery {
 #[schema(example = json!({"status": "inactive"}))]
 pub(super) struct StatusInput {
     /// "active" or "inactive".
-    status: String,
+    pub(super) status: String,
 }
 
 /// A body that isn't the expected JSON is one plain answer, not serde's wording.
-fn body<T>(input: Result<Json<T>, JsonRejection>) -> Result<T, ApiError> {
+pub(super) fn body<T>(input: Result<Json<T>, JsonRejection>) -> Result<T, ApiError> {
     input
         .map(|Json(value)| value)
         .map_err(|_| ApiError::BadBody)
@@ -157,8 +157,9 @@ fn branch_id(text: &str) -> QuoteResult<Uuid> {
     ))]
 pub(super) async fn list(
     State(state): State<AppState>,
-    Query(query): Query<ListQuery>,
+    query: Result<Query<ListQuery>, QueryRejection>,
 ) -> Result<Json<Vec<BranchView>>, ApiError> {
+    let Query(query) = query.map_err(|_| ApiError::BadQuery)?;
     let status = query
         .status
         .as_deref()

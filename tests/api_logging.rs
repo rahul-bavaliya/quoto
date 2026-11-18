@@ -271,3 +271,44 @@ async fn a_refused_call_still_gets_a_call_number_and_the_challenge() {
     assert!(response.headers().contains_key("x-request-id"));
     assert!(body.contains("UNAUTHORIZED"));
 }
+
+#[tokio::test]
+async fn no_customer_detail_reaches_the_log_at_any_level() {
+    let (log, _guard) = capture();
+    let secrets = [
+        "Zed Quiet Person",
+        "Hidden Company Ltd",
+        "Chief Secret Officer",
+        "quiet.person@secret-mail.example",
+        "secret-query-for-customers",
+        "secret-customer-path",
+    ];
+    // Refused (bad phone) before the database is reached, with all the personal details in the body.
+    call(
+        "POST",
+        "/customers",
+        &with_key(),
+        r#"{"name":"Zed Quiet Person","company":"Hidden Company Ltd","designation":"Chief Secret Officer",
+            "phone":"999","email":"quiet.person@secret-mail.example","address_line1":"1 Hidden Lane",
+            "city":"Regina","province":"SK","postal_code":"S4P3Y2"}"#,
+    )
+    .await;
+    call(
+        "GET",
+        "/customers?status=secret-query-for-customers",
+        &with_key(),
+        "",
+    )
+    .await;
+    call("GET", "/customers/secret-customer-path", &with_key(), "").await;
+
+    let text = log.text();
+    assert_eq!(log.call_lines().len(), 3, "{text}");
+    for secret in secrets.iter().chain(&["1 Hidden Lane", KEY]) {
+        assert!(
+            !text.contains(secret),
+            "{secret} leaked into the log:\n{text}"
+        );
+    }
+    assert!(text.contains("route=\"/customers/{id}\""));
+}

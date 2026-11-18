@@ -252,6 +252,9 @@ impl Quote {
         if self.customer.is_some() {
             return Err(QuoteError::AlreadyAttached { what: "customer" });
         }
+        if !customer.is_active() {
+            return Err(QuoteError::CustomerInactive);
+        }
         self.customer = Some(customer);
         debug!(quote_number = %self.number, "customer added");
         Ok(())
