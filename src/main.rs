@@ -1,10 +1,28 @@
-// src/main.rs: the program's front door. Quoto is a library for now (see `src/lib.rs`);
-// the screens and the web API come in later phases, so this only starts the logger.
+// src/main.rs: starts the web API (see `src/api.rs`). It is the one place where errors stop the
+// program: it logs the code, prints the message, and exits with the error's exit code.
 
-use quoto::logging;
-use tracing::info;
+use quoto::api::{ApiSettings, serve};
+use quoto::database::{self, DatabaseSettings};
+use quoto::{QuoteResult, logging};
+use std::process::ExitCode;
 
-fn main() {
+async fn run() -> QuoteResult<()> {
+    // Reads `.env` if there is one (the real environment wins). A missing file is fine.
+    dotenvy::dotenv().ok();
+    let api = ApiSettings::from_env()?;
+    let db = database::connect(&DatabaseSettings::from_env()?).await?;
+    serve(api, db).await
+}
+
+#[tokio::main]
+async fn main() -> ExitCode {
     logging::init();
-    info!("Quoto started. Nothing to run yet: use `cargo test` (the library has no screen).");
+    match run().await {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            error.log();
+            eprintln!("Quoto could not start: {error}");
+            ExitCode::from(error.exit_code())
+        }
+    }
 }

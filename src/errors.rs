@@ -111,6 +111,10 @@ pub enum QuoteError {
     #[error("The new rates start on {date}, which is before the current rates ({current}).")]
     RatesDateBeforeCurrent { date: NaiveDate, current: NaiveDate },
 
+    // ---- Web API ----
+    #[error("The web API could not start or keep running.")]
+    ServerStartFailed,
+
     // ---- Status and branches ----
     #[error("'{value}' is not a status. Use 'active' or 'inactive'.")]
     InvalidStatus { value: String },
@@ -184,7 +188,8 @@ impl QuoteError {
             | QuoteError::BranchNotSaved => ErrorKind::BusinessRule,
             QuoteError::LookupFailed { .. }
             | QuoteError::DatabaseUnavailable
-            | QuoteError::DatabaseSetupFailed => ErrorKind::ServiceUnavailable,
+            | QuoteError::DatabaseSetupFailed
+            | QuoteError::ServerStartFailed => ErrorKind::ServiceUnavailable,
             QuoteError::MissingSetting { .. } | QuoteError::InvalidSetting { .. } => {
                 ErrorKind::Configuration
             }
@@ -222,6 +227,7 @@ impl QuoteError {
             QuoteError::InvalidTaxSystem => "INVALID_TAX_SYSTEM",
             QuoteError::UnknownProvince { .. } => "UNKNOWN_PROVINCE",
             QuoteError::RatesDateBeforeCurrent { .. } => "RATES_DATE_BEFORE_CURRENT",
+            QuoteError::ServerStartFailed => "SERVER_START_FAILED",
             QuoteError::InvalidStatus { .. } => "INVALID_STATUS",
             QuoteError::UnknownBranch => "UNKNOWN_BRANCH",
             QuoteError::DuplicateBranchNumber { .. } => "DUPLICATE_BRANCH_NUMBER",

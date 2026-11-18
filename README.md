@@ -34,12 +34,44 @@ Total: $136.53
 
 ## Run it
 ```bash
-cargo run      # only starts the logger for now (Quoto is a library; the screens come later)
+cargo run      # start the web API (needs the database and API_KEY in .env; see "The web API")
 cargo run --example nhtsa_lookup -- <VIN>   # try the real NHTSA lookup (needs the internet)
 cargo run --example db_check   # check the database connection (see "The database")
 cargo test     # run all the unit and scenario tests
 RUST_LOG=debug cargo run   # same, with a detailed log on stderr
 ```
+
+## The web API
+REST + JSON, built on [`axum`](https://docs.rs/axum). Today it has the **branch** calls only.
+
+```bash
+docker compose up -d && cargo run --example db_setup   # the database and its tables (once)
+# put a key in .env:  API_KEY=<output of: openssl rand -base64 32>
+cargo run                                              # "the API is listening address=127.0.0.1:3000"
+```
+```bash
+KEY=...   # the same value as API_KEY
+curl -X POST http://127.0.0.1:3000/branches -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
+  -d '{"number":"001","name":"Regina Branch","address_line1":"1 Industrial Rd","city":"Regina","province":"SK","postal_code":"S4P 3Y2","phone":"306-555-0100"}'
+curl "http://127.0.0.1:3000/branches?status=active" -H "Authorization: Bearer $KEY"
+```
+
+| Call | Does |
+|---|---|
+| `GET /branches?status=active` | list (all of them without `?status`; `active` or `inactive`) |
+| `GET /branches/{id}` | read one |
+| `POST /branches` | create (always `active`) |
+| `PUT /branches/{id}` | replace the details (the status is not touched) |
+| `PATCH /branches/{id}/status` | `{"status": "inactive"}` or `{"status": "active"}` |
+
+There is **no DELETE** (a branch is never deleted). A failed call answers `{"code": "...", "message": "..."}` with the library's own code; the status is 400 (wrong input), 401 (no or wrong key), 404 (no such branch), 409 (a rule refused it, e.g. a number already used) or 503 (database down).
+
+- **Every call needs the key** (`Authorization: Bearer <key>`), even for a route that doesn't exist. This is a stand-in until real login and roles (Phase 9). The key is read from `API_KEY` into a `Secret`, compared in constant time, never logged and never sent back. There is no default key.
+- **It only listens on `127.0.0.1`.** The key travels as plain text, so the API refuses any other address until there is HTTPS (Phase 10).
+- Bodies over 16 KB are refused. A field the call doesn't know (like `status` on create) is refused.
+- The JSON is only translated: every rule (phone, postal code, province, unique number) is the library's, the same as for any other caller.
+- `cargo run` does not build the tables; run `cargo run --example db_setup` first (the API answers 503 until the tables exist).
+- Tests: `tests/api.rs` (no database) and `tests/database_api.rs` (`--ignored`; they remove their own `API-T-` branches because a branch can't be deleted through the API).
 
 ## Looking up equipment
 Type a serial number and a **lookup** fills in the make, model, year and kind of machine. The service writer then adds the plate and the meter reading, and `Equipment::from_draft` checks everything.
@@ -103,8 +135,9 @@ GitHub Actions runs the same checks automatically on every push and pull request
 ## Project layout
 ```
 src/
-├── main.rs              starts the logger and nothing else (Quoto is a library for now)
+├── main.rs              starts the web API (and is the one place where errors stop the program)
 ├── lib.rs               the library's front door
+├── api.rs               the web API + api/ (settings, auth, error, branches)
 ├── branch.rs            Branch + branch/ (location, table: the branches table and its create/read/update) (a dealership location; its province decides the taxes)
 ├── country.rs           Country (follows from the province)
 ├── errors.rs  logging.rs  money.rs  samples.rs  secret.rs
