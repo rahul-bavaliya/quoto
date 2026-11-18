@@ -268,6 +268,9 @@ impl Quote {
         if self.equipment.is_some() {
             return Err(QuoteError::AlreadyAttached { what: "equipment" });
         }
+        if !equipment.is_active() {
+            return Err(QuoteError::EquipmentInactive);
+        }
         let Some(customer) = &self.customer else {
             return Err(QuoteError::EquipmentNeedsCustomer);
         };

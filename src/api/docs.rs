@@ -10,6 +10,9 @@
 
 use super::branches::{self, BranchChanges, BranchInput, BranchView};
 use super::customers::{self, CustomerChanges, CustomerInput, CustomerView};
+use super::equipment::{
+    self, EquipmentChanges, EquipmentInput, EquipmentView, NewEquipment, OwnerInput,
+};
 use super::error::ErrorBody;
 use super::request::StatusInput;
 use axum::Router;
@@ -40,9 +43,10 @@ impl Modify for BearerKey {
 #[openapi(
     info(
         title = "Quoto API",
-        description = "Branches and customers for the Quoto quoting and repair-order system. \
-            Nothing is ever deleted: a branch or a customer is made inactive instead. \
-            Customers are people's details: use made-up people only until real login exists."
+        description = "Branches, customers and equipment for the Quoto quoting and repair-order system. \
+            Nothing is ever erased: a branch or a customer is made inactive, and DELETE on equipment \
+            archives the machine. Customers and machines identify real people and vehicles: \
+            use made-up ones only until real login exists."
     ),
     paths(
         branches::list,
@@ -56,7 +60,15 @@ impl Modify for BearerKey {
         customers::create,
         customers::replace,
         customers::change,
-        customers::change_status
+        customers::change_status,
+        equipment::list,
+        equipment::read,
+        equipment::create,
+        equipment::replace,
+        equipment::change,
+        equipment::archive,
+        equipment::change_status,
+        equipment::change_owner
     ),
     components(schemas(
         BranchChanges,
@@ -65,6 +77,11 @@ impl Modify for BearerKey {
         CustomerChanges,
         CustomerInput,
         CustomerView,
+        EquipmentChanges,
+        EquipmentInput,
+        EquipmentView,
+        NewEquipment,
+        OwnerInput,
         StatusInput,
         ErrorBody
     )),

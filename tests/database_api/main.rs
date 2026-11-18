@@ -12,6 +12,7 @@
 
 mod branches;
 mod customers;
+mod equipment;
 mod logging;
 mod patch;
 mod support;

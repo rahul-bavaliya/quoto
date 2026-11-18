@@ -41,7 +41,7 @@ async fn everything_else_still_needs_the_key_next_to_the_docs() {
 }
 
 #[tokio::test]
-async fn the_list_describes_exactly_the_branch_and_customer_calls_and_no_delete() {
+async fn the_list_describes_exactly_the_calls_and_only_equipment_has_a_delete() {
     let spec = spec().await;
     let mut calls: Vec<String> = spec["paths"]
         .as_object()
@@ -59,18 +59,26 @@ async fn the_list_describes_exactly_the_branch_and_customer_calls_and_no_delete(
     assert_eq!(
         calls,
         [
+            "DELETE /equipment/{id}",
             "GET /branches",
             "GET /branches/{id}",
             "GET /customers",
             "GET /customers/{id}",
+            "GET /equipment",
+            "GET /equipment/{id}",
             "PATCH /branches/{id}",
             "PATCH /branches/{id}/status",
             "PATCH /customers/{id}",
             "PATCH /customers/{id}/status",
+            "PATCH /equipment/{id}",
+            "PATCH /equipment/{id}/owner",
+            "PATCH /equipment/{id}/status",
             "POST /branches",
             "POST /customers",
+            "POST /equipment",
             "PUT /branches/{id}",
             "PUT /customers/{id}",
+            "PUT /equipment/{id}",
         ]
     );
 }

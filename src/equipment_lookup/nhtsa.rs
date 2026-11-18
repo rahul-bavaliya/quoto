@@ -7,7 +7,7 @@ use serde::Deserialize;
 use std::time::Duration;
 use tracing::debug;
 
-const PROVIDER: &str = "NHTSA vPIC";
+use crate::equipment::NHTSA_VPIC as PROVIDER;
 const BASE_URL: &str = "https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues";
 const TIMEOUT: Duration = Duration::from_secs(5);
 /// A decoded VIN is a few kilobytes; anything near this size is not an answer we want.

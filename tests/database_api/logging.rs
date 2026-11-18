@@ -198,3 +198,77 @@ async fn patch_calls_log_nothing_about_what_was_sent() {
     assert!(calls[2].contains("status=400"));
     api.finish().await;
 }
+
+#[tokio::test]
+#[ignore = "needs the database (docker compose up)"]
+async fn equipment_calls_log_nothing_about_the_machine_or_its_owner() {
+    let api = setup().await;
+    let log = LogText::default();
+    let subscriber = tracing_subscriber::fmt()
+        .with_writer(log.clone())
+        .with_ansi(false)
+        .with_max_level(tracing::Level::TRACE)
+        .finish();
+    let _guard = tracing::subscriber::set_default(subscriber);
+
+    let owner = api.create_customer("API-T-Quiet Owner").await;
+    let body = json!({
+        "make": "Zebulon Motors", "model": "Quietmodel 9", "model_year": 2019,
+        "serial_number": "API-T-SECRETSERIAL1", "plate": "SECRETPLATE9",
+        "meter_reading": 4321.5, "meter_type": "hr", "equipment_type": "tractor",
+        "customer_id": owner
+    });
+    let (_, created) = api.call("POST", "/equipment", Some(body)).await;
+    let id = created["id"].as_str().unwrap().to_string();
+    api.call("GET", &format!("/equipment/{id}"), None).await;
+    api.call(
+        "GET",
+        "/equipment?serial_number=API-T-SECRETSERIAL1&limit=5",
+        None,
+    )
+    .await;
+    api.call(
+        "PATCH",
+        &format!("/equipment/{id}"),
+        Some(json!({"plate": "SECRETPLATE8"})),
+    )
+    .await;
+    api.call(
+        "PATCH",
+        &format!("/equipment/{id}/owner"),
+        Some(json!({"customer_id": null})),
+    )
+    .await;
+    // a refused duplicate must not echo the serial either
+    api.call("POST", "/equipment", Some(json!({
+        "make": "Zebulon Motors", "model": "Quietmodel 9", "serial_number": "API-T-SECRETSERIAL1",
+        "meter_type": "hr", "equipment_type": "tractor"
+    }))).await;
+    api.call("DELETE", &format!("/equipment/{id}"), None).await;
+
+    let text = String::from_utf8_lossy(&log.0.lock().unwrap().clone()).to_string();
+    for secret in [
+        id.as_str(),
+        owner.as_str(),
+        "Zebulon",
+        "Quietmodel",
+        "SECRETSERIAL",
+        "SECRETPLATE",
+        "4321.5",
+        "Quiet Owner",
+        KEY,
+    ] {
+        assert!(
+            !text.contains(secret),
+            "{secret} leaked into the log:\n{text}"
+        );
+    }
+    let calls: Vec<&str> = text.lines().filter(|l| l.contains("api_request")).collect();
+    assert_eq!(calls.len(), 8, "{text}"); // the customer create counts too
+    assert!(
+        calls[2].contains("route=\"/equipment/{id}\""),
+        "{}",
+        calls[2]
+    );
+    api.finish().await;
+}

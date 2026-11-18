@@ -8,6 +8,7 @@ mod access;
 mod branches;
 mod customers;
 mod docs;
+mod equipment;
 mod patch;
 mod settings;
 mod support;

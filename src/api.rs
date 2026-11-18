@@ -8,6 +8,7 @@
 //   request    what calls with a body share (body, PATCH merge, status body)
 //   branches   the branch calls
 //   customers  the customer calls
+//   equipment  the machine calls
 //   docs       the Swagger page at /docs
 // Every call needs the API key (`Authorization: Bearer <key>`); only the documentation
 // addresses don't.
@@ -16,6 +17,7 @@ mod auth;
 mod branches;
 mod customers;
 mod docs;
+mod equipment;
 mod error;
 mod log;
 mod request;
@@ -66,6 +68,16 @@ pub fn router(db: DatabaseConnection, key: Secret) -> Router {
                 .patch(customers::change),
         )
         .route("/customers/{id}/status", patch(customers::change_status))
+        .route("/equipment", get(equipment::list).post(equipment::create))
+        .route(
+            "/equipment/{id}",
+            get(equipment::read)
+                .put(equipment::replace)
+                .patch(equipment::change)
+                .delete(equipment::archive),
+        )
+        .route("/equipment/{id}/status", patch(equipment::change_status))
+        .route("/equipment/{id}/owner", patch(equipment::change_owner))
         .merge(docs::routes())
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         // Added last, so it runs first: nothing is read or answered without the key.

@@ -1,7 +1,7 @@
 // tests/database_api/support.rs: what every database API test shares
 //
 // One `Api` per test: it takes a turn (the tests share the tables), connects, builds the tables,
-// cleans the `API-T-` rows, and makes calls straight into the router (no network). The API commits
+// cleans the `API-T-` rows (a machine's serial number starts with it too), and makes calls straight into the router (no network). The API commits
 // each call for real and nothing can be deleted through it, so `finish` removes the test rows with
 // SQL (test housekeeping only).
 
@@ -32,6 +32,9 @@ pub async fn clean(db: &DatabaseConnection) {
     db.execute_unprepared("DELETE FROM branches WHERE number LIKE 'API-T-%'")
         .await
         .expect("clean up test branches");
+    db.execute_unprepared("DELETE FROM equipment WHERE serial_number LIKE 'API-T-%'")
+        .await
+        .expect("clean up test equipment");
     db.execute_unprepared("DELETE FROM customers WHERE name LIKE 'API-T-%'")
         .await
         .expect("clean up test customers");
