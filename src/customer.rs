@@ -22,7 +22,7 @@ pub use contact::Contact;
 pub use email::Email;
 pub use phone_number::PhoneNumber;
 pub use postal_code::PostalCode;
-pub(crate) use table::CustomerTable;
+pub(crate) use table::{CustomerTable, customer_from_copy, get_customer_with_copy};
 pub use table::{
     create_customer, get_customer, list_customers, set_customer_status, update_customer,
 };

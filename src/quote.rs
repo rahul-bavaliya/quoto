@@ -15,6 +15,7 @@ mod number_machine;
 mod print;
 mod quote_number;
 mod quote_status;
+mod table;
 mod totals;
 
 pub use line_item::LineItem;
@@ -22,6 +23,10 @@ pub use line_kind::LineKind;
 pub use number_machine::{InMemoryQuoteNumbers, QuoteNumbers};
 pub use quote_number::QuoteNumber;
 pub use quote_status::QuoteStatus;
+pub use table::{
+    NewQuote, QuoteFilter, create_quote, get_quote, list_quotes, next_quote_number, save_quote,
+};
+pub(crate) use table::{QuoteLineTable, QuoteNumberTable, QuoteTable};
 
 /// The prices on a quote are good for this many days after the quote date.
 const VALID_FOR_DAYS: u64 = 30;
@@ -46,7 +51,40 @@ pub struct Quote {
     items: Vec<LineItem>,
 }
 
+/// Everything a saved quote is rebuilt from (see `quote/table.rs`).
+pub(crate) struct SavedQuote {
+    pub(crate) id: Uuid,
+    pub(crate) number: QuoteNumber,
+    pub(crate) created_at: NaiveDateTime,
+    pub(crate) expires_on: NaiveDate,
+    pub(crate) promise_date: Option<NaiveDate>,
+    pub(crate) status: QuoteStatus,
+    pub(crate) branch: Branch,
+    pub(crate) customer: Option<Customer>,
+    pub(crate) equipment: Option<Equipment>,
+    pub(crate) items: Vec<LineItem>,
+}
+
 impl Quote {
+    /// Rebuilds a quote that was saved. The rules that were checked when it was made are not run
+    /// again: the quote is what it was that day (its branch may be inactive now, its customer
+    /// may have moved). Every part was still checked as it was read.
+    pub(crate) fn restore(saved: SavedQuote) -> Quote {
+        Quote {
+            id: None,
+            number: saved.number,
+            created_at: saved.created_at,
+            expires_on: saved.expires_on,
+            promise_date: saved.promise_date,
+            status: saved.status,
+            branch: saved.branch,
+            customer: saved.customer,
+            equipment: saved.equipment,
+            items: saved.items,
+        }
+        .with_id(saved.id)
+    }
+
     /// The number and the date and time are handed in, never made here: a quote doesn't
     /// look at the clock or keep a counter (that keeps it easy to test).
     /// A new quote starts with just its branch (a quick quote). The customer and the
@@ -135,6 +173,11 @@ impl Quote {
 
     pub fn number(&self) -> &QuoteNumber {
         &self.number
+    }
+
+    /// The shop's date and time the quote was made (as it was handed in).
+    pub fn created_at(&self) -> NaiveDateTime {
+        self.created_at
     }
 
     pub fn expires_on(&self) -> NaiveDate {

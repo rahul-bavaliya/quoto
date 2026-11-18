@@ -34,7 +34,7 @@ mod row {
     use sea_orm::entity::prelude::*;
 
     #[sea_orm::model]
-    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+    #[derive(Clone, Debug, PartialEq, DeriveEntityModel, serde::Serialize, serde::Deserialize)]
     #[sea_orm(table_name = "equipment")]
     pub struct Model {
         /// Made by the database, never by Quoto.
@@ -201,6 +201,28 @@ pub async fn get_equipment(db: &impl ConnectionTrait, id: Uuid) -> QuoteResult<E
         .await
         .map_err(database_error)?
         .ok_or(QuoteError::UnknownEquipment)?;
+    equipment_from_row(row)
+}
+
+/// A quote keeps a copy of what this equipment looked like the day it was quoted: the saved row as
+/// JSON. This reads the equipment and that copy together.
+pub(crate) async fn get_equipment_with_copy(
+    db: &impl ConnectionTrait,
+    id: Uuid,
+) -> QuoteResult<(Equipment, serde_json::Value)> {
+    let row = Entity::find_by_id(id)
+        .one(db)
+        .await
+        .map_err(database_error)?
+        .ok_or(QuoteError::UnknownEquipment)?;
+    let copy = serde_json::to_value(&row).map_err(|_| QuoteError::StoredQuoteDamaged)?;
+    Ok((equipment_from_row(row)?, copy))
+}
+
+/// Builds the equipment back from a quote's copy. Every rule is checked again, as for any saved row.
+pub(crate) fn equipment_from_copy(copy: &serde_json::Value) -> QuoteResult<Equipment> {
+    let row: row::Model =
+        serde_json::from_value(copy.clone()).map_err(|_| QuoteError::StoredQuoteDamaged)?;
     equipment_from_row(row)
 }
 

@@ -171,6 +171,24 @@ pub enum QuoteError {
     #[error("This equipment is not saved yet, so it can't be updated. Create it first.")]
     EquipmentNotSaved,
 
+    // ---- Saved quotes ----
+    #[error("There is no quote with that id.")]
+    UnknownQuote,
+
+    #[error("This quote is already saved. To change it, use save_quote.")]
+    QuoteAlreadySaved,
+
+    #[error("This quote is not saved yet, so it can't be updated. Create it first.")]
+    QuoteNotSaved,
+
+    #[error(
+        "This quote was changed by someone else since you opened it. Open it again and redo your change."
+    )]
+    QuoteChangedMeanwhile,
+
+    #[error("A saved quote could not be read back. Ask whoever runs the server to check the logs.")]
+    StoredQuoteDamaged,
+
     #[error("This equipment is archived, so it can't be put on a new quote. Restore it first.")]
     EquipmentInactive,
 
@@ -233,10 +251,14 @@ impl QuoteError {
             | QuoteError::EquipmentAlreadySaved
             | QuoteError::EquipmentNotSaved
             | QuoteError::EquipmentInactive
-            | QuoteError::DuplicateSerialNumber => ErrorKind::BusinessRule,
+            | QuoteError::DuplicateSerialNumber
+            | QuoteError::QuoteAlreadySaved
+            | QuoteError::QuoteNotSaved
+            | QuoteError::QuoteChangedMeanwhile => ErrorKind::BusinessRule,
             QuoteError::LookupFailed { .. }
             | QuoteError::DatabaseUnavailable
             | QuoteError::DatabaseSetupFailed
+            | QuoteError::StoredQuoteDamaged
             | QuoteError::ServerStartFailed => ErrorKind::ServiceUnavailable,
             QuoteError::MissingSetting { .. } | QuoteError::InvalidSetting { .. } => {
                 ErrorKind::Configuration
@@ -293,6 +315,11 @@ impl QuoteError {
             QuoteError::UnknownEquipment => "UNKNOWN_EQUIPMENT",
             QuoteError::EquipmentAlreadySaved => "EQUIPMENT_ALREADY_SAVED",
             QuoteError::EquipmentNotSaved => "EQUIPMENT_NOT_SAVED",
+            QuoteError::UnknownQuote => "UNKNOWN_QUOTE",
+            QuoteError::QuoteAlreadySaved => "QUOTE_ALREADY_SAVED",
+            QuoteError::QuoteNotSaved => "QUOTE_NOT_SAVED",
+            QuoteError::QuoteChangedMeanwhile => "QUOTE_CHANGED_MEANWHILE",
+            QuoteError::StoredQuoteDamaged => "STORED_QUOTE_DAMAGED",
             QuoteError::EquipmentInactive => "EQUIPMENT_INACTIVE",
             QuoteError::DuplicateSerialNumber => "DUPLICATE_SERIAL_NUMBER",
             QuoteError::LookupFailed { .. } => "LOOKUP_FAILED",

@@ -29,7 +29,7 @@ mod row {
     use sea_orm::entity::prelude::*;
 
     #[sea_orm::model]
-    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+    #[derive(Clone, Debug, PartialEq, DeriveEntityModel, serde::Serialize, serde::Deserialize)]
     #[sea_orm(table_name = "customers")]
     pub struct Model {
         /// Made by the database, never by Quoto.
@@ -153,6 +153,28 @@ pub async fn get_customer(db: &impl ConnectionTrait, id: Uuid) -> QuoteResult<Cu
         .await
         .map_err(database_error)?
         .ok_or(QuoteError::UnknownCustomer)?;
+    customer_from_row(row)
+}
+
+/// A quote keeps a copy of what this customer looked like the day it was quoted: the saved row as
+/// JSON. This reads the customer and that copy together.
+pub(crate) async fn get_customer_with_copy(
+    db: &impl ConnectionTrait,
+    id: Uuid,
+) -> QuoteResult<(Customer, serde_json::Value)> {
+    let row = Entity::find_by_id(id)
+        .one(db)
+        .await
+        .map_err(database_error)?
+        .ok_or(QuoteError::UnknownCustomer)?;
+    let copy = serde_json::to_value(&row).map_err(|_| QuoteError::StoredQuoteDamaged)?;
+    Ok((customer_from_row(row)?, copy))
+}
+
+/// Builds the customer back from a quote's copy. Every rule is checked again, as for any saved row.
+pub(crate) fn customer_from_copy(copy: &serde_json::Value) -> QuoteResult<Customer> {
+    let row: row::Model =
+        serde_json::from_value(copy.clone()).map_err(|_| QuoteError::StoredQuoteDamaged)?;
     customer_from_row(row)
 }
 

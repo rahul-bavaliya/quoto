@@ -77,6 +77,10 @@ impl LineItem {
     pub fn signed_unit_price_cents(&self) -> i64 {
         self.unit_price_cents * self.sign()
     }
+    /// The price as it was entered (never negative); `signed_unit_price_cents` makes a credit negative.
+    pub(crate) fn unit_price_cents(&self) -> i64 {
+        self.unit_price_cents
+    }
     pub fn description(&self) -> &str {
         &self.description
     }
