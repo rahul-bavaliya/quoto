@@ -105,7 +105,7 @@ src/
 ├── branch.rs            Branch + branch/ (branch_status, location) (a dealership location; its province decides the taxes)
 ├── country.rs           Country (follows from the province)
 ├── errors.rs  logging.rs  money.rs  samples.rs  secret.rs
-├── province.rs          Province + province/ (tax, tax_rate, tax_rates, entity, seed, store); the rates live in the database
+├── province.rs          Province + province/ (tax: the sum and the rate rules; table: the provinces table)
 ├── customer.rs          Customer + customer/ (address, postal_code, contact, phone_number, email)
 ├── database.rs          connect + sync + database/ (settings: DatabaseSettings, read from the environment)
 ├── equipment.rs         Equipment + equipment/ (meter, meter_type, equipment_type, identification,
