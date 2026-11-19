@@ -103,6 +103,43 @@ impl Api {
         )
     }
 
+    /// Like `call`, with extra headers (like `If-Match`); also gives the answer's headers.
+    pub async fn call_with(
+        &self,
+        method: &str,
+        uri: &str,
+        body: Option<Value>,
+        extra: &[(&str, &str)],
+    ) -> (StatusCode, axum::http::HeaderMap, Value) {
+        let mut request = Request::builder()
+            .method(method)
+            .uri(uri)
+            .header(header::AUTHORIZATION, format!("Bearer {KEY}"));
+        for (name, value) in extra {
+            request = request.header(*name, *value);
+        }
+        let text = match &body {
+            Some(value) => {
+                request = request.header(header::CONTENT_TYPE, "application/json");
+                value.to_string()
+            }
+            None => String::new(),
+        };
+        let response = self
+            .app
+            .clone()
+            .oneshot(request.body(Body::from(text)).unwrap())
+            .await
+            .unwrap();
+        let (parts, body) = response.into_parts();
+        let bytes = to_bytes(body, 1 << 20).await.unwrap();
+        (
+            parts.status,
+            parts.headers,
+            serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+        )
+    }
+
     /// A call whose answer is not JSON (a file): the status, the headers and the raw bytes.
     pub async fn raw(&self, uri: &str) -> (StatusCode, axum::http::HeaderMap, Vec<u8>) {
         let request = Request::builder()

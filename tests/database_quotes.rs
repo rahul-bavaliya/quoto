@@ -685,9 +685,174 @@ async fn two_people_changing_the_same_quote_cannot_overwrite_each_other_silently
         .attach_customer(get_customer(&tx, p.customer).await.unwrap())
         .unwrap();
     save_quote(&tx, &first).await.unwrap();
-    let outcome = save_quote(&tx, &second).await;
-    // the same customer again is fine; it is not a different one
-    assert!(outcome.is_ok());
+    // even the same customer again: the quote moved on since `second` was read
+    assert!(matches!(
+        save_quote(&tx, &second).await,
+        Err(QuoteError::QuoteChangedMeanwhile)
+    ));
+}
+
+// ===== versions: two people at once =====
+
+#[tokio::test]
+#[ignore = "needs the database (docker compose up)"]
+async fn a_quote_starts_at_version_0_and_every_saved_change_adds_one() {
+    let (_turn, db) = setup().await;
+    let tx = work(&db).await;
+    let p = parties(&tx, "21").await;
+    let saved = create_quote(&tx, full(&p, 2090)).await.unwrap();
+    assert_eq!(saved.version(), 0);
+    assert_eq!(
+        get_quote(&tx, saved.id().unwrap()).await.unwrap().version(),
+        0
+    );
+
+    let mut quote = get_quote(&tx, saved.id().unwrap()).await.unwrap();
+    quote
+        .set_promise_date(day(2090).date() + chrono::Days::new(9))
+        .unwrap();
+    let after = save_quote(&tx, &quote).await.unwrap();
+    assert_eq!(after.version(), 1);
+    // saving what was already saved is still a save
+    let again = save_quote(&tx, &after).await.unwrap();
+    assert_eq!(again.version(), 2);
+    assert_eq!(
+        get_quote(&tx, saved.id().unwrap()).await.unwrap().version(),
+        2
+    );
+    // a list shows the same version
+    let listed = list_quotes(&tx, &QuoteFilter::default(), 200, 0)
+        .await
+        .unwrap();
+    assert_eq!(
+        listed
+            .iter()
+            .find(|q| q.id() == saved.id())
+            .unwrap()
+            .version(),
+        2
+    );
+}
+
+#[tokio::test]
+#[ignore = "needs the database (docker compose up)"]
+async fn a_change_made_from_an_old_read_is_refused_whatever_it_changes() {
+    let (_turn, db) = setup().await;
+    let tx = work(&db).await;
+    let p = parties(&tx, "22").await;
+    let saved = create_quote(&tx, full(&p, 2090)).await.unwrap();
+    let id = saved.id().unwrap();
+    let stale_date = get_quote(&tx, id).await.unwrap();
+    let mut stale_decision = get_quote(&tx, id).await.unwrap();
+    let mut stale_line = get_quote(&tx, id).await.unwrap();
+
+    // someone else changes the quote
+    let mut other = get_quote(&tx, id).await.unwrap();
+    other
+        .set_promise_date(day(2090).date() + chrono::Days::new(3))
+        .unwrap();
+    save_quote(&tx, &other).await.unwrap();
+
+    // a date, a decision and a line, each from the old read, are all refused
+    let mut stale_date = stale_date;
+    stale_date
+        .set_expiry(day(2090).date() + chrono::Days::new(5))
+        .unwrap();
+    stale_decision.accept(day(2090).date()).unwrap();
+    stale_line
+        .add_item(LineItem::new(String::from("Late"), 1.0, 100, LineKind::Fee).unwrap())
+        .unwrap();
+    for stale in [&stale_date, &stale_decision, &stale_line] {
+        let sp = tx.begin().await.unwrap();
+        assert!(matches!(
+            save_quote(&sp, stale).await,
+            Err(QuoteError::QuoteChangedMeanwhile)
+        ));
+    }
+    // nothing of theirs was saved, and the refusals did not move the version
+    let now = get_quote(&tx, id).await.unwrap();
+    assert_eq!(now.version(), 1);
+    assert_eq!(now.status(), &QuoteStatus::Pending);
+    assert_eq!(now.items().len(), 5);
+    assert_eq!(now.expires_on(), saved.expires_on());
+    // reading again and changing again works
+    let mut fresh = now;
+    fresh.accept(day(2090).date()).unwrap();
+    assert_eq!(save_quote(&tx, &fresh).await.unwrap().version(), 2);
+}
+
+#[tokio::test]
+#[ignore = "needs the database (docker compose up)"]
+async fn accepting_and_rejecting_at_the_same_moment_one_wins_and_the_other_is_told() {
+    let (_turn, db) = setup().await;
+    async fn clean(db: &DatabaseConnection) {
+        for sql in [
+            "DELETE FROM quote_lines WHERE quote_id IN (SELECT id FROM quotes WHERE number LIKE 'Q-2093-%')",
+            "DELETE FROM quotes WHERE number LIKE 'Q-2093-%'",
+            "DELETE FROM quote_numbers WHERE year = 2093",
+            "DELETE FROM equipment WHERE serial_number = 'QT-VER-SERIAL'",
+            "DELETE FROM customers WHERE name = 'QT-Ver-Jane'",
+            "DELETE FROM branches WHERE number = 'QT-VER'",
+        ] {
+            db.execute_unprepared(sql).await.expect("clean up");
+        }
+    }
+    clean(&db).await;
+    // committed for real, so several connections can race on it
+    let branch = create_branch(&db, &branch("QT-VER")).await.unwrap();
+    let customer = create_customer(&db, &plain_customer("QT-Ver-Jane"))
+        .await
+        .unwrap();
+    let machine = create_equipment(
+        &db,
+        &machine("QT-VER-SERIAL").with_customer_id(customer.id().unwrap()),
+    )
+    .await
+    .unwrap();
+    let saved = create_quote(
+        &db,
+        NewQuote {
+            created_at: day(2093),
+            branch_id: branch.id().unwrap(),
+            customer_id: customer.id(),
+            equipment_id: machine.id(),
+            items: samples::oil_change_lines().unwrap(),
+        },
+    )
+    .await
+    .unwrap();
+    let id = saved.id().unwrap();
+
+    // eight people read the same version, then all try to decide at once
+    let mut readers = Vec::new();
+    for _ in 0..8 {
+        readers.push(get_quote(&db, id).await.unwrap());
+    }
+    let mut jobs = Vec::new();
+    for (n, mut quote) in readers.into_iter().enumerate() {
+        let db = db.clone();
+        jobs.push(tokio::spawn(async move {
+            if n % 2 == 0 {
+                quote.accept(day(2093).date()).unwrap();
+            } else {
+                quote.reject("not this time").unwrap();
+            }
+            save_quote(&db, &quote).await
+        }));
+    }
+    let (mut won, mut told) = (0, 0);
+    for job in jobs {
+        match job.await.unwrap() {
+            Ok(_) => won += 1,
+            Err(QuoteError::QuoteChangedMeanwhile) => told += 1,
+            Err(other) => panic!("unexpected: {other}"),
+        }
+    }
+    let end = get_quote(&db, id).await.unwrap();
+    clean(&db).await;
+    assert_eq!((won, told), (1, 7));
+    assert_eq!(end.version(), 1);
+    assert_ne!(end.status(), &QuoteStatus::Pending);
 }
 
 // ===== lists =====

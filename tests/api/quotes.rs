@@ -1,6 +1,6 @@
 // tests/api/quotes.rs: the quote calls that are answered before the database is touched
 
-use super::support::{KEY, call};
+use super::support::{KEY, call, call_with_header};
 use axum::http::StatusCode;
 
 const NIL: &str = "00000000-0000-0000-0000-000000000000";
@@ -305,4 +305,50 @@ async fn a_big_body_is_refused() {
     );
     let (status, _) = call("POST", "/quotes", Some(KEY), Some(&big)).await;
     assert_eq!(status, StatusCode::BAD_REQUEST); // like every call: one plain answer for a body that is not accepted
+}
+
+#[tokio::test]
+async fn a_bad_if_match_is_refused_before_the_database_is_touched_on_every_changing_call() {
+    let one_line = line("part");
+    let customer = format!(r#"{{"customer_id":"{NIL}"}}"#);
+    let equipment = format!(r#"{{"equipment_id":"{NIL}"}}"#);
+    let calls = [
+        (
+            "PATCH",
+            format!("/quotes/{NIL}"),
+            Some(r#"{"expires_on":"2099-01-01"}"#),
+        ),
+        (
+            "POST",
+            format!("/quotes/{NIL}/lines"),
+            Some(one_line.as_str()),
+        ),
+        (
+            "PATCH",
+            format!("/quotes/{NIL}/customer"),
+            Some(customer.as_str()),
+        ),
+        (
+            "PATCH",
+            format!("/quotes/{NIL}/equipment"),
+            Some(equipment.as_str()),
+        ),
+        ("POST", format!("/quotes/{NIL}/accept"), None),
+        (
+            "POST",
+            format!("/quotes/{NIL}/reject"),
+            Some(r#"{"reason":"no"}"#),
+        ),
+        ("POST", format!("/quotes/{NIL}/reopen"), None),
+    ];
+    for bad in ["abc", "", "-1", "1.5", "\"x\"", "W/", "99999999999"] {
+        for (method, uri, body) in &calls {
+            let (status, answer) = call_with_header(method, uri, *body, "if-match", bad).await;
+            assert_eq!(
+                (status, answer["code"].as_str()),
+                (StatusCode::BAD_REQUEST, Some("INVALID_IF_MATCH")),
+                "{method} {uri} If-Match: {bad:?}"
+            );
+        }
+    }
 }

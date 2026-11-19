@@ -82,6 +82,9 @@ mod row {
         pub equipment_copy: Option<Json>,
         #[sea_orm(default_expr = "Expr::current_timestamp()")]
         pub updated_at: DateTimeUtc,
+        /// 0 when the quote is made; +1 with every saved change (see `save_quote`).
+        #[sea_orm(default_value = 0)]
+        pub version: i32,
     }
 
     impl ActiveModelBehavior for ActiveModel {}
@@ -314,19 +317,29 @@ pub async fn list_quotes(
 /// **Update** a saved quote with what changed on it: its status (accepted, rejected, reopened),
 /// its dates, the customer or machine added to a quick quote, and **new** lines. Lines already
 /// saved are never touched. A customer or machine added now is read from the database and copied
-/// now; one already on the quote keeps its old copy. If someone else changed the quote since it
-/// was read, nothing is saved (`QuoteChangedMeanwhile`). Returns the quote as saved.
+/// now; one already on the quote keeps its old copy.
+///
+/// **Two people at once:** every quote has a `version` (0 when made, +1 with every saved change).
+/// A save is accepted only if the quote was read at the latest version; otherwise nothing is saved
+/// (`QuoteChangedMeanwhile`) and the caller reads it again. The row is locked while saving, so
+/// even two saves at the same instant take turns. Returns the quote as saved (the next version).
 pub async fn save_quote<C>(db: &C, quote: &Quote) -> QuoteResult<Quote>
 where
     C: ConnectionTrait + TransactionTrait,
 {
     let id = quote.id().ok_or(QuoteError::QuoteNotSaved)?;
     let tx = db.begin().await.map_err(database_error)?;
+    // The row is locked until this save ends, so two saves of the same quote take turns: the
+    // second one waits, then sees the first one's new version and is refused below.
     let stored = row::Entity::find_by_id(id)
+        .lock_exclusive()
         .one(&tx)
         .await
         .map_err(database_error)?
         .ok_or(QuoteError::UnknownQuote)?;
+    if stored.version != quote.version() {
+        return Err(QuoteError::QuoteChangedMeanwhile);
+    }
 
     let (customer_id, customer_copy) = match party_change(
         stored.customer_id,
@@ -357,19 +370,17 @@ where
         }
     };
 
-    // The lines on the quote that already have an id must be exactly the lines saved: otherwise
-    // someone added a line in between, and ours would land on the wrong position.
-    let saved_lines = line_rows(&tx, &[id]).await?.remove(&id).unwrap_or_default();
+    // The same version means the quote was read after the last change, so the lines it knows are
+    // exactly the lines saved, and the new ones go after them.
     let known = quote
         .items()
         .iter()
         .filter(|item| item.id().is_some())
         .count();
-    if known != saved_lines.len() {
-        return Err(QuoteError::QuoteChangedMeanwhile);
-    }
 
+    let next_version = stored.version + 1;
     let mut update: row::ActiveModel = stored.into();
+    update.version = Set(next_version);
     update.expires_on = Set(quote.expires_on());
     update.promise_date = Set(quote.promise_date());
     update.status = Set(quote.status().label().to_string());
@@ -515,6 +526,7 @@ fn quote_from_rows(row: row::Model, lines: Vec<line_row::Model>) -> QuoteResult<
 
     Ok(Quote::restore(SavedQuote {
         id: row.id,
+        version: row.version,
         number: QuoteNumber::parse(&row.number)?,
         created_at: row.created_at,
         expires_on: row.expires_on,
