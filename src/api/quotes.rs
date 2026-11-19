@@ -358,7 +358,7 @@ pub(super) async fn list(
 #[utoipa::path(get, path = "/quotes/{id}", operation_id = "read_quote", tag = "quotes",
     params(("id" = String, Path, description = "The quote's id.")),
     responses(
-        (status = 200, description = "The quote.", body = QuoteView),
+        (status = 200, description = "The quote.", body = QuoteView, headers(("ETag" = String, description = "The quote's version, like \"3\". Send it back as If-Match to change the quote only if it has not moved on."))),
         (status = 404, description = "No quote has that id.", body = ErrorBody),
         (status = 401, description = "No key, or the wrong one.", body = ErrorBody),
         (status = 503, description = "The database is not available, or the saved quote is damaged.", body = ErrorBody),
@@ -409,7 +409,7 @@ pub(super) async fn print(
 /// or later. Nothing is saved if anything is refused, and a refused quote does not use up a number.
 #[utoipa::path(post, path = "/quotes", operation_id = "create_quote", tag = "quotes", request_body = NewQuoteInput,
     responses(
-        (status = 201, description = "The quote as saved, with its id and number.", body = QuoteView),
+        (status = 201, description = "The quote as saved, with its id and number.", body = QuoteView, headers(("ETag" = String, description = "The quote's version, like \"3\". Send it back as If-Match to change the quote only if it has not moved on."))),
         (status = 400, description = "The body is wrong, or a rule refused a value.", body = ErrorBody),
         (status = 404, description = "The branch, customer or machine is not saved.", body = ErrorBody),
         (status = 409, description = "A party is inactive, the machine is not the customer's or needs a customer, or a credit is bigger than the subtotal.", body = ErrorBody),
@@ -447,7 +447,7 @@ pub(super) async fn create(
 #[utoipa::path(patch, path = "/quotes/{id}", operation_id = "change_quote", tag = "quotes", request_body = QuoteChanges,
     params(("id" = String, Path, description = "The quote's id."), ("If-Match" = Option<String>, Header, description = "The version you read (the ETag). If the quote has changed since, nothing is done and the answer is 409 QUOTE_CHANGED_MEANWHILE. Leave out to skip the check."),),
     responses(
-        (status = 200, description = "The quote as saved.", body = QuoteView),
+        (status = 200, description = "The quote as saved.", body = QuoteView, headers(("ETag" = String, description = "The quote's version, like \"3\". Send it back as If-Match to change the quote only if it has not moved on."))),
         (status = 400, description = "The body is empty or wrong, or a date is before the quote's own date.", body = ErrorBody),
         (status = 404, description = "No quote has that id.", body = ErrorBody),
         (status = 409, description = "Someone changed the quote meanwhile; read it again.", body = ErrorBody),
@@ -486,7 +486,7 @@ pub(super) async fn change(
 #[utoipa::path(post, path = "/quotes/{id}/lines", operation_id = "add_quote_line", tag = "quotes", request_body = LineInput,
     params(("id" = String, Path, description = "The quote's id."), ("If-Match" = Option<String>, Header, description = "The version you read (the ETag). If the quote has changed since, nothing is done and the answer is 409 QUOTE_CHANGED_MEANWHILE. Leave out to skip the check."),),
     responses(
-        (status = 201, description = "The quote with the new line at the end.", body = QuoteView),
+        (status = 201, description = "The quote with the new line at the end.", body = QuoteView, headers(("ETag" = String, description = "The quote's version, like \"3\". Send it back as If-Match to change the quote only if it has not moved on."))),
         (status = 400, description = "The body is wrong, or a rule refused a value.", body = ErrorBody),
         (status = 404, description = "No quote has that id.", body = ErrorBody),
         (status = 409, description = "The quote is already decided, is full (200 lines), a credit is bigger than the subtotal, or someone changed it meanwhile.", body = ErrorBody),
@@ -515,7 +515,7 @@ pub(super) async fn add_line(
 #[utoipa::path(patch, path = "/quotes/{id}/customer", operation_id = "add_quote_customer", tag = "quotes", request_body = QuoteCustomerInput,
     params(("id" = String, Path, description = "The quote's id."), ("If-Match" = Option<String>, Header, description = "The version you read (the ETag). If the quote has changed since, nothing is done and the answer is 409 QUOTE_CHANGED_MEANWHILE. Leave out to skip the check."),),
     responses(
-        (status = 200, description = "The quote with its customer.", body = QuoteView),
+        (status = 200, description = "The quote with its customer.", body = QuoteView, headers(("ETag" = String, description = "The quote's version, like \"3\". Send it back as If-Match to change the quote only if it has not moved on."))),
         (status = 400, description = "The body is not exactly {\"customer_id\": id}.", body = ErrorBody),
         (status = 404, description = "No quote has that id, or the customer is not saved.", body = ErrorBody),
         (status = 409, description = "The quote already has a customer or is already decided, the customer is inactive, or someone changed the quote meanwhile.", body = ErrorBody),
@@ -542,7 +542,7 @@ pub(super) async fn add_customer(
 #[utoipa::path(patch, path = "/quotes/{id}/equipment", operation_id = "add_quote_equipment", tag = "quotes", request_body = QuoteEquipmentInput,
     params(("id" = String, Path, description = "The quote's id."), ("If-Match" = Option<String>, Header, description = "The version you read (the ETag). If the quote has changed since, nothing is done and the answer is 409 QUOTE_CHANGED_MEANWHILE. Leave out to skip the check."),),
     responses(
-        (status = 200, description = "The quote with its machine.", body = QuoteView),
+        (status = 200, description = "The quote with its machine.", body = QuoteView, headers(("ETag" = String, description = "The quote's version, like \"3\". Send it back as If-Match to change the quote only if it has not moved on."))),
         (status = 400, description = "The body is not exactly {\"equipment_id\": id}.", body = ErrorBody),
         (status = 404, description = "No quote has that id, or the machine is not saved.", body = ErrorBody),
         (status = 409, description = "The quote has no customer yet, already has a machine, is already decided, the machine is archived or belongs to someone else, or someone changed the quote meanwhile.", body = ErrorBody),
@@ -569,7 +569,8 @@ pub(super) async fn add_equipment(
 #[utoipa::path(post, path = "/quotes/{id}/accept", operation_id = "accept_quote", tag = "quotes",
     params(("id" = String, Path, description = "The quote's id."), ("If-Match" = Option<String>, Header, description = "The version you read (the ETag). If the quote has changed since, nothing is done and the answer is 409 QUOTE_CHANGED_MEANWHILE. Leave out to skip the check."),),
     responses(
-        (status = 200, description = "The accepted quote.", body = QuoteView),
+        (status = 400, description = "The If-Match header is not a version.", body = ErrorBody),
+        (status = 200, description = "The accepted quote.", body = QuoteView, headers(("ETag" = String, description = "The quote's version, like \"3\". Send it back as If-Match to change the quote only if it has not moved on."))),
         (status = 404, description = "No quote has that id.", body = ErrorBody),
         (status = 409, description = "Already decided, no customer or machine yet, expired, or someone changed it meanwhile.", body = ErrorBody),
         (status = 401, description = "No key, or the wrong one.", body = ErrorBody),
@@ -592,7 +593,7 @@ pub(super) async fn accept(
 #[utoipa::path(post, path = "/quotes/{id}/reject", operation_id = "reject_quote", tag = "quotes", request_body = RejectInput,
     params(("id" = String, Path, description = "The quote's id."), ("If-Match" = Option<String>, Header, description = "The version you read (the ETag). If the quote has changed since, nothing is done and the answer is 409 QUOTE_CHANGED_MEANWHILE. Leave out to skip the check."),),
     responses(
-        (status = 200, description = "The rejected quote.", body = QuoteView),
+        (status = 200, description = "The rejected quote.", body = QuoteView, headers(("ETag" = String, description = "The quote's version, like \"3\". Send it back as If-Match to change the quote only if it has not moved on."))),
         (status = 400, description = "The body is wrong, or the reason is blank or over 500 characters.", body = ErrorBody),
         (status = 404, description = "No quote has that id.", body = ErrorBody),
         (status = 409, description = "Already decided, or someone changed it meanwhile.", body = ErrorBody),
@@ -619,7 +620,8 @@ pub(super) async fn reject(
 #[utoipa::path(post, path = "/quotes/{id}/reopen", operation_id = "reopen_quote", tag = "quotes",
     params(("id" = String, Path, description = "The quote's id."), ("If-Match" = Option<String>, Header, description = "The version you read (the ETag). If the quote has changed since, nothing is done and the answer is 409 QUOTE_CHANGED_MEANWHILE. Leave out to skip the check."),),
     responses(
-        (status = 200, description = "The pending quote.", body = QuoteView),
+        (status = 400, description = "The If-Match header is not a version.", body = ErrorBody),
+        (status = 200, description = "The pending quote.", body = QuoteView, headers(("ETag" = String, description = "The quote's version, like \"3\". Send it back as If-Match to change the quote only if it has not moved on."))),
         (status = 404, description = "No quote has that id.", body = ErrorBody),
         (status = 409, description = "The quote is not rejected, or someone changed it meanwhile.", body = ErrorBody),
         (status = 401, description = "No key, or the wrong one.", body = ErrorBody),

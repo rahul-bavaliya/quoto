@@ -149,6 +149,34 @@ async fn every_call_has_its_own_operation_id() {
     assert_eq!(unique.len(), ids.len(), "shared operation ids in {ids:?}");
 }
 
+#[tokio::test]
+async fn the_quote_calls_document_the_if_match_header_its_400_and_the_etag() {
+    let spec = spec().await;
+    for (path, item) in spec["paths"].as_object().unwrap() {
+        for (method, call) in item.as_object().unwrap() {
+            let takes_if_match = call["parameters"]
+                .as_array()
+                .is_some_and(|all| all.iter().any(|p| p["name"] == "If-Match"));
+            if takes_if_match {
+                assert!(
+                    call["responses"]["400"].is_object() && call["responses"]["409"].is_object(),
+                    "{method} {path} takes If-Match, so 400 and 409 must be documented"
+                );
+            }
+            // a call that answers one quote says its version in the ETag header
+            for (code, answer) in call["responses"].as_object().unwrap() {
+                let schema = &answer["content"]["application/json"]["schema"]["$ref"];
+                if schema.as_str().is_some_and(|s| s.ends_with("/QuoteView")) {
+                    assert!(
+                        answer["headers"]["ETag"].is_object(),
+                        "{method} {path} {code} must document the ETag header"
+                    );
+                }
+            }
+        }
+    }
+}
+
 /// The schema a call's request body points to (Day 56: two bodies were once both called
 /// `CustomerInput`, so the page showed the quote's `customer_id` form for "create a customer").
 fn body_properties<'a>(spec: &'a Value, path: &str, method: &str) -> Vec<&'a str> {
