@@ -344,6 +344,9 @@ async fn quote_calls_log_nothing_about_the_quote() {
     )
     .await;
 
+    // the PDF holds every detail of the quote; the log must still hold none of it
+    let (_, _, pdf) = api.raw(&format!("/quotes/{id}/pdf")).await;
+    assert!(String::from_utf8_lossy(&pdf).contains("Zed Quote Person"));
     let text = String::from_utf8_lossy(&log.0.lock().unwrap().clone()).to_string();
     for secret in [
         id.as_str(),
@@ -371,10 +374,11 @@ async fn quote_calls_log_nothing_about_the_quote() {
         );
     }
     let calls: Vec<&str> = text.lines().filter(|l| l.contains("api_request")).collect();
-    assert_eq!(calls.len(), 9, "{text}");
+    assert_eq!(calls.len(), 10, "{text}");
     assert!(calls[0].contains("route=\"/quotes\"") && calls[0].contains("status=201"));
     assert!(calls[1].contains("route=\"/quotes/{id}\""));
     assert!(calls[4].contains("route=\"/quotes/{id}/reject\""));
     assert!(calls[7].contains("status=409") && calls[7].contains("code=\"ALREADY_DECIDED\""));
+    assert!(calls[9].contains("route=\"/quotes/{id}/pdf\"") && calls[9].contains("status=200"));
     api.finish().await;
 }

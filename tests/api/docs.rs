@@ -68,6 +68,7 @@ async fn the_list_describes_exactly_the_calls_and_only_equipment_has_a_delete() 
             "GET /equipment/{id}",
             "GET /quotes",
             "GET /quotes/{id}",
+            "GET /quotes/{id}/pdf",
             "PATCH /branches/{id}",
             "PATCH /branches/{id}/status",
             "PATCH /customers/{id}",

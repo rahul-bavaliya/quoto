@@ -22,6 +22,7 @@ async fn every_quote_call_needs_the_key() {
         ("GET", "/quotes".to_string()),
         ("POST", "/quotes".to_string()),
         ("GET", format!("/quotes/{NIL}")),
+        ("GET", format!("/quotes/{NIL}/pdf")),
         ("PATCH", format!("/quotes/{NIL}")),
         ("POST", format!("/quotes/{NIL}/lines")),
         ("PATCH", format!("/quotes/{NIL}/customer")),
@@ -44,6 +45,8 @@ async fn a_quote_cannot_be_deleted_or_replaced_or_given_a_status() {
         ("DELETE", "/quotes".to_string()),
         ("PUT", "/quotes".to_string()),
         ("GET", format!("/quotes/{NIL}/accept")),
+        ("POST", format!("/quotes/{NIL}/pdf")),
+        ("DELETE", format!("/quotes/{NIL}/pdf")),
     ] {
         let (status, _) = call(method, &uri, Some(KEY), Some("{}")).await;
         assert!(
@@ -58,6 +61,7 @@ async fn an_id_that_is_not_a_uuid_is_a_quote_nobody_has() {
     let good_line = line("part");
     for (method, uri, body) in [
         ("GET", "/quotes/nope", None),
+        ("GET", "/quotes/nope/pdf", None),
         (
             "PATCH",
             "/quotes/nope",
