@@ -272,3 +272,109 @@ async fn equipment_calls_log_nothing_about_the_machine_or_its_owner() {
     );
     api.finish().await;
 }
+
+#[tokio::test]
+#[ignore = "needs the database (docker compose up)"]
+async fn quote_calls_log_nothing_about_the_quote() {
+    let api = setup().await;
+    let branch = api.create_branch("API-T-QLOG").await;
+    let customer = api.create_customer("API-T-Zed Quote Person").await;
+    let (_, machine) = api
+        .call(
+            "POST",
+            "/equipment",
+            Some(json!({
+                "make": "Zed Make", "model": "Zed Model", "serial_number": "API-T-QLOG-SERIAL",
+                "plate": "ZED-999", "meter_type": "hr", "meter_reading": 4321.5,
+                "equipment_type": "tractor", "customer_id": customer
+            })),
+        )
+        .await;
+    let machine = machine["id"].as_str().unwrap().to_string();
+
+    let log = LogText::default();
+    let subscriber = tracing_subscriber::fmt()
+        .with_writer(log.clone())
+        .with_ansi(false)
+        .with_max_level(tracing::Level::TRACE) // every level, every crate (sqlx too)
+        .finish();
+    let _guard = tracing::subscriber::set_default(subscriber);
+
+    let (_, created) = api
+        .call(
+            "POST",
+            "/quotes",
+            Some(json!({
+                "branch_id": branch, "customer_id": customer, "equipment_id": machine,
+                "items": [{"description": "Zed Secret Labour", "quantity": 1, "unit_price_cents": 98765, "kind": "labour"}]
+            })),
+        )
+        .await;
+    let id = created["id"].as_str().unwrap().to_string();
+    api.call("GET", &format!("/quotes/{id}"), None).await;
+    api.call("GET", &format!("/quotes?customer_id={customer}"), None)
+        .await;
+    api.call(
+        "POST",
+        &format!("/quotes/{id}/lines"),
+        Some(json!({"description": "Zed Secret Part", "quantity": 1, "unit_price_cents": 5551, "kind": "part"})),
+    )
+    .await;
+    api.call(
+        "POST",
+        &format!("/quotes/{id}/reject"),
+        Some(json!({"reason": "Zed customer said the secret reason"})),
+    )
+    .await;
+    api.call("POST", &format!("/quotes/{id}/reopen"), None)
+        .await;
+    api.call("POST", &format!("/quotes/{id}/accept"), None)
+        .await;
+    // refused calls too
+    api.call(
+        "POST",
+        &format!("/quotes/{id}/reject"),
+        Some(json!({"reason": "Zed late secret reason"})),
+    )
+    .await;
+    api.call(
+        "PATCH",
+        &format!("/quotes/{id}"),
+        Some(json!({"promise_date": "2031-02-03"})),
+    )
+    .await;
+
+    let text = String::from_utf8_lossy(&log.0.lock().unwrap().clone()).to_string();
+    for secret in [
+        id.as_str(),
+        customer.as_str(),
+        machine.as_str(),
+        branch.as_str(),
+        "Zed Quote Person",
+        "Zed Make",
+        "Zed Model",
+        "API-T-QLOG",
+        "ZED-999",
+        "4321.5",
+        "Zed Secret Labour",
+        "Zed Secret Part",
+        "secret reason",
+        "late secret",
+        "2031-02-03",
+        "Prairie Farms",
+        "123 Main St",
+        KEY,
+    ] {
+        assert!(
+            !text.contains(secret),
+            "{secret} leaked into the log:\n{text}"
+        );
+    }
+    let calls: Vec<&str> = text.lines().filter(|l| l.contains("api_request")).collect();
+    assert_eq!(calls.len(), 9, "{text}");
+    assert!(calls[0].contains("route=\"/quotes\"") && calls[0].contains("status=201"));
+    assert!(calls[1].contains("route=\"/quotes/{id}\""));
+    assert!(calls[4].contains("route=\"/quotes/{id}/reject\""));
+    assert!(calls[7].contains("status=409") && calls[7].contains("code=\"ALREADY_DECIDED\""));
+    api.finish().await;
+}

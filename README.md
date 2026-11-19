@@ -42,7 +42,7 @@ RUST_LOG=debug cargo run   # same, with a detailed log on stderr
 ```
 
 ## The web API
-REST + JSON, built on [`axum`](https://docs.rs/axum). Today it has the **branch**, **customer** and **equipment** calls.
+REST + JSON, built on [`axum`](https://docs.rs/axum). Today it has the **branch**, **customer**, **equipment** and **quote** calls.
 
 ```bash
 docker compose up -d && cargo run --example db_setup   # the database and its tables (once; run it again after pulling a new migration)
@@ -86,6 +86,22 @@ curl "http://127.0.0.1:3000/branches?status=active" -H "Authorization: Bearer $K
 | `DELETE /equipment/{id}` | **archives** the machine (it is never erased): hidden from the default list, can't go on a new quote, restorable with the status call |
 | `PATCH /equipment/{id}/owner` | `{"customer_id": "<id>"}` gives it to a customer (a **sale** is just this call again), `{"customer_id": null}` to nobody. The body must be exactly that one key |
 
+**Quotes** are at `/quotes` and below. A quote is never erased: there is no DELETE, no PUT and no status call. Its status moves only through `accept`, `reject` and `reopen`, so a decision can't happen by accident.
+
+| Call | What it does |
+|---|---|
+| `POST /quotes` | create: `{"branch_id": "<id>", "customer_id": null, "equipment_id": null, "items": [...]}`. Only the branch is needed (a **quick quote**); the quote is always `pending` and gets the next number of the year (`Q-2026-00000001`). The date is the shop's clock; a caller can't choose a number, id, status or date |
+| `GET /quotes?customer_id=&branch_id=&equipment_id=&limit=&offset=` | newest first, with their lines; same paging as customers |
+| `GET /quotes/{id}` | one quote with its branch, customer and machine **as they were when added**, its lines, `expired` (worked out today, never stored) and its totals in cents (GST and PST by the branch's province) |
+| `PATCH /quotes/{id}` | change `expires_on` and/or `promise_date` (`YYYY-MM-DD`, never before the quote's own date). Both are checked first: if one is wrong, nothing changes. `null` is refused (a date can't be cleared) |
+| `POST /quotes/{id}/lines` | add one line `{"description","quantity","unit_price_cents","kind"}`; `kind` is `labour`, `part`, `fee` or `credit` (a credit is sent as a **positive** price and comes off the total; it can't be bigger than the subtotal). Lines are only ever **added**: a mistake is fixed with a credit line |
+| `PATCH /quotes/{id}/customer` / `.../equipment` | `{"customer_id": "<id>"}` / `{"equipment_id": "<id>"}`: add the customer (once), then the machine (once; it must be that customer's). Exactly one key, never `null` |
+| `POST /quotes/{id}/accept` | needs a customer and a machine and prices that have not expired (move `expires_on` first). Final |
+| `POST /quotes/{id}/reject` | `{"reason": "..."}` (not blank, at most 500 characters; the customer's own words, never logged) |
+| `POST /quotes/{id}/reopen` | a rejected quote goes back to `pending`; the old reason is dropped |
+
+Limits (Day 53): a line has a quantity above 0 and at most 1,000,000, a unit price of at most 1,000,000.00 (so a total can never overflow), a description of 1 to 200 characters (spaces around it are dropped), and a quote holds at most 200 lines. A change to a quote that someone else changed a moment ago answers `409 QUOTE_CHANGED_MEANWHILE`: read it again and retry.
+
 One customer can own many machines. **One physical machine is one record:** the serial number is unique (any case), so entering it twice answers `409 DUPLICATE_SERIAL_NUMBER`; find the machine by `?serial_number=` and change its owner instead. A plate is not unique. Only the current owner is kept (no history yet). Machines identify real vehicles: made-up ones only until real login exists, and nothing about a machine (serial, plate, make, model, ids) is ever logged.
 
 A customer is never deleted either. An **inactive customer can't be put on a new quote** (`CUSTOMER_INACTIVE`, 409). Customers are people's details: **use made-up people only until real login exists (Phase 9).**
@@ -105,7 +121,7 @@ There is **no DELETE** for branches and customers (they are made inactive); `DEL
 - Bodies over 16 KB are refused. A field the call doesn't know (like `status` on create) is refused.
 - The JSON is only translated: every rule (phone, postal code, province, unique number) is the library's, the same as for any other caller.
 - `cargo run` does not build the tables; run `cargo run --example db_setup` first (the API answers 503 until the tables exist).
-- Tests: `tests/api/` (no database) and `tests/database_api/` (`--ignored`; they remove their own `API-T-` branches, customers and machines because nothing can be erased through the API). Run one with `cargo test --test api` or `cargo test --test database_api -- --ignored`.
+- Tests: `tests/api/` (no database) and `tests/database_api/` (`--ignored`; they remove their own `API-T-` branches, customers, machines and quotes (and give back the quote numbers they used) because nothing can be erased through the API). Run one with `cargo test --test api` or `cargo test --test database_api -- --ignored`.
 
 ## Looking up equipment
 Type a serial number and a **lookup** fills in the make, model, year and kind of machine. The service writer then adds the plate and the meter reading, and `Equipment::from_draft` checks everything.
@@ -190,7 +206,7 @@ GitHub Actions runs the same checks automatically on every push and pull request
 src/
 ├── main.rs              starts the web API (and is the one place where errors stop the program)
 ├── lib.rs               the library's front door
-├── api.rs               the web API + api/ (settings, auth, error, log, request, branches, customers, equipment, docs)
+├── api.rs               the web API + api/ (settings, auth, error, log, request, branches, customers, equipment, quotes, docs)
 ├── branch.rs            Branch + branch/ (location, table: the branches table and its create/read/update) (a dealership location; its province decides the taxes)
 ├── country.rs           Country (follows from the province)
 ├── errors.rs  logging.rs  money.rs  samples.rs  secret.rs
@@ -209,7 +225,7 @@ examples/
 └── db_setup.rs          run the migrations and add the provinces (needs docker compose up)
 tests/                   one file per feature, plus quote_scenarios.rs; the two big ones are folders:
 ├── api/                 the API without a database (access, branches, customers, equipment, patch, settings, docs, support)
-└── database_api/        the API with a database, run by hand (branches, customers, equipment, patch, logging, support)
+└── database_api/        the API with a database, run by hand (branches, customers, equipment, quotes, patch, logging, support)
 docker-compose.yml       PostgreSQL for development
 .env.example             the settings Quoto needs (copy to .env)
 ```

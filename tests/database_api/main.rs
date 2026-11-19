@@ -15,4 +15,5 @@ mod customers;
 mod equipment;
 mod logging;
 mod patch;
+mod quotes;
 mod support;

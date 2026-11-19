@@ -32,11 +32,27 @@ impl LineItem {
         unit_price_cents: i64,
         kind: LineKind,
     ) -> Result<Self, QuoteError> {
-        if quantity <= 0.0 {
+        // `is_nan` first: "not a number" is neither above nor below zero.
+        if quantity.is_nan() || quantity <= 0.0 {
             return Err(QuoteError::BadQuantity { description });
         }
         if unit_price_cents < 0 {
             return Err(QuoteError::NegativePrice { description });
+        }
+        // Sizes are held so a total can never overflow (1e6 x 1e8 cents = 1e14, far below i64).
+        if quantity > super::MAX_QUANTITY || unit_price_cents > super::MAX_UNIT_PRICE_CENTS {
+            return Err(QuoteError::LineTooLarge { description });
+        }
+        let description = description.trim().to_string();
+        if description.is_empty() {
+            return Err(QuoteError::MissingField {
+                field: "description",
+            });
+        }
+        if description.chars().count() > super::MAX_DESCRIPTION_CHARS {
+            return Err(QuoteError::DescriptionTooLong {
+                max: super::MAX_DESCRIPTION_CHARS,
+            });
         }
 
         Ok(LineItem {

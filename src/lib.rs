@@ -45,8 +45,9 @@ pub use province::{
     Province, TaxRate, TaxRates, all_rates, calculate_tax, change_rates, rates_for, seed_provinces,
 };
 pub use quote::{
-    InMemoryQuoteNumbers, LineItem, LineKind, NewQuote, Quote, QuoteFilter, QuoteNumber,
-    QuoteNumbers, QuoteStatus, create_quote, get_quote, list_quotes, next_quote_number, save_quote,
+    InMemoryQuoteNumbers, LineItem, LineKind, MAX_DESCRIPTION_CHARS, MAX_LINES, MAX_QUANTITY,
+    MAX_UNIT_PRICE_CENTS, NewQuote, Quote, QuoteFilter, QuoteNumber, QuoteNumbers, QuoteStatus,
+    create_quote, get_quote, list_quotes, next_quote_number, save_quote,
 };
 pub use secret::Secret;
 pub use status::Status;

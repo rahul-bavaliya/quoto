@@ -10,5 +10,6 @@ mod customers;
 mod docs;
 mod equipment;
 mod patch;
+mod quotes;
 mod settings;
 mod support;

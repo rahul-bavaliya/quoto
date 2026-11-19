@@ -9,6 +9,7 @@
 //   branches   the branch calls
 //   customers  the customer calls
 //   equipment  the machine calls
+//   quotes     the quote calls
 //   docs       the Swagger page at /docs
 // Every call needs the API key (`Authorization: Bearer <key>`); only the documentation
 // addresses don't.
@@ -20,6 +21,7 @@ mod docs;
 mod equipment;
 mod error;
 mod log;
+mod quotes;
 mod request;
 mod settings;
 
@@ -30,7 +32,7 @@ use crate::secret::Secret;
 use axum::Router;
 use axum::extract::DefaultBodyLimit;
 use axum::middleware::{from_fn, from_fn_with_state};
-use axum::routing::{get, patch};
+use axum::routing::{get, patch, post};
 use sea_orm::DatabaseConnection;
 use std::sync::Arc;
 use tracing::{debug, info};
@@ -78,6 +80,14 @@ pub fn router(db: DatabaseConnection, key: Secret) -> Router {
         )
         .route("/equipment/{id}/status", patch(equipment::change_status))
         .route("/equipment/{id}/owner", patch(equipment::change_owner))
+        .route("/quotes", get(quotes::list).post(quotes::create))
+        .route("/quotes/{id}", get(quotes::read).patch(quotes::change))
+        .route("/quotes/{id}/lines", post(quotes::add_line))
+        .route("/quotes/{id}/customer", patch(quotes::add_customer))
+        .route("/quotes/{id}/equipment", patch(quotes::add_equipment))
+        .route("/quotes/{id}/accept", post(quotes::accept))
+        .route("/quotes/{id}/reject", post(quotes::reject))
+        .route("/quotes/{id}/reopen", post(quotes::reopen))
         .merge(docs::routes())
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         // Added last, so it runs first: nothing is read or answered without the key.
