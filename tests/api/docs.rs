@@ -176,3 +176,66 @@ async fn the_quote_calls_document_the_if_match_header_its_400_and_the_etag() {
         }
     }
 }
+
+/// The schema a call's request body points to (Day 56: two bodies were once both called
+/// `CustomerInput`, so the page showed the quote's `customer_id` form for "create a customer").
+fn body_properties<'a>(spec: &'a Value, path: &str, method: &str) -> Vec<&'a str> {
+    let pointer =
+        spec["paths"][path][method]["requestBody"]["content"]["application/json"]["schema"]["$ref"]
+            .as_str()
+            .unwrap_or_else(|| panic!("{method} {path} has no body schema"));
+    let name = pointer.rsplit('/').next().unwrap();
+    spec["components"]["schemas"][name]["properties"]
+        .as_object()
+        .unwrap_or_else(|| panic!("schema {name} has no properties"))
+        .keys()
+        .map(String::as_str)
+        .collect()
+}
+
+#[tokio::test]
+async fn each_call_shows_the_body_it_really_takes_and_no_two_bodies_share_a_name() {
+    let spec = spec().await;
+    let create_customer = body_properties(&spec, "/customers", "post");
+    assert!(create_customer.contains(&"name") && !create_customer.contains(&"customer_id"));
+    let create_machine = body_properties(&spec, "/equipment", "post");
+    assert!(create_machine.contains(&"make") && !create_machine.contains(&"equipment_id"));
+    assert_eq!(
+        body_properties(&spec, "/quotes/{id}/customer", "patch"),
+        ["customer_id"]
+    );
+    assert_eq!(
+        body_properties(&spec, "/quotes/{id}/equipment", "patch"),
+        ["equipment_id"]
+    );
+
+    // Every call with a body points at a schema of its own: two calls may share one only when
+    // they really take the same body (e.g. the status call of every record).
+    let mut seen: std::collections::BTreeMap<String, Vec<String>> = Default::default();
+    for (path, item) in spec["paths"].as_object().unwrap() {
+        for (method, call) in item.as_object().unwrap() {
+            if let Some(pointer) =
+                call["requestBody"]["content"]["application/json"]["schema"]["$ref"].as_str()
+            {
+                seen.entry(pointer.to_string())
+                    .or_default()
+                    .push(format!("{method} {path}"));
+            }
+        }
+    }
+    for (schema, calls) in &seen {
+        if schema.ends_with("StatusInput") {
+            continue;
+        }
+        // create + replace of one record legitimately share one input schema
+        let records: std::collections::BTreeSet<&str> = calls
+            .iter()
+            .map(|call| call.split('/').nth(1).unwrap_or(""))
+            .collect();
+        assert_eq!(
+            records.len(),
+            1,
+            "{schema} is used by different records: {calls:?}"
+        );
+    }
+}

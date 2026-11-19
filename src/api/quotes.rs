@@ -108,7 +108,7 @@ pub(super) struct QuoteChanges {
 #[derive(ToSchema)]
 #[schema(example = json!({"customer_id": "00000000-0000-0000-0000-000000000000"}))]
 #[allow(dead_code)]
-pub(super) struct CustomerInput {
+pub(super) struct QuoteCustomerInput {
     /// The customer's id. The key must be there and must be an id (a customer is never removed).
     customer_id: String,
 }
@@ -117,7 +117,7 @@ pub(super) struct CustomerInput {
 #[derive(ToSchema)]
 #[schema(example = json!({"equipment_id": "00000000-0000-0000-0000-000000000000"}))]
 #[allow(dead_code)]
-pub(super) struct EquipmentInput {
+pub(super) struct QuoteEquipmentInput {
     /// The machine's id. The key must be there and must be an id.
     equipment_id: String,
 }
@@ -512,7 +512,7 @@ pub(super) async fn add_line(
 }
 
 /// Add the customer to a quote that has none. A quote has one customer, added once.
-#[utoipa::path(patch, path = "/quotes/{id}/customer", operation_id = "add_quote_customer", tag = "quotes", request_body = CustomerInput,
+#[utoipa::path(patch, path = "/quotes/{id}/customer", operation_id = "add_quote_customer", tag = "quotes", request_body = QuoteCustomerInput,
     params(("id" = String, Path, description = "The quote's id."), ("If-Match" = Option<String>, Header, description = "The version you read (the ETag). If the quote has changed since, nothing is done and the answer is 409 QUOTE_CHANGED_MEANWHILE. Leave out to skip the check."),),
     responses(
         (status = 200, description = "The quote with its customer.", body = QuoteView, headers(("ETag" = String, description = "The quote's version, like \"3\". Send it back as If-Match to change the quote only if it has not moved on."))),
@@ -539,7 +539,7 @@ pub(super) async fn add_customer(
 
 /// Add the machine to a quote that has none. The customer comes first, and the machine must be
 /// theirs. A quote has one machine, added once.
-#[utoipa::path(patch, path = "/quotes/{id}/equipment", operation_id = "add_quote_equipment", tag = "quotes", request_body = EquipmentInput,
+#[utoipa::path(patch, path = "/quotes/{id}/equipment", operation_id = "add_quote_equipment", tag = "quotes", request_body = QuoteEquipmentInput,
     params(("id" = String, Path, description = "The quote's id."), ("If-Match" = Option<String>, Header, description = "The version you read (the ETag). If the quote has changed since, nothing is done and the answer is 409 QUOTE_CHANGED_MEANWHILE. Leave out to skip the check."),),
     responses(
         (status = 200, description = "The quote with its machine.", body = QuoteView, headers(("ETag" = String, description = "The quote's version, like \"3\". Send it back as If-Match to change the quote only if it has not moved on."))),
