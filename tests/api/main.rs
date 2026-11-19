@@ -11,5 +11,6 @@ mod docs;
 mod equipment;
 mod patch;
 mod quotes;
+mod repair_orders;
 mod settings;
 mod support;

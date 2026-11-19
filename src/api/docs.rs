@@ -18,6 +18,10 @@ use super::quotes::{
     self, LineInput, LineView, NewQuoteInput, PdfFile, QuoteChanges, QuoteCustomerInput,
     QuoteEquipmentInput, QuoteView, RejectInput, TotalsView,
 };
+use super::repair_orders::{
+    self, CancelRepairOrderInput, OpenRepairOrderInput, RepairOrderChanges, RepairOrderMeterView,
+    RepairOrderView,
+};
 use super::request::StatusInput;
 use axum::Router;
 use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
@@ -47,9 +51,9 @@ impl Modify for BearerKey {
 #[openapi(
     info(
         title = "Quoto API",
-        description = "Branches, customers, equipment and quotes for the Quoto quoting and repair-order system. \
+        description = "Branches, customers, equipment, quotes and repair orders for the Quoto quoting and repair-order system. \
             Nothing is ever erased: a branch or a customer is made inactive, and DELETE on equipment \
-            archives the machine, and a quote is never erased. Customers and machines identify real people and vehicles: \
+            archives the machine, and a quote or a repair order is never erased. Customers and machines identify real people and vehicles: \
             use made-up ones only until real login exists."
     ),
     paths(
@@ -83,7 +87,14 @@ impl Modify for BearerKey {
         quotes::add_equipment,
         quotes::accept,
         quotes::reject,
-        quotes::reopen
+        quotes::reopen,
+        repair_orders::open,
+        repair_orders::list,
+        repair_orders::read,
+        repair_orders::change,
+        repair_orders::start,
+        repair_orders::complete,
+        repair_orders::cancel
     ),
     components(schemas(
         BranchChanges,
@@ -108,6 +119,11 @@ impl Modify for BearerKey {
         QuoteView,
         RejectInput,
         TotalsView,
+        CancelRepairOrderInput,
+        OpenRepairOrderInput,
+        RepairOrderChanges,
+        RepairOrderMeterView,
+        RepairOrderView,
         ErrorBody
     )),
     modifiers(&BearerKey),

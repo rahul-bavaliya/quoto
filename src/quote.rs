@@ -27,7 +27,7 @@ pub use quote_status::QuoteStatus;
 pub use table::{
     NewQuote, QuoteFilter, create_quote, get_quote, list_quotes, next_quote_number, save_quote,
 };
-pub(crate) use table::{QuoteLineTable, QuoteNumberTable, QuoteTable};
+pub(crate) use table::{QuoteLineTable, QuoteNumberTable, QuoteTable, quotes_by_ids};
 
 /// The prices on a quote are good for this many days after the quote date.
 const VALID_FOR_DAYS: u64 = 30;

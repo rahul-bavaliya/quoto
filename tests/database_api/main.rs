@@ -16,4 +16,5 @@ mod equipment;
 mod logging;
 mod patch;
 mod quotes;
+mod repair_orders;
 mod support;

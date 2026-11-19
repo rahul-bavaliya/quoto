@@ -149,6 +149,34 @@ fn the_saved_quote_errors_have_the_right_kind() {
 }
 
 #[test]
+fn the_repair_order_errors_have_the_right_kind() {
+    for error in [
+        QuoteError::RepairOrderNotSaved,
+        QuoteError::QuoteNotAccepted,
+        QuoteError::RepairOrderExists,
+        QuoteError::RepairOrderNotOpen,
+        QuoteError::RepairOrderNotInProgress,
+        QuoteError::RepairOrderClosed,
+        QuoteError::RepairOrderChangedMeanwhile,
+    ] {
+        assert_eq!(error.kind(), ErrorKind::BusinessRule, "{error:?}");
+    }
+    for error in [
+        QuoteError::UnknownRepairOrder,
+        QuoteError::MeterReadingRequired,
+        QuoteError::DueDateBeforeOpened,
+        QuoteError::CancellationReasonTooLong { max: 500 },
+        QuoteError::InvalidRepairOrderNumber { input: "x".into() },
+    ] {
+        assert_eq!(error.kind(), ErrorKind::InvalidInput, "{error:?}");
+    }
+    assert_eq!(
+        QuoteError::StoredRepairOrderDamaged.kind(),
+        ErrorKind::ServiceUnavailable
+    );
+}
+
+#[test]
 fn the_equipment_errors_have_the_right_kind() {
     for error in [
         QuoteError::EquipmentAlreadySaved,
@@ -313,6 +341,20 @@ fn every_error_has_its_own_code() {
         QuoteError::QuoteNotSaved.code(),
         QuoteError::QuoteChangedMeanwhile.code(),
         QuoteError::StoredQuoteDamaged.code(),
+        QuoteError::UnknownRepairOrder.code(),
+        QuoteError::RepairOrderNotSaved.code(),
+        QuoteError::QuoteNotAccepted.code(),
+        QuoteError::RepairOrderExists.code(),
+        QuoteError::MeterReadingRequired.code(),
+        QuoteError::RepairOrderNotOpen.code(),
+        QuoteError::RepairOrderNotInProgress.code(),
+        QuoteError::RepairOrderClosed.code(),
+        QuoteError::DueDateBeforeOpened.code(),
+        QuoteError::CancellationReasonTooLong { max: 500 }.code(),
+        QuoteError::RepairOrderChangedMeanwhile.code(),
+        QuoteError::StoredRepairOrderDamaged.code(),
+        QuoteError::RepairOrderNumbersExhausted { year: 2026 }.code(),
+        QuoteError::InvalidRepairOrderNumber { input: "x".into() }.code(),
         QuoteError::ServerStartFailed.code(),
         QuoteError::DuplicateBranchNumber { number: "x".into() }.code(),
         QuoteError::BranchAlreadySaved.code(),
@@ -519,6 +561,9 @@ fn no_error_message_repeats_the_value_that_was_refused() {
         },
         QuoteError::InvalidEquipmentType {
             value: marker.into(),
+        },
+        QuoteError::InvalidRepairOrderNumber {
+            input: marker.into(),
         },
     ];
     for error in errors {

@@ -29,7 +29,13 @@ pub struct Api {
 }
 
 pub async fn clean(db: &DatabaseConnection) {
-    // Quotes first: they point at the test branches, customers and machines (nothing that a quote
+    // Repair orders first: they point at quotes and at the test branches, customers and machines.
+    db.execute_unprepared(
+        "DELETE FROM repair_orders WHERE branch_id IN (SELECT id FROM branches WHERE number LIKE 'API-T-%')",
+    )
+    .await
+    .expect("clean up test repair orders");
+    // Quotes next: they point at the test branches, customers and machines (nothing that a quote
     // points at can be deleted). Every test quote is made at an `API-T-` branch.
     db.execute_unprepared(
         "DELETE FROM quote_lines WHERE quote_id IN \
@@ -51,6 +57,12 @@ pub async fn clean(db: &DatabaseConnection) {
     ))
     .await
     .expect("give back the test quote numbers");
+    db.execute_unprepared(&format!(
+        "UPDATE repair_order_numbers SET last_number = COALESCE((SELECT max(substring(number from 9)::int) \
+         FROM repair_orders WHERE number LIKE 'RO-{year}-%'), 0) WHERE year = {year}"
+    ))
+    .await
+    .expect("give back the test repair order numbers");
     db.execute_unprepared("DELETE FROM branches WHERE number LIKE 'API-T-%'")
         .await
         .expect("clean up test branches");

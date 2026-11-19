@@ -206,34 +206,47 @@ impl QuoteView {
             branch: BranchView::from(quote.branch()),
             customer: quote.customer().map(CustomerView::from),
             equipment: quote.equipment().map(EquipmentView::from),
-            items: quote
-                .items()
-                .iter()
-                .map(|line| LineView {
-                    id: line.id().map(|id| id.to_string()).unwrap_or_default(),
-                    kind: line.kind().label().to_lowercase(),
-                    description: line.description().to_string(),
-                    quantity: line.quantity(),
-                    unit_price_cents: line.unit_price_cents(),
-                    line_total_cents: line.line_total(),
-                })
-                .collect(),
-            totals: TotalsView {
-                labour_cents: quote.labour_total(),
-                parts_cents: quote.parts_total(),
-                fees_cents: quote.fees_total(),
-                credit_cents: quote.credit_total(),
-                subtotal_cents: quote.subtotal(),
-                gst_cents: quote.gst_amount(),
-                pst_cents: quote.pst_amount(),
-                total_cents: quote.total(),
-            },
+            items: LineView::all(quote),
+            totals: TotalsView::of(quote),
+        }
+    }
+}
+
+impl LineView {
+    /// Every line of a quote, in order.
+    pub(super) fn all(quote: &Quote) -> Vec<LineView> {
+        quote
+            .items()
+            .iter()
+            .map(|line| LineView {
+                id: line.id().map(|id| id.to_string()).unwrap_or_default(),
+                kind: line.kind().label().to_lowercase(),
+                description: line.description().to_string(),
+                quantity: line.quantity(),
+                unit_price_cents: line.unit_price_cents(),
+                line_total_cents: line.line_total(),
+            })
+            .collect()
+    }
+}
+
+impl TotalsView {
+    pub(super) fn of(quote: &Quote) -> TotalsView {
+        TotalsView {
+            labour_cents: quote.labour_total(),
+            parts_cents: quote.parts_total(),
+            fees_cents: quote.fees_total(),
+            credit_cents: quote.credit_total(),
+            subtotal_cents: quote.subtotal(),
+            gst_cents: quote.gst_amount(),
+            pst_cents: quote.pst_amount(),
+            total_cents: quote.total(),
         }
     }
 }
 
 /// The shop's clock. A quote never looks at it: the API hands the time in.
-fn now() -> NaiveDateTime {
+pub(super) fn now() -> NaiveDateTime {
     Local::now().naive_local()
 }
 
@@ -247,7 +260,7 @@ fn view(quote: &Quote) -> ([(HeaderName, String); 1], Json<QuoteView>) {
 
 /// The version a caller says it read: `If-Match: "3"` (or `3`). `*` and no header mean "any".
 /// Anything else is refused before the database is touched.
-fn if_match(headers: &HeaderMap) -> Result<Option<i32>, ApiError> {
+pub(super) fn if_match(headers: &HeaderMap) -> Result<Option<i32>, ApiError> {
     let Some(value) = headers.get(header::IF_MATCH) else {
         return Ok(None);
     };

@@ -73,7 +73,12 @@ impl Api {
         body
     }
 
-    async fn failure(&self, method: &str, uri: &str, body: Option<Value>) -> (u16, String) {
+    pub(super) async fn failure(
+        &self,
+        method: &str,
+        uri: &str,
+        body: Option<Value>,
+    ) -> (u16, String) {
         let (status, answer) = self.call(method, uri, body).await;
         (
             status.as_u16(),

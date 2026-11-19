@@ -18,6 +18,7 @@ pub mod logging;
 pub mod money;
 pub mod province;
 pub mod quote;
+pub mod repair_order;
 pub mod samples;
 pub mod secret;
 pub mod status;
@@ -48,6 +49,11 @@ pub use quote::{
     InMemoryQuoteNumbers, LineItem, LineKind, MAX_DESCRIPTION_CHARS, MAX_LINES, MAX_QUANTITY,
     MAX_UNIT_PRICE_CENTS, NewQuote, Quote, QuoteFilter, QuoteNumber, QuoteNumbers, QuoteStatus,
     create_quote, get_quote, list_quotes, next_quote_number, save_quote,
+};
+pub use repair_order::{
+    NewRepairOrder, RepairOrder, RepairOrderFilter, RepairOrderNumber, RepairOrderStatus,
+    create_repair_order, get_repair_order, list_repair_orders, next_repair_order_number,
+    save_repair_order,
 };
 pub use secret::Secret;
 pub use status::Status;

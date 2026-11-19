@@ -46,7 +46,8 @@ fn status_of(error: &QuoteError) -> StatusCode {
         QuoteError::UnknownBranch
         | QuoteError::UnknownCustomer
         | QuoteError::UnknownEquipment
-        | QuoteError::UnknownQuote => StatusCode::NOT_FOUND,
+        | QuoteError::UnknownQuote
+        | QuoteError::UnknownRepairOrder => StatusCode::NOT_FOUND,
         QuoteError::DuplicateBranchNumber { .. } => StatusCode::CONFLICT,
         _ => match error.kind() {
             ErrorKind::InvalidInput => StatusCode::BAD_REQUEST,
@@ -74,7 +75,7 @@ impl IntoResponse for ApiError {
             ApiError::BadIfMatch => (
                 StatusCode::BAD_REQUEST,
                 "INVALID_IF_MATCH",
-                String::from("If-Match must be the version of the quote, like \"3\", or *."),
+                String::from("If-Match must be the version of the record, like \"3\", or *."),
             ),
             ApiError::Unauthorized => (
                 StatusCode::UNAUTHORIZED,
