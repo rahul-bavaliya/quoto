@@ -16,13 +16,13 @@ pub type QuoteResult<T> = Result<T, QuoteError>;
 #[derive(Debug, PartialEq, Error)]
 pub enum QuoteError {
     // ---- Quote lines ----
-    #[error("{description} quantity must be greater than zero.")]
+    #[error("A line's quantity must be greater than zero.")]
     BadQuantity { description: String },
 
-    #[error("{description} unit price can't be negative.")]
+    #[error("A line's unit price can't be negative.")]
     NegativePrice { description: String },
 
-    #[error("{description} is too big: at most {max_quantity} of a kind and {max_price} each.", max_quantity = crate::quote::MAX_QUANTITY, max_price = format_money(crate::quote::MAX_UNIT_PRICE_CENTS))]
+    #[error("A line is too big: at most {max_quantity} of a kind and {max_price} each.", max_quantity = crate::quote::MAX_QUANTITY, max_price = format_money(crate::quote::MAX_UNIT_PRICE_CENTS))]
     LineTooLarge { description: String },
 
     #[error("A line's description can be at most {max} characters.")]
@@ -48,29 +48,29 @@ pub enum QuoteError {
     #[error("{field} is required.")]
     MissingField { field: &'static str },
 
-    #[error("\"{input}\" is not a valid 10-digit phone number.")]
+    #[error("That is not a valid 10-digit phone number.")]
     InvalidPhone { input: String },
 
-    #[error("\"{input}\" is not a valid email address.")]
+    #[error("That is not a valid email address.")]
     InvalidEmail { input: String },
 
-    #[error("\"{input}\" is not a valid postal code (like S4P 3Y2).")]
+    #[error("That is not a valid postal code (like S4P 3Y2).")]
     InvalidPostalCode { input: String },
 
     // ---- Quote ----
-    #[error("\"{input}\" is not a valid quote number (like Q-2026-00000001).")]
+    #[error("That is not a valid quote number (like Q-2026-00000001).")]
     InvalidQuoteNumber { input: String },
 
     #[error("All the quote numbers for {year} are used up.")]
     QuoteNumbersExhausted { year: u16 },
 
-    #[error("The expiry date {date} can't be before the quote date {quote_date}.")]
+    #[error("The expiry date can't be before the quote date.")]
     ExpiryBeforeQuoteDate {
         date: NaiveDate,
         quote_date: NaiveDate,
     },
 
-    #[error("The promise date {date} can't be before the quote date {quote_date}.")]
+    #[error("The promise date can't be before the quote date.")]
     PromiseBeforeQuoteDate {
         date: NaiveDate,
         quote_date: NaiveDate,
@@ -117,7 +117,7 @@ pub enum QuoteError {
     #[error("A province needs a GST (with an optional PST) or an HST: never both, never neither.")]
     InvalidTaxSystem,
 
-    #[error("There is no province with the code {code}.")]
+    #[error("There is no province with that code.")]
     UnknownProvince { code: String },
 
     #[error("The new rates start on {date}, which is before the current rates ({current}).")]
@@ -143,13 +143,13 @@ pub enum QuoteError {
     CustomerInactive,
 
     // ---- Status and branches ----
-    #[error("'{value}' is not a status. Use 'active' or 'inactive'.")]
+    #[error("That is not a status. Use 'active' or 'inactive'.")]
     InvalidStatus { value: String },
 
     #[error("There is no branch with that id or number.")]
     UnknownBranch,
 
-    #[error("A branch with the number {number} already exists.")]
+    #[error("A branch with that number already exists.")]
     DuplicateBranchNumber { number: String },
 
     #[error("This branch is already saved. To change it, use update.")]
@@ -162,13 +162,13 @@ pub enum QuoteError {
     #[error("A serial number or a plate is required to identify the unit.")]
     MissingIdentification,
 
-    #[error("Meter reading {reading} must be a number that is zero or more.")]
+    #[error("The meter reading must be a number that is zero or more.")]
     InvalidMeterReading { reading: f64 },
 
-    #[error("'{value}' is not a meter type. Use 'km', 'mi' or 'hr'.")]
+    #[error("That is not a meter type. Use 'km', 'mi' or 'hr'.")]
     InvalidMeterType { value: String },
 
-    #[error("'{value}' is not an equipment type. Use car, truck, tractor, trailer or other.")]
+    #[error("That is not an equipment type. Use car, truck, tractor, trailer or other.")]
     InvalidEquipmentType { value: String },
 
     #[error("The equipment's source is not one Quoto knows.")]
