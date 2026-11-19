@@ -124,3 +124,21 @@ async fn a_query_string_that_is_not_understood_is_one_plain_answer() {
         assert_eq!(answer["code"], "INVALID_QUERY", "{uri}");
     }
 }
+
+#[tokio::test]
+async fn a_refused_customer_never_gets_its_own_values_back_in_the_message() {
+    for (field, bad) in [
+        ("phone", "ZZmarker9137"),
+        ("alternate_phone", "ZZmarker9137"),
+        ("email", "ZZmarker9137"),
+        ("postal_code", "ZZmarker9137"),
+        ("province", "ZZ"),
+    ] {
+        let mut body = customer_json();
+        body[field] = json!(bad);
+        let (status, answer) = post_customer(body).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{field}");
+        let text = answer.to_string();
+        assert!(!text.contains(bad), "{field}: {text}");
+    }
+}

@@ -1249,3 +1249,41 @@ async fn a_pdf_of_a_quote_nobody_has_is_a_json_404() {
     assert!(String::from_utf8_lossy(&bytes).contains("UNKNOWN_QUOTE"));
     api.finish().await;
 }
+
+// ===== messages never repeat what was sent (Day 58) =====
+
+#[tokio::test]
+#[ignore = "needs the database (docker compose up)"]
+async fn a_duplicate_branch_number_a_bad_status_and_a_bad_machine_never_come_back_in_the_message() {
+    let api = setup().await;
+    let set = api.set("58").await;
+    let (_, branch) = api
+        .call("GET", &format!("/branches/{}", set.branch), None)
+        .await;
+    let number = branch["number"].as_str().unwrap().to_string();
+    let mut again = json!({
+        "number": number, "name": "API-T-dup", "address_line1": "1 Industrial Rd", "city": "Regina",
+        "province": "SK", "postal_code": "S4P 3Y2", "phone": "306-555-0142"
+    });
+    again["number"] = json!(number);
+    let (status, answer) = api.call("POST", "/branches", Some(again)).await;
+    assert_eq!(status, StatusCode::CONFLICT);
+    assert!(!answer.to_string().contains(&number), "{answer}");
+
+    let (status, answer) = api
+        .call(
+            "PATCH",
+            &format!("/customers/{}/status", set.customer),
+            Some(json!({"status": "ZZmarker9137"})),
+        )
+        .await;
+    assert!(status.is_client_error());
+    assert!(!answer.to_string().contains("ZZmarker9137"), "{answer}");
+
+    let (status, answer) = api
+        .call("POST", "/equipment", Some(json!({"make": "x", "model": "y", "serial_number": "ZZSER9137", "meter_type": "ZZmarker9137", "meter_reading": 1.0, "equipment_type": "tractor"})))
+        .await;
+    assert!(status.is_client_error());
+    assert!(!answer.to_string().contains("ZZmarker9137"), "{answer}");
+    api.finish().await;
+}

@@ -23,14 +23,14 @@ fn every_message_reads_like_a_sentence() {
             description: String::from("Oil Filter")
         }
         .to_string(),
-        "Oil Filter quantity must be greater than zero."
+        "A line's quantity must be greater than zero."
     );
     assert_eq!(
         QuoteError::NegativePrice {
             description: String::from("Oil Filter")
         }
         .to_string(),
-        "Oil Filter unit price can't be negative."
+        "A line's unit price can't be negative."
     );
     assert_eq!(
         QuoteError::MissingField { field: "city" }.to_string(),
@@ -41,28 +41,28 @@ fn every_message_reads_like_a_sentence() {
             input: String::from("555")
         }
         .to_string(),
-        "\"555\" is not a valid 10-digit phone number."
+        "That is not a valid 10-digit phone number."
     );
     assert_eq!(
         QuoteError::InvalidEmail {
             input: String::from("bob")
         }
         .to_string(),
-        "\"bob\" is not a valid email address."
+        "That is not a valid email address."
     );
     assert_eq!(
         QuoteError::InvalidPostalCode {
             input: String::from("12345")
         }
         .to_string(),
-        "\"12345\" is not a valid postal code (like S4P 3Y2)."
+        "That is not a valid postal code (like S4P 3Y2)."
     );
     assert_eq!(
         QuoteError::InvalidQuoteNumber {
             input: String::from("Q-1")
         }
         .to_string(),
-        "\"Q-1\" is not a valid quote number (like Q-2026-00000001)."
+        "That is not a valid quote number (like Q-2026-00000001)."
     );
     assert_eq!(
         QuoteError::QuoteNumbersExhausted { year: 2026 }.to_string(),
@@ -74,7 +74,7 @@ fn every_message_reads_like_a_sentence() {
     );
     assert_eq!(
         QuoteError::InvalidMeterReading { reading: -5.0 }.to_string(),
-        "Meter reading -5 must be a number that is zero or more."
+        "The meter reading must be a number that is zero or more."
     );
 }
 
@@ -404,7 +404,7 @@ fn a_date_before_the_quote_date_is_wrong_input() {
     let expiry = QuoteError::ExpiryBeforeQuoteDate { date, quote_date };
     assert_eq!(
         expiry.to_string(),
-        "The expiry date 2026-11-01 can't be before the quote date 2026-11-16."
+        "The expiry date can't be before the quote date."
     );
     assert_eq!(expiry.kind(), ErrorKind::InvalidInput);
     assert_eq!(expiry.code(), "EXPIRY_BEFORE_QUOTE_DATE");
@@ -413,7 +413,7 @@ fn a_date_before_the_quote_date_is_wrong_input() {
     let promise = QuoteError::PromiseBeforeQuoteDate { date, quote_date };
     assert_eq!(
         promise.to_string(),
-        "The promise date 2026-11-01 can't be before the quote date 2026-11-16."
+        "The promise date can't be before the quote date."
     );
     assert_eq!(promise.kind(), ErrorKind::InvalidInput);
     assert_eq!(promise.code(), "PROMISE_BEFORE_QUOTE_DATE");
@@ -474,5 +474,76 @@ fn the_line_limit_errors_have_the_right_kind() {
         QuoteError::InvalidLineKind,
     ] {
         assert_eq!(error.kind(), ErrorKind::InvalidInput);
+    }
+}
+
+// ===== no message repeats what the caller sent (api-rules 10, Day 58) =====
+
+#[test]
+fn no_error_message_repeats_the_value_that_was_refused() {
+    let marker = "ZZmarker9137";
+    let day = chrono::NaiveDate::from_ymd_opt(2026, 11, 16).unwrap();
+    let errors = vec![
+        QuoteError::BadQuantity {
+            description: marker.into(),
+        },
+        QuoteError::NegativePrice {
+            description: marker.into(),
+        },
+        QuoteError::LineTooLarge {
+            description: marker.into(),
+        },
+        QuoteError::InvalidPhone {
+            input: marker.into(),
+        },
+        QuoteError::InvalidEmail {
+            input: marker.into(),
+        },
+        QuoteError::InvalidPostalCode {
+            input: marker.into(),
+        },
+        QuoteError::InvalidQuoteNumber {
+            input: marker.into(),
+        },
+        QuoteError::InvalidStatus {
+            value: marker.into(),
+        },
+        QuoteError::UnknownProvince {
+            code: marker.into(),
+        },
+        QuoteError::DuplicateBranchNumber {
+            number: marker.into(),
+        },
+        QuoteError::InvalidMeterType {
+            value: marker.into(),
+        },
+        QuoteError::InvalidEquipmentType {
+            value: marker.into(),
+        },
+    ];
+    for error in errors {
+        let message = error.to_string();
+        assert!(
+            !message.contains(marker),
+            "{error:?} repeats the value: {message}"
+        );
+    }
+    // numbers and dates too
+    let reading = QuoteError::InvalidMeterReading { reading: -9137.5 }.to_string();
+    assert!(!reading.contains("9137"), "{reading}");
+    let early = day.pred_opt().unwrap();
+    for message in [
+        QuoteError::ExpiryBeforeQuoteDate {
+            date: early,
+            quote_date: day,
+        }
+        .to_string(),
+        QuoteError::PromiseBeforeQuoteDate {
+            date: early,
+            quote_date: day,
+        }
+        .to_string(),
+    ] {
+        assert!(!message.contains("2026"), "{message}");
     }
 }
