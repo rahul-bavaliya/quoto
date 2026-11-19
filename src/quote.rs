@@ -12,6 +12,7 @@ use uuid::Uuid;
 mod line_item;
 mod line_kind;
 mod number_machine;
+mod pdf;
 mod print;
 mod quote_number;
 mod quote_status;

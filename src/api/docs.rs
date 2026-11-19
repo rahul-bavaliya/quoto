@@ -16,7 +16,7 @@ use super::equipment::{
 use super::error::ErrorBody;
 use super::quotes::{
     self, CustomerInput as QuoteCustomerInput, EquipmentInput as QuoteEquipmentInput, LineInput,
-    LineView, NewQuoteInput, QuoteChanges, QuoteView, RejectInput, TotalsView,
+    LineView, NewQuoteInput, PdfFile, QuoteChanges, QuoteView, RejectInput, TotalsView,
 };
 use super::request::StatusInput;
 use axum::Router;
@@ -75,6 +75,7 @@ impl Modify for BearerKey {
         equipment::change_owner,
         quotes::list,
         quotes::read,
+        quotes::print,
         quotes::create,
         quotes::change,
         quotes::add_line,
@@ -100,6 +101,7 @@ impl Modify for BearerKey {
         LineInput,
         LineView,
         NewQuoteInput,
+        PdfFile,
         QuoteChanges,
         QuoteCustomerInput,
         QuoteEquipmentInput,

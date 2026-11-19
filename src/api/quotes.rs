@@ -2,6 +2,7 @@
 //
 //   GET   /quotes?customer_id=&branch_id=&equipment_id=&limit=&offset=   a page of quotes, newest first
 //   GET   /quotes/{id}             read one (with its lines and totals, its version, and an ETag)
+//   GET   /quotes/{id}/pdf         the quote as a PDF file to print or send
 //   POST  /quotes                  create (always pending; the number is handed out here)
 //   PATCH /quotes/{id}             change the expiry date and/or the promise date
 //   POST  /quotes/{id}/lines       add one line (lines are only ever added)
@@ -367,6 +368,40 @@ pub(super) async fn read(
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, ApiError> {
     Ok(view(&get_quote(&state.db, quote_id(&id)?).await?))
+}
+
+/// The body of the PDF answer: a file, not JSON.
+#[derive(ToSchema)]
+#[schema(value_type = String, format = Binary)]
+#[allow(dead_code)]
+pub(super) struct PdfFile(Vec<u8>);
+
+/// The quote as a PDF file (Letter size, any number of pages): the same lines and totals as the
+/// JSON, laid out to print or send to the customer. A browser can't send the key, so open it
+/// from the docs page ("Try it out" then "Download file") or with `curl -o quote.pdf`. The answer
+/// is never cached, because it holds the customer's details.
+#[utoipa::path(get, path = "/quotes/{id}/pdf", operation_id = "print_quote", tag = "quotes",
+    params(("id" = String, Path, description = "The quote's id.")),
+    responses(
+        (status = 200, description = "The quote as a PDF file.", content_type = "application/pdf", body = PdfFile),
+        (status = 404, description = "No quote has that id.", body = ErrorBody),
+        (status = 401, description = "No key, or the wrong one.", body = ErrorBody),
+        (status = 503, description = "The database is not available, or the saved quote is damaged.", body = ErrorBody),
+    ))]
+pub(super) async fn print(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<impl IntoResponse, ApiError> {
+    let quote = get_quote(&state.db, quote_id(&id)?).await?;
+    let file = quote.to_pdf(now().date());
+    // The number is `Q-<year>-<digits>`: safe to put in a file name.
+    let name = format!("inline; filename=\"{}.pdf\"", quote.number());
+    let headers: [(HeaderName, String); 3] = [
+        (header::CONTENT_TYPE, "application/pdf".to_string()),
+        (header::CONTENT_DISPOSITION, name),
+        (header::CACHE_CONTROL, "no-store".to_string()),
+    ];
+    Ok((StatusCode::OK, headers, file))
 }
 
 /// Create a quote. It is always pending and gets the next number of the year. Only the branch is

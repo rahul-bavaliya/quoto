@@ -1193,3 +1193,59 @@ async fn accepting_and_rejecting_at_the_same_moment_one_wins_and_everyone_else_i
     assert_eq!(end["version"], 1); // exactly one change was saved
     api.finish().await;
 }
+
+// ===== the PDF =====
+
+#[tokio::test]
+#[ignore = "needs the database (docker compose up)"]
+async fn a_quote_can_be_downloaded_as_a_pdf_that_shows_it_as_it_was_saved() {
+    let api = setup().await;
+    let set = api.set("17").await;
+    let quote = api
+        .full(
+            &set,
+            vec![line("labour", 2.0, 10_000), line("part", 1.0, 5_000)],
+        )
+        .await;
+    let (status, headers, bytes) = api.raw(&format!("/quotes/{}/pdf", id(&quote))).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(headers["content-type"], "application/pdf");
+    assert_eq!(headers["cache-control"], "no-store");
+    let number = quote["number"].as_str().unwrap();
+    assert_eq!(
+        headers["content-disposition"],
+        format!("inline; filename=\"{number}.pdf\"").as_str()
+    );
+    assert!(bytes.starts_with(b"%PDF-1.4\n") && bytes.ends_with(b"%%EOF\n"));
+    let text = String::from_utf8_lossy(&bytes).to_string();
+    for wanted in [number, "API-T-Quoter 17", "$277.50", "PENDING"] {
+        assert!(text.contains(wanted), "{wanted} is not in the PDF");
+    }
+
+    // renaming the customer later does not change the quote's PDF; accepting changes the mark
+    api.call(
+        "PATCH",
+        &format!("/customers/{}", set.customer),
+        Some(json!({"name": "API-T-Renamed"})),
+    )
+    .await;
+    api.call("POST", &format!("/quotes/{}/accept", id(&quote)), None)
+        .await;
+    let (_, _, after) = api.raw(&format!("/quotes/{}/pdf", id(&quote))).await;
+    let after = String::from_utf8_lossy(&after).to_string();
+    assert!(after.contains("API-T-Quoter 17") && !after.contains("API-T-Renamed"));
+    assert!(after.contains("ACCEPTED") && !after.contains("PENDING"));
+    api.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "needs the database (docker compose up)"]
+async fn a_pdf_of_a_quote_nobody_has_is_a_json_404() {
+    let api = setup().await;
+    let nil = "00000000-0000-0000-0000-000000000000";
+    let (status, headers, bytes) = api.raw(&format!("/quotes/{nil}/pdf")).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(headers["content-type"], "application/json");
+    assert!(String::from_utf8_lossy(&bytes).contains("UNKNOWN_QUOTE"));
+    api.finish().await;
+}
