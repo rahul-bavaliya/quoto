@@ -959,3 +959,237 @@ async fn quotes_made_at_the_same_moment_get_different_numbers() {
     assert_eq!(numbers, (first..first + 6).collect::<Vec<_>>()); // no repeat, no gap
     api.finish().await;
 }
+
+// ===== versions: two people at once =====
+
+fn etag(headers: &axum::http::HeaderMap) -> &str {
+    headers["etag"].to_str().unwrap()
+}
+
+#[tokio::test]
+#[ignore = "needs the database (docker compose up)"]
+async fn a_quote_says_its_version_in_the_body_and_the_etag_and_every_change_adds_one() {
+    let api = setup().await;
+    let set = api.set("18").await;
+    let (status, headers, quote) = api
+        .call_with(
+            "POST",
+            "/quotes",
+            Some(json!({"branch_id": set.branch})),
+            &[],
+        )
+        .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(
+        (quote["version"].clone(), etag(&headers)),
+        (json!(0), "\"0\"")
+    );
+    let base = format!("/quotes/{}", id(&quote));
+
+    let (_, headers, read) = api.call_with("GET", &base, None, &[]).await;
+    assert_eq!(
+        (read["version"].clone(), etag(&headers)),
+        (json!(0), "\"0\"")
+    );
+    let (_, headers, changed) = api
+        .call_with(
+            "PATCH",
+            &base,
+            Some(json!({"promise_date": "2099-06-01"})),
+            &[],
+        )
+        .await;
+    assert_eq!(
+        (changed["version"].clone(), etag(&headers)),
+        (json!(1), "\"1\"")
+    );
+    let (_, headers, line_added) = api
+        .call_with(
+            "POST",
+            &format!("{base}/lines"),
+            Some(line("fee", 1.0, 100)),
+            &[],
+        )
+        .await;
+    assert_eq!(
+        (line_added["version"].clone(), etag(&headers)),
+        (json!(2), "\"2\"")
+    );
+    // a refused change does not move the version, and a read never does
+    api.call("POST", &format!("{base}/accept"), None).await; // no customer: refused
+    let (_, listed) = api
+        .call("GET", &format!("/quotes?branch_id={}", set.branch), None)
+        .await;
+    assert_eq!(listed[0]["version"], 2);
+    let (_, again) = api.call("GET", &base, None).await;
+    assert_eq!(again["version"], 2);
+    api.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "needs the database (docker compose up)"]
+async fn a_change_that_says_which_version_it_read_is_refused_when_the_quote_has_moved_on() {
+    let api = setup().await;
+    let set = api.set("19").await;
+    let quote = api.full(&set, vec![line("labour", 1.0, 10_000)]).await;
+    let base = format!("/quotes/{}", id(&quote));
+    // someone else changes it: version 0 -> 1
+    api.call("PATCH", &base, Some(json!({"promise_date": "2099-06-01"})))
+        .await;
+
+    // every changing call, made from the old read (version 0), is refused and changes nothing
+    let calls: Vec<(&str, String, Option<Value>)> = vec![
+        (
+            "PATCH",
+            base.clone(),
+            Some(json!({"expires_on": "2099-12-31"})),
+        ),
+        (
+            "POST",
+            format!("{base}/lines"),
+            Some(line("part", 1.0, 100)),
+        ),
+        ("POST", format!("{base}/accept"), None),
+        (
+            "POST",
+            format!("{base}/reject"),
+            Some(json!({"reason": "no"})),
+        ),
+        ("POST", format!("{base}/reopen"), None),
+        (
+            "PATCH",
+            format!("{base}/customer"),
+            Some(json!({"customer_id": set.customer})),
+        ),
+        (
+            "PATCH",
+            format!("{base}/equipment"),
+            Some(json!({"equipment_id": set.machine})),
+        ),
+    ];
+    for (method, uri, body) in calls {
+        let (status, _, answer) = api
+            .call_with(method, &uri, body, &[("if-match", "\"0\"")])
+            .await;
+        assert_eq!(
+            (status, answer["code"].as_str()),
+            (StatusCode::CONFLICT, Some("QUOTE_CHANGED_MEANWHILE")),
+            "{method} {uri}"
+        );
+    }
+    let (_, now) = api.call("GET", &base, None).await;
+    assert_eq!(now["version"], 1);
+    assert_eq!(now["status"], "pending");
+    assert_eq!(now["items"].as_array().unwrap().len(), 1);
+    assert_eq!(now["expires_on"], quote["expires_on"]);
+
+    // the right version goes through: quoted, bare, or `*`; and none at all also goes through
+    let (status, _, one) = api
+        .call_with(
+            "PATCH",
+            &base,
+            Some(json!({"expires_on": "2099-12-31"})),
+            &[("if-match", "\"1\"")],
+        )
+        .await;
+    assert_eq!((status, one["version"].clone()), (StatusCode::OK, json!(2)));
+    let (status, _, two) = api
+        .call_with(
+            "POST",
+            &format!("{base}/lines"),
+            Some(line("part", 1.0, 100)),
+            &[("if-match", "2")],
+        )
+        .await;
+    assert_eq!(
+        (status, two["version"].clone()),
+        (StatusCode::CREATED, json!(3))
+    );
+    let (status, _, three) = api
+        .call_with(
+            "POST",
+            &format!("{base}/lines"),
+            Some(line("part", 1.0, 100)),
+            &[("if-match", "*")],
+        )
+        .await;
+    assert_eq!(
+        (status, three["version"].clone()),
+        (StatusCode::CREATED, json!(4))
+    );
+    let (status, _, four) = api
+        .call_with("POST", &format!("{base}/accept"), None, &[])
+        .await;
+    assert_eq!(
+        (status, four["version"].clone()),
+        (StatusCode::OK, json!(5))
+    );
+    // reading never needs the header, even a wrong one
+    let (status, _, _) = api
+        .call_with("GET", &base, None, &[("if-match", "\"0\"")])
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    api.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "needs the database (docker compose up)"]
+async fn accepting_and_rejecting_at_the_same_moment_one_wins_and_everyone_else_is_told() {
+    let api = setup().await;
+    let set = api.set("20").await;
+    let quote = api.full(&set, vec![line("labour", 1.0, 10_000)]).await;
+    let base = format!("/quotes/{}", id(&quote));
+
+    let mut jobs = Vec::new();
+    for n in 0..8 {
+        let app = api.app.clone();
+        let base = base.clone();
+        jobs.push(tokio::spawn(async move {
+            use axum::body::{Body, to_bytes};
+            use axum::http::{Request, header};
+            use tower::ServiceExt;
+            let (path, body) = if n % 2 == 0 {
+                (format!("{base}/accept"), String::new())
+            } else {
+                (
+                    format!("{base}/reject"),
+                    json!({"reason": "not this time"}).to_string(),
+                )
+            };
+            let request = Request::builder()
+                .method("POST")
+                .uri(path)
+                .header(
+                    header::AUTHORIZATION,
+                    format!("Bearer {}", super::support::KEY),
+                )
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(body))
+                .unwrap();
+            let response = app.oneshot(request).await.unwrap();
+            let status = response.status();
+            let bytes = to_bytes(response.into_body(), 1 << 20).await.unwrap();
+            (status, serde_json::from_slice::<Value>(&bytes).unwrap())
+        }));
+    }
+    let mut won = 0;
+    for job in jobs {
+        let (status, answer) = job.await.unwrap();
+        if status == StatusCode::OK {
+            won += 1;
+        } else {
+            // either it read the quote too early (changed meanwhile) or too late (already decided)
+            let code = answer["code"].as_str().unwrap();
+            assert!(
+                status == StatusCode::CONFLICT
+                    && (code == "QUOTE_CHANGED_MEANWHILE" || code == "ALREADY_DECIDED"),
+                "{status} {answer}"
+            );
+        }
+    }
+    assert_eq!(won, 1);
+    let (_, end) = api.call("GET", &base, None).await;
+    assert_ne!(end["status"], "pending");
+    assert_eq!(end["version"], 1); // exactly one change was saved
+    api.finish().await;
+}

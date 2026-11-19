@@ -1,7 +1,7 @@
 // src/api/quotes.rs: the quote calls
 //
 //   GET   /quotes?customer_id=&branch_id=&equipment_id=&limit=&offset=   a page of quotes, newest first
-//   GET   /quotes/{id}             read one (with its lines and totals)
+//   GET   /quotes/{id}             read one (with its lines and totals, its version, and an ETag)
 //   POST  /quotes                  create (always pending; the number is handed out here)
 //   PATCH /quotes/{id}             change the expiry date and/or the promise date
 //   POST  /quotes/{id}/lines       add one line (lines are only ever added)
@@ -10,6 +10,11 @@
 //   POST  /quotes/{id}/accept      the customer says yes
 //   POST  /quotes/{id}/reject      {"reason": "..."}         the customer says no, and why
 //   POST  /quotes/{id}/reopen      a rejected quote goes back to pending
+//
+// Every quote has a `version` (0 when made, +1 with every change), sent in the body and as the
+// `ETag`. A call that changes a quote may send it back as `If-Match`: if the quote has changed
+// since, nothing is done and the answer is `409 QUOTE_CHANGED_MEANWHILE` (read it again). Without
+// the header a change is still checked at the moment it is saved, but not against an old screen.
 //
 // A quote is never erased and has no DELETE and no status call: its status moves only through
 // accept / reject / reopen, so a decision can't be made by accident. The branch, customer and
@@ -32,7 +37,8 @@ use crate::{get_customer, get_equipment};
 use axum::Json;
 use axum::extract::rejection::{JsonRejection, QueryRejection};
 use axum::extract::{Path, Query, State};
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, HeaderName, StatusCode, header};
+use axum::response::IntoResponse;
 use chrono::{Local, NaiveDate, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -156,6 +162,9 @@ pub(super) struct TotalsView {
 #[derive(Serialize, ToSchema)]
 pub(super) struct QuoteView {
     id: String,
+    /// 0 when the quote is made, +1 with every change. Also sent as the `ETag` header: send it
+    /// back as `If-Match` on a change to refuse the change if the quote moved on since you read it.
+    version: i32,
     /// `Q-<year>-<8 digits>`, handed out when the quote was created.
     number: String,
     /// "pending", "accepted" or "rejected".
@@ -185,6 +194,7 @@ impl QuoteView {
         };
         QuoteView {
             id: quote.id().map(|id| id.to_string()).unwrap_or_default(),
+            version: quote.version(),
             number: quote.number().to_string(),
             status: quote.status().label(),
             rejection_reason,
@@ -226,8 +236,38 @@ fn now() -> NaiveDateTime {
     Local::now().naive_local()
 }
 
-fn view(quote: &Quote) -> Json<QuoteView> {
-    Json(QuoteView::new(quote, now().date()))
+/// A quote as a caller gets it: the JSON, and its version as the `ETag` header.
+fn view(quote: &Quote) -> ([(HeaderName, String); 1], Json<QuoteView>) {
+    (
+        [(header::ETAG, format!("\"{}\"", quote.version()))],
+        Json(QuoteView::new(quote, now().date())),
+    )
+}
+
+/// The version a caller says it read: `If-Match: "3"` (or `3`). `*` and no header mean "any".
+/// Anything else is refused before the database is touched.
+fn if_match(headers: &HeaderMap) -> Result<Option<i32>, ApiError> {
+    let Some(value) = headers.get(header::IF_MATCH) else {
+        return Ok(None);
+    };
+    let text = value.to_str().map_err(|_| ApiError::BadIfMatch)?.trim();
+    if text == "*" {
+        return Ok(None);
+    }
+    text.trim_matches('"')
+        .parse::<i32>()
+        .ok()
+        .filter(|version| *version >= 0)
+        .map(Some)
+        .ok_or(ApiError::BadIfMatch)
+}
+
+/// Refuses a change made from a version that is not the saved one.
+fn check_version(expected: Option<i32>, quote: &Quote) -> QuoteResult<()> {
+    match expected {
+        Some(version) if version != quote.version() => Err(QuoteError::QuoteChangedMeanwhile),
+        _ => Ok(()),
+    }
 }
 
 #[derive(Deserialize, IntoParams)]
@@ -325,7 +365,7 @@ pub(super) async fn list(
 pub(super) async fn read(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<QuoteView>, ApiError> {
+) -> Result<impl IntoResponse, ApiError> {
     Ok(view(&get_quote(&state.db, quote_id(&id)?).await?))
 }
 
@@ -344,7 +384,7 @@ pub(super) async fn read(
 pub(super) async fn create(
     State(state): State<AppState>,
     input: Result<Json<NewQuoteInput>, JsonRejection>,
-) -> Result<(StatusCode, Json<QuoteView>), ApiError> {
+) -> Result<impl IntoResponse, ApiError> {
     let input = body(input)?;
     // Everything that can be checked without the database is checked first.
     let items = input
@@ -370,7 +410,7 @@ pub(super) async fn create(
 /// Change the dates. Send either or both (`YYYY-MM-DD`); what is left out stays. A date can't be
 /// cleared, and neither can be before the quote's own date.
 #[utoipa::path(patch, path = "/quotes/{id}", operation_id = "change_quote", tag = "quotes", request_body = QuoteChanges,
-    params(("id" = String, Path, description = "The quote's id.")),
+    params(("id" = String, Path, description = "The quote's id."), ("If-Match" = Option<String>, Header, description = "The version you read (the ETag). If the quote has changed since, nothing is done and the answer is 409 QUOTE_CHANGED_MEANWHILE. Leave out to skip the check."),),
     responses(
         (status = 200, description = "The quote as saved.", body = QuoteView),
         (status = 400, description = "The body is empty or wrong, or a date is before the quote's own date.", body = ErrorBody),
@@ -382,9 +422,11 @@ pub(super) async fn create(
 pub(super) async fn change(
     State(state): State<AppState>,
     Path(id): Path<String>,
+    headers: HeaderMap,
     input: Result<Json<Map<String, Value>>, JsonRejection>,
-) -> Result<Json<QuoteView>, ApiError> {
+) -> Result<impl IntoResponse, ApiError> {
     let id = quote_id(&id)?;
+    let expected = if_match(&headers)?;
     let fields = changes(input)?;
     // A `null` would mean "clear it", which a date can't do: refused rather than ignored.
     if fields.values().any(|value| !value.is_string()) {
@@ -393,6 +435,7 @@ pub(super) async fn change(
     let dates: QuoteChanges =
         serde_json::from_value(Value::Object(fields)).map_err(|_| ApiError::BadBody)?;
     let mut quote = get_quote(&state.db, id).await?;
+    check_version(expected, &quote)?;
     if let Some(date) = dates.expires_on {
         quote.set_expiry(date)?;
     }
@@ -406,7 +449,7 @@ pub(super) async fn change(
 /// quote that is still pending is fixed with a credit line, and the old lines stay as they were).
 /// Only a pending quote can change.
 #[utoipa::path(post, path = "/quotes/{id}/lines", operation_id = "add_quote_line", tag = "quotes", request_body = LineInput,
-    params(("id" = String, Path, description = "The quote's id.")),
+    params(("id" = String, Path, description = "The quote's id."), ("If-Match" = Option<String>, Header, description = "The version you read (the ETag). If the quote has changed since, nothing is done and the answer is 409 QUOTE_CHANGED_MEANWHILE. Leave out to skip the check."),),
     responses(
         (status = 201, description = "The quote with the new line at the end.", body = QuoteView),
         (status = 400, description = "The body is wrong, or a rule refused a value.", body = ErrorBody),
@@ -418,11 +461,14 @@ pub(super) async fn change(
 pub(super) async fn add_line(
     State(state): State<AppState>,
     Path(id): Path<String>,
+    headers: HeaderMap,
     input: Result<Json<LineInput>, JsonRejection>,
-) -> Result<(StatusCode, Json<QuoteView>), ApiError> {
+) -> Result<impl IntoResponse, ApiError> {
     let id = quote_id(&id)?;
+    let expected = if_match(&headers)?;
     let line = body(input)?.into_line()?;
     let mut quote = get_quote(&state.db, id).await?;
+    check_version(expected, &quote)?;
     quote.add_item(line)?;
     Ok((
         StatusCode::CREATED,
@@ -432,7 +478,7 @@ pub(super) async fn add_line(
 
 /// Add the customer to a quote that has none. A quote has one customer, added once.
 #[utoipa::path(patch, path = "/quotes/{id}/customer", operation_id = "add_quote_customer", tag = "quotes", request_body = CustomerInput,
-    params(("id" = String, Path, description = "The quote's id.")),
+    params(("id" = String, Path, description = "The quote's id."), ("If-Match" = Option<String>, Header, description = "The version you read (the ETag). If the quote has changed since, nothing is done and the answer is 409 QUOTE_CHANGED_MEANWHILE. Leave out to skip the check."),),
     responses(
         (status = 200, description = "The quote with its customer.", body = QuoteView),
         (status = 400, description = "The body is not exactly {\"customer_id\": id}.", body = ErrorBody),
@@ -444,11 +490,14 @@ pub(super) async fn add_line(
 pub(super) async fn add_customer(
     State(state): State<AppState>,
     Path(id): Path<String>,
+    headers: HeaderMap,
     input: Result<Json<Map<String, Value>>, JsonRejection>,
-) -> Result<Json<QuoteView>, ApiError> {
+) -> Result<impl IntoResponse, ApiError> {
     let id = quote_id(&id)?;
+    let expected = if_match(&headers)?;
     let customer_id = only_id(input, "customer_id", QuoteError::UnknownCustomer)?;
     let mut quote = get_quote(&state.db, id).await?;
+    check_version(expected, &quote)?;
     quote.attach_customer(get_customer(&state.db, customer_id).await?)?;
     Ok(view(&save_quote(&state.db, &quote).await?))
 }
@@ -456,7 +505,7 @@ pub(super) async fn add_customer(
 /// Add the machine to a quote that has none. The customer comes first, and the machine must be
 /// theirs. A quote has one machine, added once.
 #[utoipa::path(patch, path = "/quotes/{id}/equipment", operation_id = "add_quote_equipment", tag = "quotes", request_body = EquipmentInput,
-    params(("id" = String, Path, description = "The quote's id.")),
+    params(("id" = String, Path, description = "The quote's id."), ("If-Match" = Option<String>, Header, description = "The version you read (the ETag). If the quote has changed since, nothing is done and the answer is 409 QUOTE_CHANGED_MEANWHILE. Leave out to skip the check."),),
     responses(
         (status = 200, description = "The quote with its machine.", body = QuoteView),
         (status = 400, description = "The body is not exactly {\"equipment_id\": id}.", body = ErrorBody),
@@ -468,11 +517,14 @@ pub(super) async fn add_customer(
 pub(super) async fn add_equipment(
     State(state): State<AppState>,
     Path(id): Path<String>,
+    headers: HeaderMap,
     input: Result<Json<Map<String, Value>>, JsonRejection>,
-) -> Result<Json<QuoteView>, ApiError> {
+) -> Result<impl IntoResponse, ApiError> {
     let id = quote_id(&id)?;
+    let expected = if_match(&headers)?;
     let equipment_id = only_id(input, "equipment_id", QuoteError::UnknownEquipment)?;
     let mut quote = get_quote(&state.db, id).await?;
+    check_version(expected, &quote)?;
     quote.attach_equipment(get_equipment(&state.db, equipment_id).await?)?;
     Ok(view(&save_quote(&state.db, &quote).await?))
 }
@@ -480,7 +532,7 @@ pub(super) async fn add_equipment(
 /// The customer accepts. Needs a customer and a machine, and prices that have not expired
 /// (move the expiry date first). An accepted quote is final.
 #[utoipa::path(post, path = "/quotes/{id}/accept", operation_id = "accept_quote", tag = "quotes",
-    params(("id" = String, Path, description = "The quote's id.")),
+    params(("id" = String, Path, description = "The quote's id."), ("If-Match" = Option<String>, Header, description = "The version you read (the ETag). If the quote has changed since, nothing is done and the answer is 409 QUOTE_CHANGED_MEANWHILE. Leave out to skip the check."),),
     responses(
         (status = 200, description = "The accepted quote.", body = QuoteView),
         (status = 404, description = "No quote has that id.", body = ErrorBody),
@@ -491,15 +543,19 @@ pub(super) async fn add_equipment(
 pub(super) async fn accept(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<QuoteView>, ApiError> {
-    let mut quote = get_quote(&state.db, quote_id(&id)?).await?;
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, ApiError> {
+    let id = quote_id(&id)?;
+    let expected = if_match(&headers)?;
+    let mut quote = get_quote(&state.db, id).await?;
+    check_version(expected, &quote)?;
     quote.accept(now().date())?;
     Ok(view(&save_quote(&state.db, &quote).await?))
 }
 
 /// The customer says no, and why. An expired quote can still be rejected.
 #[utoipa::path(post, path = "/quotes/{id}/reject", operation_id = "reject_quote", tag = "quotes", request_body = RejectInput,
-    params(("id" = String, Path, description = "The quote's id.")),
+    params(("id" = String, Path, description = "The quote's id."), ("If-Match" = Option<String>, Header, description = "The version you read (the ETag). If the quote has changed since, nothing is done and the answer is 409 QUOTE_CHANGED_MEANWHILE. Leave out to skip the check."),),
     responses(
         (status = 200, description = "The rejected quote.", body = QuoteView),
         (status = 400, description = "The body is wrong, or the reason is blank or over 500 characters.", body = ErrorBody),
@@ -511,11 +567,14 @@ pub(super) async fn accept(
 pub(super) async fn reject(
     State(state): State<AppState>,
     Path(id): Path<String>,
+    headers: HeaderMap,
     input: Result<Json<RejectInput>, JsonRejection>,
-) -> Result<Json<QuoteView>, ApiError> {
+) -> Result<impl IntoResponse, ApiError> {
     let id = quote_id(&id)?;
+    let expected = if_match(&headers)?;
     let reason = body(input)?.reason;
     let mut quote = get_quote(&state.db, id).await?;
+    check_version(expected, &quote)?;
     quote.reject(&reason)?;
     Ok(view(&save_quote(&state.db, &quote).await?))
 }
@@ -523,7 +582,7 @@ pub(super) async fn reject(
 /// A rejected quote goes back to pending (the customer came back); the old reason is dropped.
 /// An accepted quote can't be reopened.
 #[utoipa::path(post, path = "/quotes/{id}/reopen", operation_id = "reopen_quote", tag = "quotes",
-    params(("id" = String, Path, description = "The quote's id.")),
+    params(("id" = String, Path, description = "The quote's id."), ("If-Match" = Option<String>, Header, description = "The version you read (the ETag). If the quote has changed since, nothing is done and the answer is 409 QUOTE_CHANGED_MEANWHILE. Leave out to skip the check."),),
     responses(
         (status = 200, description = "The pending quote.", body = QuoteView),
         (status = 404, description = "No quote has that id.", body = ErrorBody),
@@ -534,8 +593,12 @@ pub(super) async fn reject(
 pub(super) async fn reopen(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<QuoteView>, ApiError> {
-    let mut quote = get_quote(&state.db, quote_id(&id)?).await?;
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, ApiError> {
+    let id = quote_id(&id)?;
+    let expected = if_match(&headers)?;
+    let mut quote = get_quote(&state.db, id).await?;
+    check_version(expected, &quote)?;
     quote.reopen()?;
     Ok(view(&save_quote(&state.db, &quote).await?))
 }

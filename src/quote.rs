@@ -41,6 +41,9 @@ pub struct Quote {
     /// The database's id. Empty until this quote is loaded from the database:
     /// a new one never makes its own id.
     id: Option<Uuid>,
+    /// How many times this quote has been changed in the database (0 when made). A change is
+    /// accepted only if it was made from the latest version: see `save_quote`.
+    version: i32,
     number: QuoteNumber,
     created_at: NaiveDateTime,
     /// The last day the prices are honoured. Worked out when the quote is created.
@@ -60,6 +63,7 @@ pub struct Quote {
 /// Everything a saved quote is rebuilt from (see `quote/table.rs`).
 pub(crate) struct SavedQuote {
     pub(crate) id: Uuid,
+    pub(crate) version: i32,
     pub(crate) number: QuoteNumber,
     pub(crate) created_at: NaiveDateTime,
     pub(crate) expires_on: NaiveDate,
@@ -78,6 +82,7 @@ impl Quote {
     pub(crate) fn restore(saved: SavedQuote) -> Quote {
         Quote {
             id: None,
+            version: saved.version,
             number: saved.number,
             created_at: saved.created_at,
             expires_on: saved.expires_on,
@@ -118,6 +123,7 @@ impl Quote {
             .unwrap_or(NaiveDate::MAX);
         Ok(Quote {
             id: None,
+            version: 0,
             number,
             created_at,
             expires_on,
@@ -163,6 +169,12 @@ impl Quote {
     /// `None` means "not saved yet". The database gives the id; Quoto never makes one.
     pub fn id(&self) -> Option<Uuid> {
         self.id
+    }
+
+    /// How many times the saved quote has been changed (0 for a new one). `save_quote` accepts
+    /// a change only if it was made from the latest version.
+    pub fn version(&self) -> i32 {
+        self.version
     }
 
     /// Attaches the id the database gave. Used when loading from the database.
