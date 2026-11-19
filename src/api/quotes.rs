@@ -395,7 +395,7 @@ pub(super) async fn print(
     let quote = get_quote(&state.db, quote_id(&id)?).await?;
     let file = quote.to_pdf(now().date());
     // The number is `Q-<year>-<digits>`: safe to put in a file name.
-    let name = format!("inline; filename=\"{}.pdf\"", quote.number());
+    let name = format!("attachment; filename=\"{}.pdf\"", quote.number());
     let headers: [(HeaderName, String); 3] = [
         (header::CONTENT_TYPE, "application/pdf".to_string()),
         (header::CONTENT_DISPOSITION, name),

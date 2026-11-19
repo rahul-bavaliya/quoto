@@ -1214,7 +1214,7 @@ async fn a_quote_can_be_downloaded_as_a_pdf_that_shows_it_as_it_was_saved() {
     let number = quote["number"].as_str().unwrap();
     assert_eq!(
         headers["content-disposition"],
-        format!("inline; filename=\"{number}.pdf\"").as_str()
+        format!("attachment; filename=\"{number}.pdf\"").as_str()
     );
     assert!(bytes.starts_with(b"%PDF-1.4\n") && bytes.ends_with(b"%%EOF\n"));
     let text = String::from_utf8_lossy(&bytes).to_string();
