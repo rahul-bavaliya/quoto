@@ -359,3 +359,115 @@ fn money_in_the_biggest_allowed_line_still_fits_in_its_column() {
     let text = all_text(&quote.to_pdf(day(2026, 11, 18)));
     assert!(text.iter().any(|t| t == "$1000000000000.00"), "{text:?}");
 }
+
+// ---- the customer's signature (Day 59) ----
+
+const SIGNATURE_WORDS: [&str; 4] = [
+    "Customer acceptance",
+    "Customer signature",
+    "Date",
+    "Printed name",
+];
+
+fn has_signature_place(pdf: &[u8]) -> bool {
+    let text = all_text(pdf);
+    SIGNATURE_WORDS
+        .iter()
+        .all(|word| text.iter().any(|t| t == word))
+}
+
+#[test]
+fn only_a_quote_that_can_still_be_accepted_has_a_place_to_sign() {
+    let mut quote = sample(Province::Saskatchewan);
+    let made = quote.created_at().date();
+    // pending, on the day it was made and on the last good day
+    assert!(has_signature_place(&quote.to_pdf(made)));
+    assert!(has_signature_place(&quote.to_pdf(quote.expires_on())));
+    // the sentence says what signing means, with the price date
+    let text = all_text(&quote.to_pdf(made));
+    let promise = text
+        .iter()
+        .find(|t| t.starts_with("By signing below"))
+        .unwrap();
+    assert!(
+        promise.contains(&quote.expires_on().to_string()),
+        "{promise}"
+    );
+    // expired: the prices are no longer good, so nothing to sign
+    let late = quote.expires_on() + chrono::Days::new(1);
+    assert!(!has_signature_place(&quote.to_pdf(late)));
+    // rejected and accepted quotes have been decided
+    let mut rejected = sample(Province::Saskatchewan);
+    rejected.reject("too dear").unwrap();
+    assert!(!has_signature_place(&rejected.to_pdf(made)));
+    quote.accept(made).unwrap();
+    assert!(!has_signature_place(&quote.to_pdf(made)));
+    // a quick quote with no customer yet is still pending, so it can be signed on paper
+    assert!(has_signature_place(&bare().to_pdf(made)));
+}
+
+#[test]
+fn the_signature_block_is_never_split_over_two_pages_whatever_the_number_of_lines() {
+    for lines in 0..80 {
+        let mut quote = sample(Province::Alberta);
+        for n in 0..lines {
+            quote.add_item(part(&format!("Bolt {n}"))).unwrap();
+        }
+        let pdf = quote.to_pdf(quote.created_at().date());
+        let pages = streams(&pdf);
+        let holders: Vec<usize> = pages
+            .iter()
+            .enumerate()
+            .filter(|(_, page)| shown(page).iter().any(|t| t == "Customer acceptance"))
+            .map(|(index, _)| index)
+            .collect();
+        // exactly one page holds it, and that page holds all of it, after the totals
+        assert_eq!(holders.len(), 1, "{lines} lines");
+        let page = shown(&pages[holders[0]]);
+        for word in SIGNATURE_WORDS {
+            assert!(page.iter().any(|t| t == word), "{lines} lines: {word}");
+        }
+        assert_eq!(holders[0], pages.len() - 1, "{lines} lines");
+        let position = |text: &str| page.iter().position(|t| t == text).unwrap();
+        if page.iter().any(|t| t == "Total") {
+            assert!(
+                position("Total") < position("Customer acceptance"),
+                "{lines} lines"
+            );
+        }
+        assert!(position("Customer acceptance") < position("Printed name"));
+    }
+}
+
+/// The height (y) each shown text sits at, read from the page's own drawing commands.
+fn heights(stream: &str) -> Vec<(f64, String)> {
+    let texts = shown(stream);
+    let ys: Vec<f64> = stream
+        .lines()
+        .filter(|line| line.contains(" Td (") && line.starts_with("BT"))
+        .map(|line| {
+            let before = line.split(" Td (").next().unwrap();
+            before.split_whitespace().last().unwrap().parse().unwrap()
+        })
+        .collect();
+    assert_eq!(ys.len(), texts.len());
+    ys.into_iter().zip(texts).collect()
+}
+
+#[test]
+fn the_signature_block_always_sits_above_the_footer() {
+    // The footer is at 40; nothing else may be below 70 (the bottom margin).
+    for lines in 0..80 {
+        let mut quote = sample(Province::Saskatchewan);
+        for n in 0..lines {
+            quote.add_item(part(&format!("Bolt {n}"))).unwrap();
+        }
+        let pdf = quote.to_pdf(quote.created_at().date());
+        for page in streams(&pdf) {
+            for (y, text) in heights(&page) {
+                let footer = text.starts_with("Quote Q-") || text.starts_with("Page ");
+                assert!(footer || y >= 70.0, "{lines} lines: {text:?} is at {y}");
+            }
+        }
+    }
+}

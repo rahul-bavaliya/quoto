@@ -8,7 +8,7 @@
 // Limits, by design: the standard fonts hold Latin-1 only (English and French letters), so any
 // other character is shown as `?`. Letter paper, one column of lines, any number of pages.
 
-use super::Quote;
+use super::{Quote, QuoteStatus};
 use crate::money::format_money;
 use chrono::NaiveDate;
 
@@ -58,6 +58,9 @@ const QUANTITY_RIGHT: f64 = 372.0;
 const UNIT_RIGHT: f64 = 452.0;
 const TOTAL_RIGHT: f64 = RIGHT;
 
+const SIGNATURE_RIGHT: f64 = 300.0; // the signature and name lines end here
+const DATE_LEFT: f64 = 340.0; // the date line starts here
+const SIGNATURE_HEIGHT: f64 = 150.0; // the whole signature block, so it is never split
 const BODY: f64 = 9.0;
 const LEADING: f64 = 12.0; // the height of one line of body text
 
@@ -250,6 +253,7 @@ impl Quote {
         self.draw_parties(&mut doc);
         self.draw_lines(&mut doc);
         self.draw_totals(&mut doc);
+        self.draw_signature(&mut doc, today);
         assemble(&doc.pages, &self.number.to_string())
     }
 
@@ -427,6 +431,52 @@ impl Quote {
             doc.text(LEFT, y, &part, Face::Regular, 8.0);
             doc.y -= LEADING;
         }
+    }
+}
+
+impl Quote {
+    /// The place for the customer to accept the quote on paper: a signature line, a date line and
+    /// a printed name. Only a quote that can still be accepted gets one (pending and not
+    /// expired); an accepted, rejected or expired quote has nothing left to sign. The whole block
+    /// stays together on one page.
+    fn draw_signature(&self, doc: &mut Document, today: NaiveDate) {
+        if !matches!(self.status, QuoteStatus::Pending) || self.is_expired(today) {
+            return;
+        }
+        let note = format!(
+            "By signing below, the customer accepts this quote and agrees to the prices above, \
+             which are good until {}.",
+            self.expires_on
+        );
+        let lines = wrap(&note, Face::Regular, BODY, RIGHT - LEFT);
+        doc.room_for(SIGNATURE_HEIGHT + LEADING * lines.len() as f64);
+        doc.y -= 16.0;
+        let y = doc.y;
+        doc.text(LEFT, y, "Customer acceptance", Face::Bold, 10.0);
+        doc.y -= LEADING + 4.0;
+        for part in lines {
+            let y = doc.y;
+            doc.text(LEFT, y, &part, Face::Regular, BODY);
+            doc.y -= LEADING;
+        }
+        // Room to sign above the line, then the labels under the lines.
+        doc.y -= 40.0;
+        let line_y = doc.y;
+        doc.line(LEFT, SIGNATURE_RIGHT, line_y, 0.5);
+        doc.line(DATE_LEFT, RIGHT, line_y, 0.5);
+        doc.text(
+            LEFT,
+            line_y - 11.0,
+            "Customer signature",
+            Face::Regular,
+            8.0,
+        );
+        doc.text(DATE_LEFT, line_y - 11.0, "Date", Face::Regular, 8.0);
+        doc.y -= 44.0;
+        let name_y = doc.y;
+        doc.line(LEFT, SIGNATURE_RIGHT, name_y, 0.5);
+        doc.text(LEFT, name_y - 11.0, "Printed name", Face::Regular, 8.0);
+        doc.y -= 24.0;
     }
 }
 
