@@ -103,6 +103,20 @@ impl Api {
         )
     }
 
+    /// A call whose answer is not JSON (a file): the status, the headers and the raw bytes.
+    pub async fn raw(&self, uri: &str) -> (StatusCode, axum::http::HeaderMap, Vec<u8>) {
+        let request = Request::builder()
+            .method("GET")
+            .uri(uri)
+            .header(header::AUTHORIZATION, format!("Bearer {KEY}"))
+            .body(Body::empty())
+            .unwrap();
+        let response = self.app.clone().oneshot(request).await.unwrap();
+        let (parts, body) = response.into_parts();
+        let bytes = to_bytes(body, 1 << 22).await.unwrap();
+        (parts.status, parts.headers, bytes.to_vec())
+    }
+
     /// Creates a branch and returns its id.
     pub async fn create_branch(&self, number: &str) -> String {
         let (status, body) = self

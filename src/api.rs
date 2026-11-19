@@ -82,6 +82,7 @@ pub fn router(db: DatabaseConnection, key: Secret) -> Router {
         .route("/equipment/{id}/owner", patch(equipment::change_owner))
         .route("/quotes", get(quotes::list).post(quotes::create))
         .route("/quotes/{id}", get(quotes::read).patch(quotes::change))
+        .route("/quotes/{id}/pdf", get(quotes::print))
         .route("/quotes/{id}/lines", post(quotes::add_line))
         .route("/quotes/{id}/customer", patch(quotes::add_customer))
         .route("/quotes/{id}/equipment", patch(quotes::add_equipment))
