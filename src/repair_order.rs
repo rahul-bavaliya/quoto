@@ -18,10 +18,12 @@ use chrono::{NaiveDate, NaiveDateTime};
 use tracing::debug;
 use uuid::Uuid;
 
+mod notes;
 mod number;
 mod status;
 mod table;
 
+pub use notes::MAX_NOTE_CHARS;
 pub use number::RepairOrderNumber;
 pub use status::RepairOrderStatus;
 pub use table::{
@@ -46,6 +48,12 @@ pub struct RepairOrder {
     meter_type: MeterType,
     started_at: Option<NaiveDateTime>,
     closed_at: Option<NaiveDateTime>,
+    /// What the customer says is wrong. Optional; the technician's or writer's own words.
+    complaint: Option<String>,
+    /// What the technician found to be the cause. Optional.
+    cause: Option<String>,
+    /// What was done to put it right. Optional.
+    correction: Option<String>,
     /// The accepted quote this was written up from: its customer, machine, lines and totals.
     quote: Quote,
 }
@@ -62,6 +70,9 @@ pub(crate) struct SavedRepairOrder {
     pub(crate) meter_type: MeterType,
     pub(crate) started_at: Option<NaiveDateTime>,
     pub(crate) closed_at: Option<NaiveDateTime>,
+    pub(crate) complaint: Option<String>,
+    pub(crate) cause: Option<String>,
+    pub(crate) correction: Option<String>,
     pub(crate) quote: Quote,
 }
 
@@ -80,6 +91,9 @@ impl RepairOrder {
             meter_type: saved.meter_type,
             started_at: saved.started_at,
             closed_at: saved.closed_at,
+            complaint: saved.complaint,
+            cause: saved.cause,
+            correction: saved.correction,
             quote: saved.quote,
         }
     }
@@ -126,6 +140,9 @@ impl RepairOrder {
             meter_type,
             started_at: None,
             closed_at: None,
+            complaint: None,
+            cause: None,
+            correction: None,
             quote,
         })
     }
@@ -223,6 +240,41 @@ impl RepairOrder {
             return Err(QuoteError::DueDateBeforeOpened);
         }
         self.due_date = date;
+        Ok(())
+    }
+
+    pub fn complaint(&self) -> Option<&str> {
+        self.complaint.as_deref()
+    }
+
+    pub fn cause(&self) -> Option<&str> {
+        self.cause.as_deref()
+    }
+
+    pub fn correction(&self) -> Option<&str> {
+        self.correction.as_deref()
+    }
+
+    /// Writes (or clears, with `None` or blank text) what the customer **complained** about.
+    /// Optional and free text; see `notes::clean_note` for the rules. Only an open or
+    /// in-progress repair order can change. The words are somebody's own: never logged.
+    pub fn set_complaint(&mut self, text: Option<&str>) -> QuoteResult<()> {
+        self.ensure_not_closed()?;
+        self.complaint = notes::clean_note("complaint", text)?;
+        Ok(())
+    }
+
+    /// Writes (or clears) the **cause** the technician found. Same rules as the complaint.
+    pub fn set_cause(&mut self, text: Option<&str>) -> QuoteResult<()> {
+        self.ensure_not_closed()?;
+        self.cause = notes::clean_note("cause", text)?;
+        Ok(())
+    }
+
+    /// Writes (or clears) the **correction**: what was done to fix it. Same rules as the complaint.
+    pub fn set_correction(&mut self, text: Option<&str>) -> QuoteResult<()> {
+        self.ensure_not_closed()?;
+        self.correction = notes::clean_note("correction", text)?;
         Ok(())
     }
 

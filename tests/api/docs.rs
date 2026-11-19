@@ -225,7 +225,7 @@ async fn each_call_shows_the_body_it_really_takes_and_no_two_bodies_share_a_name
     );
     assert_eq!(
         body_properties(&spec, "/repair-orders/{id}", "patch"),
-        ["due_date"]
+        ["cause", "complaint", "correction", "due_date"]
     );
     assert_eq!(
         body_properties(&spec, "/repair-orders/{id}/cancel", "post"),

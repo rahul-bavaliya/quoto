@@ -51,9 +51,9 @@ pub use quote::{
     create_quote, get_quote, list_quotes, next_quote_number, save_quote,
 };
 pub use repair_order::{
-    NewRepairOrder, RepairOrder, RepairOrderFilter, RepairOrderNumber, RepairOrderStatus,
-    create_repair_order, get_repair_order, list_repair_orders, next_repair_order_number,
-    save_repair_order,
+    MAX_NOTE_CHARS, NewRepairOrder, RepairOrder, RepairOrderFilter, RepairOrderNumber,
+    RepairOrderStatus, create_repair_order, get_repair_order, list_repair_orders,
+    next_repair_order_number, save_repair_order,
 };
 pub use secret::Secret;
 pub use status::Status;

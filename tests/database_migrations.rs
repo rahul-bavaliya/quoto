@@ -161,7 +161,7 @@ async fn running_the_migrations_again_changes_nothing() {
     place.finish().await;
 
     assert_eq!(first, second);
-    assert_eq!(remembered, 4); // the four steps so far, each remembered once
+    assert_eq!(remembered, 5); // the five steps so far, each remembered once
 }
 
 #[tokio::test]

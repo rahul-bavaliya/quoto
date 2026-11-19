@@ -166,6 +166,11 @@ fn the_repair_order_errors_have_the_right_kind() {
         QuoteError::MeterReadingRequired,
         QuoteError::DueDateBeforeOpened,
         QuoteError::CancellationReasonTooLong { max: 500 },
+        QuoteError::RepairOrderTextTooLong {
+            field: "cause",
+            max: 4000,
+        },
+        QuoteError::RepairOrderTextInvalid { field: "cause" },
         QuoteError::InvalidRepairOrderNumber { input: "x".into() },
     ] {
         assert_eq!(error.kind(), ErrorKind::InvalidInput, "{error:?}");
@@ -351,6 +356,12 @@ fn every_error_has_its_own_code() {
         QuoteError::RepairOrderClosed.code(),
         QuoteError::DueDateBeforeOpened.code(),
         QuoteError::CancellationReasonTooLong { max: 500 }.code(),
+        QuoteError::RepairOrderTextTooLong {
+            field: "cause",
+            max: 4000,
+        }
+        .code(),
+        QuoteError::RepairOrderTextInvalid { field: "cause" }.code(),
         QuoteError::RepairOrderChangedMeanwhile.code(),
         QuoteError::StoredRepairOrderDamaged.code(),
         QuoteError::RepairOrderNumbersExhausted { year: 2026 }.code(),

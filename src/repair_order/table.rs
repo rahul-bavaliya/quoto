@@ -75,6 +75,13 @@ mod row {
         pub meter_type: String,
         pub started_at: Option<DateTime>,
         pub closed_at: Option<DateTime>,
+        /// Free text, written by people, never logged. Each is empty or clean (see `notes.rs`).
+        #[sea_orm(column_type = "Text")]
+        pub complaint: Option<String>,
+        #[sea_orm(column_type = "Text")]
+        pub cause: Option<String>,
+        #[sea_orm(column_type = "Text")]
+        pub correction: Option<String>,
         #[sea_orm(default_expr = "Expr::current_timestamp()")]
         pub updated_at: DateTimeUtc,
         /// 0 when made; +1 with every saved change (see `save_repair_order`).
@@ -282,8 +289,8 @@ pub async fn list_repair_orders(
         .collect()
 }
 
-/// **Update** a saved repair order with what changed on it: its status, its due date and the
-/// times that go with a status. Nothing else about it can change.
+/// **Update** a saved repair order with what changed on it: its status, its due date, the
+/// times that go with a status and its three paragraphs (complaint, cause, correction). Nothing else about it can change.
 ///
 /// **Two people at once:** a save is accepted only if the repair order was read at the latest
 /// version; otherwise nothing is saved (`RepairOrderChangedMeanwhile`) and the caller reads it
@@ -313,6 +320,9 @@ where
     update.cancellation_reason = Set(cancellation_reason(order.status()));
     update.started_at = Set(order.started_at());
     update.closed_at = Set(order.closed_at());
+    update.complaint = Set(order.complaint().map(str::to_string));
+    update.cause = Set(order.cause().map(str::to_string));
+    update.correction = Set(order.correction().map(str::to_string));
     update.updated_at = Set(chrono::Utc::now());
     update.update(&tx).await.map_err(database_error)?;
 
@@ -362,7 +372,15 @@ fn order_from_row(row: row::Model, quote: crate::quote::Quote) -> QuoteResult<Re
         && quote.branch().id() == Some(row.branch_id)
         && quote.customer().map(|customer| customer.id()) == Some(Some(row.customer_id))
         && quote.equipment().map(|machine| machine.id()) == Some(Some(row.equipment_id));
-    if !times_fit || !same_quote || !row.meter_reading.is_finite() || row.meter_reading < 0.0 {
+    let notes_clean = super::notes::is_stored_clean("complaint", &row.complaint)
+        && super::notes::is_stored_clean("cause", &row.cause)
+        && super::notes::is_stored_clean("correction", &row.correction);
+    if !times_fit
+        || !same_quote
+        || !notes_clean
+        || !row.meter_reading.is_finite()
+        || row.meter_reading < 0.0
+    {
         return Err(damaged());
     }
     Ok(RepairOrder::restore(SavedRepairOrder {
@@ -376,6 +394,9 @@ fn order_from_row(row: row::Model, quote: crate::quote::Quote) -> QuoteResult<Re
         meter_type: MeterType::from_code(&row.meter_type).map_err(|_| damaged())?,
         started_at: row.started_at,
         closed_at: row.closed_at,
+        complaint: row.complaint,
+        cause: row.cause,
+        correction: row.correction,
         quote,
     }))
 }

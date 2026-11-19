@@ -131,6 +131,13 @@ async fn a_repair_order_change_or_cancel_with_a_wrong_body_is_refused() {
         r#"{"due_date":"tomorrow"}"#,
         r#"{"due_date":"2030-02-30"}"#,
         r#"{"due_date":"2030-01-01","status":"completed"}"#,
+        // the paragraphs are text or null, nothing else
+        r#"{"complaint":5}"#,
+        r#"{"cause":true}"#,
+        r#"{"correction":["a"]}"#,
+        r#"{"complaint":{"text":"a"}}"#,
+        r#"{"complaint":"ok","note":"unknown field"}"#,
+        r#"{"due_date":"2030-01-01","complaint":5}"#,
         r#"{"status":"completed"}"#,
         r#"{"started_at":"2030-01-01T00:00:00"}"#,
     ] {
