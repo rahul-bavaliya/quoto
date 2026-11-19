@@ -641,6 +641,12 @@ async fn repair_order_calls_log_nothing_about_the_order() {
     api.call(
         "PATCH",
         &format!("/repair-orders/{order_id}"),
+        Some(json!({"complaint": "Zed secret complaint", "cause": "Zed secret cause", "correction": "Zed secret correction"})),
+    )
+    .await;
+    api.call(
+        "PATCH",
+        &format!("/repair-orders/{order_id}"),
         Some(json!({"due_date": "2999-05-06"})),
     )
     .await;
@@ -663,6 +669,9 @@ async fn repair_order_calls_log_nothing_about_the_order() {
         set.customer.as_str(),
         set.machine.as_str(),
         "Zed secret reason",
+        "secret complaint",
+        "secret cause",
+        "secret correction",
         "8888.5",
         "7777.25",
         "2999-05-06",
@@ -679,6 +688,124 @@ async fn repair_order_calls_log_nothing_about_the_order() {
         .lines()
         .filter(|l| l.contains("api_request") && l.contains("repair-order"))
         .count();
-    assert_eq!(repair_order_calls, 6, "{text}"); // one line per call
+    assert_eq!(repair_order_calls, 7, "{text}"); // one line per call
+    api.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "needs the database (docker compose up)"]
+async fn the_complaint_cause_and_correction_are_written_changed_cleared_and_frozen_at_the_end() {
+    let api = setup().await;
+    let set = api.set_with("13", Some(10.0)).await;
+    let order = api.order(&set, "13").await;
+    let base = format!("/repair-orders/{}", id(&order));
+    assert_eq!(
+        (&order["complaint"], &order["cause"], &order["correction"]),
+        (&Value::Null, &Value::Null, &Value::Null)
+    );
+
+    // any of them, alone or together; trimmed; new lines kept
+    let (status, headers, saved) = api
+        .call_with(
+            "PATCH",
+            &base,
+            Some(json!({"complaint": "  Slow when warm.\nAlso noisy.  ", "cause": "Worn seal"})),
+            &[],
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    assert_eq!(headers["etag"], "\"1\"");
+    assert_eq!(saved["complaint"], "Slow when warm.\nAlso noisy.");
+    assert_eq!(saved["cause"], "Worn seal");
+    assert_eq!(saved["correction"], Value::Null);
+
+    // the due date and a paragraph in one call
+    let (status, saved) = api
+        .call(
+            "PATCH",
+            &base,
+            Some(json!({"correction": "Replaced the seal.", "due_date": "2999-01-02"})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    assert_eq!(
+        (saved["correction"].as_str(), saved["due_date"].as_str()),
+        (Some("Replaced the seal."), Some("2999-01-02"))
+    );
+    assert_eq!(saved["cause"], "Worn seal"); // what was left out stays
+
+    // too long, or a control character: nothing at all changes, not even the part that was fine
+    for (bad, code) in [
+        (
+            json!({"cause": "x".repeat(4001)}),
+            "REPAIR_ORDER_TEXT_TOO_LONG",
+        ),
+        (
+            json!({"complaint": "bell\u{7}"}),
+            "REPAIR_ORDER_TEXT_INVALID",
+        ),
+    ] {
+        let mut body = bad.clone();
+        body["correction"] = json!("this part is fine but must not be saved");
+        assert_eq!(
+            api.failure("PATCH", &base, Some(body)).await,
+            (400, code.to_string())
+        );
+    }
+    let (_, _, same) = api.call_with("GET", &base, None, &[]).await;
+    assert_eq!(
+        (same["version"].as_i64(), same["correction"].as_str()),
+        (Some(2), Some("Replaced the seal."))
+    );
+
+    // blank and null clear
+    let (_, cleared) = api
+        .call(
+            "PATCH",
+            &base,
+            Some(json!({"complaint": "   ", "cause": null})),
+        )
+        .await;
+    assert_eq!(
+        (&cleared["complaint"], &cleared["cause"]),
+        (&Value::Null, &Value::Null)
+    );
+    assert_eq!(cleared["correction"], "Replaced the seal.");
+
+    // an old screen is refused with If-Match, as always
+    let (status, _, answer) = api
+        .call_with(
+            "PATCH",
+            &base,
+            Some(json!({"cause": "late"})),
+            &[("if-match", "0")],
+        )
+        .await;
+    assert_eq!(
+        (status, answer["code"].as_str()),
+        (StatusCode::CONFLICT, Some("REPAIR_ORDER_CHANGED_MEANWHILE"))
+    );
+
+    // the list carries them; and once completed (or cancelled) they can't change
+    let (_, list) = api
+        .call(
+            "GET",
+            &format!("/repair-orders?customer_id={}", set.customer),
+            None,
+        )
+        .await;
+    assert_eq!(list[0]["correction"], "Replaced the seal.");
+    api.call("POST", &format!("{base}/start"), None).await;
+    api.call("POST", &format!("{base}/complete"), None).await;
+    assert_eq!(
+        api.failure("PATCH", &base, Some(json!({"cause": "after the end"})))
+            .await,
+        (409, "REPAIR_ORDER_CLOSED".to_string())
+    );
+    let (_, end) = api.call("GET", &base, None).await;
+    assert_eq!(
+        (&end["cause"], end["correction"].as_str()),
+        (&Value::Null, Some("Replaced the seal."))
+    );
     api.finish().await;
 }

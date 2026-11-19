@@ -3,7 +3,8 @@
 //   POST  /quotes/{id}/repair-order   {"meter_reading": 1250.5}   open a repair order from an accepted quote
 //   GET   /repair-orders?customer_id=&branch_id=&equipment_id=&status=&limit=&offset=   a page, newest first
 //   GET   /repair-orders/{id}         read one (with the quote's lines and totals, its version, and an ETag)
-//   PATCH /repair-orders/{id}         {"due_date": "2026-12-01"}  change (or clear, with null) the due date
+//   PATCH /repair-orders/{id}         the due date and the three paragraphs: {"due_date": "2026-12-01",
+//                                     "complaint": "...", "cause": "...", "correction": "..."} (any of them; null clears)
 //   POST  /repair-orders/{id}/start     the work begins
 //   POST  /repair-orders/{id}/complete  the work is done
 //   POST  /repair-orders/{id}/cancel    {"reason": "..."}  the work will not be done, and why
@@ -11,10 +12,12 @@
 // A repair order is made only from an accepted quote, and a quote has at most one. The work, the
 // prices and the people are the quote's: they are read from it, never copied, so they can't
 // disagree. The order adds what the quote does not know: its own number, status, due date, when
-// it started and ended, and the meter reading on the day the machine came in.
+// it started and ended, and the meter reading on the day the machine came in. It also carries
+// three optional paragraphs written by people: the complaint, the cause and the correction.
 //
 // It has a `version` and an `ETag`, and a call that changes it may send `If-Match`, exactly like
-// a quote (`409 REPAIR_ORDER_CHANGED_MEANWHILE`). Nothing from a repair order reaches a log.
+// a quote (`409 REPAIR_ORDER_CHANGED_MEANWHILE`). Nothing from a repair order reaches a log, and the
+// paragraphs least of all.
 
 use super::AppState;
 use super::branches::BranchView;
@@ -58,14 +61,21 @@ pub(super) struct CancelRepairOrderInput {
     reason: String,
 }
 
-/// The body of the PATCH: the due date (`YYYY-MM-DD`), or `null` to clear it.
+/// The body of the PATCH: any of these (at least one); what is left out stays; `null` clears.
 #[derive(ToSchema)]
-#[schema(example = json!({"due_date": "2026-12-01"}))]
+#[schema(example = json!({"due_date": "2026-12-01", "complaint": "Hydraulics are slow when warm.", "cause": "Worn pump seal.", "correction": "Replaced the seal and refilled the oil."}))]
 #[allow(dead_code)]
 pub(super) struct RepairOrderChanges {
-    /// Not before the day the order was opened. Can't be changed once the order is completed or cancelled.
+    /// `YYYY-MM-DD`. Not before the day the order was opened.
     #[schema(value_type = Option<String>, format = Date)]
     due_date: Option<NaiveDate>,
+    /// What the customer says is wrong. Free text, at most 4000 characters (new lines are fine);
+    /// blank or `null` clears it. Never logged.
+    complaint: Option<String>,
+    /// What the technician found to be the cause. Same rules as the complaint.
+    cause: Option<String>,
+    /// What was done to put it right. Same rules as the complaint.
+    correction: Option<String>,
 }
 
 /// What the meter said when the machine came in.
@@ -96,6 +106,12 @@ pub(super) struct RepairOrderView {
     started_at: Option<String>,
     /// When it was completed or cancelled.
     closed_at: Option<String>,
+    /// What the customer says is wrong. Optional free text.
+    complaint: Option<String>,
+    /// What the technician found to be the cause. Optional free text.
+    cause: Option<String>,
+    /// What was done to put it right. Optional free text.
+    correction: Option<String>,
     meter: RepairOrderMeterView,
     /// The accepted quote this order came from.
     quote_id: String,
@@ -130,6 +146,9 @@ impl RepairOrderView {
             due_date: order.due_date().map(|date| date.to_string()),
             started_at: order.started_at().map(text_time),
             closed_at: order.closed_at().map(text_time),
+            complaint: order.complaint().map(str::to_string),
+            cause: order.cause().map(str::to_string),
+            correction: order.correction().map(str::to_string),
             meter: RepairOrderMeterView {
                 reading: order.meter_reading(),
                 meter_type: order.meter_type().code(),
@@ -144,6 +163,9 @@ impl RepairOrderView {
         }
     }
 }
+
+/// The only fields a PATCH may carry.
+const CHANGEABLE: [&str; 4] = ["due_date", "complaint", "cause", "correction"];
 
 /// A repair order as a caller gets it: the JSON, and its version as the `ETag` header.
 fn view(order: &RepairOrder) -> ([(HeaderName, String); 1], Json<RepairOrderView>) {
@@ -275,13 +297,16 @@ pub(super) async fn read(
     Ok(view(&get_repair_order(&state.db, order_id(&id)?).await?))
 }
 
-/// Change the due date: `{"due_date": "YYYY-MM-DD"}`, or `null` to clear it. It can't be before
-/// the day the order was opened, and a completed or cancelled order can't change.
+/// Change the due date and/or write the three paragraphs. Send any of `due_date`, `complaint`,
+/// `cause` and `correction` (at least one); what is left out stays, and `null` clears it. The
+/// paragraphs are optional free text (at most 4000 characters each, spaces around them are
+/// dropped, blank clears). Everything sent is checked first: if one part is refused, nothing
+/// changes. A completed or cancelled order can't change.
 #[utoipa::path(patch, path = "/repair-orders/{id}", operation_id = "change_repair_order", tag = "repair orders", request_body = RepairOrderChanges,
     params(("id" = String, Path, description = "The repair order's id."), ("If-Match" = Option<String>, Header, description = "The version you read (the ETag). If the order has changed since, nothing is done and the answer is 409 REPAIR_ORDER_CHANGED_MEANWHILE. Leave out to skip the check."),),
     responses(
         (status = 200, description = "The repair order as saved.", body = RepairOrderView, headers(("ETag" = String, description = "The order's version, like \"3\". Send it back as If-Match to change the order only if it has not moved on."))),
-        (status = 400, description = "The body is wrong, the If-Match header is not a version, or the date is before the day the order was opened.", body = ErrorBody),
+        (status = 400, description = "The body is empty or wrong, the If-Match header is not a version, the date is before the day the order was opened, or a paragraph is too long or holds control characters.", body = ErrorBody),
         (status = 404, description = "No repair order has that id.", body = ErrorBody),
         (status = 409, description = "The order is completed or cancelled, or someone changed it meanwhile.", body = ErrorBody),
         (status = 401, description = "No key, or the wrong one.", body = ErrorBody),
@@ -296,16 +321,38 @@ pub(super) async fn change(
     let id = order_id(&id)?;
     let expected = if_match(&headers)?;
     let fields = body(input)?;
-    let date = match (fields.len(), fields.get("due_date")) {
-        (1, Some(Value::Null)) => None,
-        (1, Some(Value::String(text))) => {
-            Some(text.parse::<NaiveDate>().map_err(|_| ApiError::BadBody)?)
-        }
-        _ => return Err(ApiError::BadBody),
+    // Only these four may be sent, each a string or null, and at least one. Checked before the
+    // database is touched.
+    if fields.is_empty()
+        || fields.iter().any(|(key, value)| {
+            !CHANGEABLE.contains(&key.as_str()) || !(value.is_string() || value.is_null())
+        })
+    {
+        return Err(ApiError::BadBody);
+    }
+    let date = match fields.get("due_date") {
+        None => None,
+        Some(Value::Null) => Some(None),
+        Some(Value::String(text)) => Some(Some(
+            text.parse::<NaiveDate>().map_err(|_| ApiError::BadBody)?,
+        )),
+        Some(_) => return Err(ApiError::BadBody),
     };
+    let paragraph = |key: &str| fields.get(key).map(Value::as_str);
     let mut order = get_repair_order(&state.db, id).await?;
     check_version(expected, &order)?;
-    order.set_due_date(date)?;
+    if let Some(date) = date {
+        order.set_due_date(date)?;
+    }
+    if let Some(text) = paragraph("complaint") {
+        order.set_complaint(text)?;
+    }
+    if let Some(text) = paragraph("cause") {
+        order.set_cause(text)?;
+    }
+    if let Some(text) = paragraph("correction") {
+        order.set_correction(text)?;
+    }
     Ok(view(&save_repair_order(&state.db, &order).await?))
 }
 

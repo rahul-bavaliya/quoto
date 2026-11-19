@@ -430,3 +430,138 @@ fn the_error_kinds_tell_callers_who_can_fix_what() {
         "UNKNOWN_REPAIR_ORDER"
     );
 }
+
+// ===== complaint, cause and correction (Day 61) =====
+
+#[test]
+fn a_new_repair_order_has_no_paragraphs() {
+    let order = open_order();
+    assert_eq!(
+        (order.complaint(), order.cause(), order.correction()),
+        (None, None, None)
+    );
+}
+
+#[test]
+fn the_three_paragraphs_are_optional_and_kept_as_written() {
+    let mut order = open_order();
+    order
+        .set_complaint(Some("Hydraulics are slow\nwhen warm."))
+        .unwrap();
+    order.set_cause(Some("Worn pump seal.")).unwrap();
+    assert_eq!(order.complaint(), Some("Hydraulics are slow\nwhen warm."));
+    assert_eq!(order.cause(), Some("Worn pump seal."));
+    assert_eq!(order.correction(), None); // never written: still empty
+    order
+        .set_correction(Some("Replaced the seal.\tOil refilled."))
+        .unwrap();
+    assert_eq!(
+        order.correction(),
+        Some("Replaced the seal.\tOil refilled.")
+    );
+    // they are written while the work is going on, too
+    order.start(at(day(2026, 11, 17), 9)).unwrap();
+    order
+        .set_cause(Some("Worn pump seal and a cracked hose."))
+        .unwrap();
+    assert_eq!(order.cause(), Some("Worn pump seal and a cracked hose."));
+    // and they don't touch the flow
+    assert_eq!(order.status().label(), "in_progress");
+}
+
+#[test]
+fn spaces_are_trimmed_windows_line_ends_are_unified_and_blank_or_none_clears() {
+    let mut order = open_order();
+    order
+        .set_complaint(Some("  line one\r\nline two  \n\n"))
+        .unwrap();
+    assert_eq!(order.complaint(), Some("line one\nline two"));
+    for empty in [None, Some(""), Some("   "), Some("\n\t \r\n")] {
+        order.set_complaint(Some("something")).unwrap();
+        order.set_complaint(empty).unwrap();
+        assert_eq!(order.complaint(), None, "{empty:?}");
+    }
+}
+
+#[test]
+fn a_paragraph_is_at_most_4000_characters_counted_as_characters() {
+    let mut order = open_order();
+    let longest = "é".repeat(MAX_NOTE_CHARS); // 8000 bytes, 4000 characters
+    order.set_cause(Some(&longest)).unwrap();
+    assert_eq!(
+        order.cause().map(|c| c.chars().count()),
+        Some(MAX_NOTE_CHARS)
+    );
+    let one_more = "é".repeat(MAX_NOTE_CHARS + 1);
+    for (name, error) in [
+        (
+            "complaint",
+            order.set_complaint(Some(&one_more)).unwrap_err(),
+        ),
+        ("cause", order.set_cause(Some(&one_more)).unwrap_err()),
+        (
+            "correction",
+            order.set_correction(Some(&one_more)).unwrap_err(),
+        ),
+    ] {
+        assert_eq!(error.code(), "REPAIR_ORDER_TEXT_TOO_LONG");
+        assert_eq!(error.kind(), ErrorKind::InvalidInput);
+        assert!(error.to_string().contains(name), "{error}"); // says which one, in Quoto's own word
+    }
+    // the refused ones changed nothing
+    assert_eq!((order.complaint(), order.correction()), (None, None));
+    assert_eq!(MAX_NOTE_CHARS, 4000);
+}
+
+#[test]
+fn control_characters_are_refused_but_new_lines_and_tabs_are_fine() {
+    let mut order = open_order();
+    for bad in [
+        "bell\u{7}",
+        "nul\u{0}",
+        "escape\u{1b}[0m",
+        "form\u{c}feed",
+        "line\u{85}break",
+    ] {
+        let error = order.set_correction(Some(bad)).unwrap_err();
+        assert_eq!(error.code(), "REPAIR_ORDER_TEXT_INVALID", "{bad:?}");
+        assert_eq!(error.kind(), ErrorKind::InvalidInput);
+        assert!(
+            !error.to_string().contains("bell"),
+            "never repeats the text"
+        );
+    }
+    assert_eq!(order.correction(), None);
+    order.set_correction(Some("a\nb\tc")).unwrap();
+}
+
+#[test]
+fn a_completed_or_cancelled_repair_order_can_no_longer_be_written_on() {
+    let mut done = open_order();
+    done.set_cause(Some("kept")).unwrap();
+    done.start(at(day(2026, 11, 17), 9)).unwrap();
+    done.complete(at(day(2026, 11, 17), 15)).unwrap();
+    let mut cancelled = open_order();
+    cancelled
+        .cancel("not needed", at(day(2026, 11, 17), 9))
+        .unwrap();
+    for order in [&mut done, &mut cancelled] {
+        for error in [
+            order.set_complaint(Some("late")).unwrap_err(),
+            order.set_cause(None).unwrap_err(),
+            order.set_correction(Some("late")).unwrap_err(),
+        ] {
+            assert_eq!(error.code(), "REPAIR_ORDER_CLOSED");
+        }
+    }
+    assert_eq!(done.cause(), Some("kept")); // untouched, even by `None`
+    assert_eq!(cancelled.complaint(), None);
+}
+
+#[test]
+fn a_refused_paragraph_never_repeats_what_was_written() {
+    let mut order = open_order();
+    let marker = format!("ZZmarker9137{}", "x".repeat(MAX_NOTE_CHARS));
+    let message = order.set_complaint(Some(&marker)).unwrap_err().to_string();
+    assert!(!message.contains("ZZmarker"), "{message}");
+}

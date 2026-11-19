@@ -243,6 +243,13 @@ pub enum QuoteError {
     #[error("The cancellation reason can be at most {max} characters.")]
     CancellationReasonTooLong { max: usize },
 
+    /// `field` is one of Quoto's own words ("complaint", "cause", "correction"), never caller text.
+    #[error("The {field} can be at most {max} characters.")]
+    RepairOrderTextTooLong { field: &'static str, max: usize },
+
+    #[error("The {field} can't hold control characters. New lines and tabs are fine.")]
+    RepairOrderTextInvalid { field: &'static str },
+
     #[error(
         "This repair order was changed by someone else since you opened it. Open it again and redo your change."
     )]
@@ -408,6 +415,8 @@ impl QuoteError {
             QuoteError::RepairOrderClosed => "REPAIR_ORDER_CLOSED",
             QuoteError::DueDateBeforeOpened => "DUE_DATE_BEFORE_OPENED",
             QuoteError::CancellationReasonTooLong { .. } => "CANCELLATION_REASON_TOO_LONG",
+            QuoteError::RepairOrderTextTooLong { .. } => "REPAIR_ORDER_TEXT_TOO_LONG",
+            QuoteError::RepairOrderTextInvalid { .. } => "REPAIR_ORDER_TEXT_INVALID",
             QuoteError::RepairOrderChangedMeanwhile => "REPAIR_ORDER_CHANGED_MEANWHILE",
             QuoteError::StoredRepairOrderDamaged => "STORED_REPAIR_ORDER_DAMAGED",
             QuoteError::DuplicateSerialNumber => "DUPLICATE_SERIAL_NUMBER",

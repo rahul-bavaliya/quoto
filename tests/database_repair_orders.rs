@@ -430,6 +430,74 @@ async fn a_repair_order_that_was_never_saved_or_is_unknown_can_not_be_updated() 
     assert!(order.id().is_some());
 }
 
+#[tokio::test]
+#[ignore = "needs the database (docker compose up)"]
+async fn the_three_paragraphs_are_saved_read_back_changed_and_cleared() {
+    let (_turn, db) = setup().await;
+    let tx = work(&db).await;
+    let p = parties(&tx, "R14", Some(10.0)).await;
+    let quote = quote_for(&tx, &p, 2092, true).await;
+    let mut order = create_repair_order(&tx, open_from(&quote, 2092, None))
+        .await
+        .unwrap();
+    let id = order.id().unwrap();
+    assert_eq!(
+        (order.complaint(), order.cause(), order.correction()),
+        (None, None, None)
+    );
+
+    order
+        .set_complaint(Some("  Slow when warm.\r\nAlso noisy.  "))
+        .unwrap();
+    order.set_cause(Some("Worn seal")).unwrap();
+    let saved = save_repair_order(&tx, &order).await.unwrap();
+    assert_eq!(saved.version(), 1);
+    let read = get_repair_order(&tx, id).await.unwrap();
+    for each in [&saved, &read] {
+        assert_eq!(each.complaint(), Some("Slow when warm.\nAlso noisy."));
+        assert_eq!(each.cause(), Some("Worn seal"));
+        assert_eq!(each.correction(), None);
+    }
+    // the longest allowed paragraph, in accents, makes the round trip
+    let mut order = read;
+    let longest = "é".repeat(MAX_NOTE_CHARS);
+    order.set_correction(Some(&longest)).unwrap();
+    let saved = save_repair_order(&tx, &order).await.unwrap();
+    assert_eq!(saved.correction(), Some(longest.as_str()));
+
+    // changing one leaves the others; clearing one empties only that one
+    let mut order = saved;
+    order.set_cause(None).unwrap();
+    let saved = save_repair_order(&tx, &order).await.unwrap();
+    assert_eq!(
+        (
+            saved.complaint().is_some(),
+            saved.cause(),
+            saved.correction().is_some()
+        ),
+        (true, None, true)
+    );
+
+    // it still works through the flow: written on, started, completed, and then it is final
+    let mut order = saved;
+    order.start(later(2092, 8)).unwrap();
+    order.complete(later(2092, 16)).unwrap();
+    let done = save_repair_order(&tx, &order).await.unwrap();
+    assert_eq!(done.complaint(), Some("Slow when warm.\nAlso noisy."));
+    let list = list_repair_orders(
+        &tx,
+        &RepairOrderFilter {
+            customer_id: Some(p.customer),
+            ..Default::default()
+        },
+        10,
+        0,
+    )
+    .await
+    .unwrap();
+    assert_eq!(list[0].complaint(), done.complaint()); // lists carry them too
+}
+
 // ===== lists =====
 
 #[tokio::test]
@@ -601,6 +669,10 @@ async fn a_row_damaged_behind_quotos_back_is_refused_not_shown() {
         "UPDATE repair_orders SET status = 'open', started_at = created_at, closed_at = NULL",
         "UPDATE repair_orders SET status = 'open', started_at = NULL, meter_reading = -5",
         "UPDATE repair_orders SET meter_reading = 5, meter_type = 'parsecs'",
+        "UPDATE repair_orders SET complaint = '   '",
+        "UPDATE repair_orders SET cause = '  untidy  '",
+        "UPDATE repair_orders SET correction = 'bell' || chr(7)",
+        "UPDATE repair_orders SET complaint = repeat('x', 4001)",
         "UPDATE repair_orders SET meter_type = 'hr', number = 'RO-2096-ZZ'",
     ] {
         // only our own row, never anyone else's
@@ -618,7 +690,7 @@ async fn a_row_damaged_behind_quotos_back_is_refused_not_shown() {
         db.execute_unprepared(&format!(
             "UPDATE repair_orders SET status = 'open', cancellation_reason = NULL, \
              started_at = NULL, closed_at = NULL, meter_reading = 10, meter_type = 'hr', \
-             number = 'RO-2096-00000001', customer_id = '{}' WHERE id = '{id}'",
+             complaint = NULL, cause = NULL, correction = NULL, number = 'RO-2096-00000001', customer_id = '{}' WHERE id = '{id}'",
             p.customer
         ))
         .await
@@ -627,7 +699,7 @@ async fn a_row_damaged_behind_quotos_back_is_refused_not_shown() {
     // after all that, the repaired row reads fine again
     let healthy = get_repair_order(&db, id).await.map(|o| o.status().label());
     clean_2096(&db).await;
-    assert_eq!(results, ["STORED_REPAIR_ORDER_DAMAGED"; 9]);
+    assert_eq!(results, ["STORED_REPAIR_ORDER_DAMAGED"; 13]);
     assert_eq!(healthy.unwrap(), "open");
 }
 
