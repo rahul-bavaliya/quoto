@@ -15,8 +15,8 @@ use super::equipment::{
 };
 use super::error::ErrorBody;
 use super::quotes::{
-    self, CustomerInput as QuoteCustomerInput, EquipmentInput as QuoteEquipmentInput, LineInput,
-    LineView, NewQuoteInput, PdfFile, QuoteChanges, QuoteView, RejectInput, TotalsView,
+    self, LineInput, LineView, NewQuoteInput, PdfFile, QuoteChanges, QuoteCustomerInput,
+    QuoteEquipmentInput, QuoteView, RejectInput, TotalsView,
 };
 use super::request::StatusInput;
 use axum::Router;
