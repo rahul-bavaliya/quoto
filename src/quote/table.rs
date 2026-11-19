@@ -314,6 +314,29 @@ pub async fn list_quotes(
         .collect()
 }
 
+/// Reads several quotes by id in two queries (one for the quotes, one for all their lines), for
+/// callers that hold a list of ids (a page of repair orders). An id nobody has is just missing
+/// from the answer.
+pub(crate) async fn quotes_by_ids(
+    db: &impl ConnectionTrait,
+    ids: &[Uuid],
+) -> QuoteResult<HashMap<Uuid, Quote>> {
+    let rows = row::Entity::find()
+        .filter(row::Column::Id.is_in(ids.iter().copied()))
+        .all(db)
+        .await
+        .map_err(database_error)?;
+    let found: Vec<Uuid> = rows.iter().map(|row| row.id).collect();
+    let mut lines = line_rows(db, &found).await?;
+    rows.into_iter()
+        .map(|row| {
+            let id = row.id;
+            let own = lines.remove(&id).unwrap_or_default();
+            quote_from_rows(row, own).map(|quote| (id, quote))
+        })
+        .collect()
+}
+
 /// **Update** a saved quote with what changed on it: its status (accepted, rejected, reopened),
 /// its dates, the customer or machine added to a quick quote, and **new** lines. Lines already
 /// saved are never touched. A customer or machine added now is read from the database and copied

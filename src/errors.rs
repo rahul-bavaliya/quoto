@@ -204,6 +204,55 @@ pub enum QuoteError {
     #[error("This equipment is archived, so it can't be put on a new quote. Restore it first.")]
     EquipmentInactive,
 
+    // ---- Repair orders ----
+    #[error("That is not a valid repair order number (like RO-2026-00000001).")]
+    InvalidRepairOrderNumber { input: String },
+
+    #[error("All the repair order numbers of {year} are used. Ask whoever runs the server.")]
+    RepairOrderNumbersExhausted { year: u16 },
+
+    #[error("There is no repair order with that id.")]
+    UnknownRepairOrder,
+
+    #[error("This repair order is not saved yet, so it can't be updated.")]
+    RepairOrderNotSaved,
+
+    #[error("Only an accepted quote can become a repair order.")]
+    QuoteNotAccepted,
+
+    #[error("This quote already has a repair order.")]
+    RepairOrderExists,
+
+    #[error(
+        "A repair order needs the meter reading when the machine came in. Send it as meter_reading."
+    )]
+    MeterReadingRequired,
+
+    #[error("Only an open repair order can be started.")]
+    RepairOrderNotOpen,
+
+    #[error("Only a repair order that is in progress can be completed.")]
+    RepairOrderNotInProgress,
+
+    #[error("This repair order is completed or cancelled, so it can't be changed.")]
+    RepairOrderClosed,
+
+    #[error("The due date can't be before the day the repair order was opened.")]
+    DueDateBeforeOpened,
+
+    #[error("The cancellation reason can be at most {max} characters.")]
+    CancellationReasonTooLong { max: usize },
+
+    #[error(
+        "This repair order was changed by someone else since you opened it. Open it again and redo your change."
+    )]
+    RepairOrderChangedMeanwhile,
+
+    #[error(
+        "A saved repair order could not be read back. Ask whoever runs the server to check the logs."
+    )]
+    StoredRepairOrderDamaged,
+
     #[error(
         "Equipment with this serial number already exists. Find it in the equipment list by serial number and change its owner instead of entering it again."
     )]
@@ -267,11 +316,20 @@ impl QuoteError {
             | QuoteError::QuoteAlreadySaved
             | QuoteError::QuoteNotSaved
             | QuoteError::TooManyLines { .. }
-            | QuoteError::QuoteChangedMeanwhile => ErrorKind::BusinessRule,
+            | QuoteError::QuoteChangedMeanwhile
+            | QuoteError::RepairOrderNumbersExhausted { .. }
+            | QuoteError::RepairOrderNotSaved
+            | QuoteError::QuoteNotAccepted
+            | QuoteError::RepairOrderExists
+            | QuoteError::RepairOrderNotOpen
+            | QuoteError::RepairOrderNotInProgress
+            | QuoteError::RepairOrderClosed
+            | QuoteError::RepairOrderChangedMeanwhile => ErrorKind::BusinessRule,
             QuoteError::LookupFailed { .. }
             | QuoteError::DatabaseUnavailable
             | QuoteError::DatabaseSetupFailed
             | QuoteError::StoredQuoteDamaged
+            | QuoteError::StoredRepairOrderDamaged
             | QuoteError::ServerStartFailed => ErrorKind::ServiceUnavailable,
             QuoteError::MissingSetting { .. } | QuoteError::InvalidSetting { .. } => {
                 ErrorKind::Configuration
@@ -338,6 +396,20 @@ impl QuoteError {
             QuoteError::QuoteChangedMeanwhile => "QUOTE_CHANGED_MEANWHILE",
             QuoteError::StoredQuoteDamaged => "STORED_QUOTE_DAMAGED",
             QuoteError::EquipmentInactive => "EQUIPMENT_INACTIVE",
+            QuoteError::InvalidRepairOrderNumber { .. } => "INVALID_REPAIR_ORDER_NUMBER",
+            QuoteError::RepairOrderNumbersExhausted { .. } => "REPAIR_ORDER_NUMBERS_EXHAUSTED",
+            QuoteError::UnknownRepairOrder => "UNKNOWN_REPAIR_ORDER",
+            QuoteError::RepairOrderNotSaved => "REPAIR_ORDER_NOT_SAVED",
+            QuoteError::QuoteNotAccepted => "QUOTE_NOT_ACCEPTED",
+            QuoteError::RepairOrderExists => "REPAIR_ORDER_EXISTS",
+            QuoteError::MeterReadingRequired => "METER_READING_REQUIRED",
+            QuoteError::RepairOrderNotOpen => "REPAIR_ORDER_NOT_OPEN",
+            QuoteError::RepairOrderNotInProgress => "REPAIR_ORDER_NOT_IN_PROGRESS",
+            QuoteError::RepairOrderClosed => "REPAIR_ORDER_CLOSED",
+            QuoteError::DueDateBeforeOpened => "DUE_DATE_BEFORE_OPENED",
+            QuoteError::CancellationReasonTooLong { .. } => "CANCELLATION_REASON_TOO_LONG",
+            QuoteError::RepairOrderChangedMeanwhile => "REPAIR_ORDER_CHANGED_MEANWHILE",
+            QuoteError::StoredRepairOrderDamaged => "STORED_REPAIR_ORDER_DAMAGED",
             QuoteError::DuplicateSerialNumber => "DUPLICATE_SERIAL_NUMBER",
             QuoteError::LookupFailed { .. } => "LOOKUP_FAILED",
             QuoteError::DatabaseUnavailable => "DATABASE_UNAVAILABLE",

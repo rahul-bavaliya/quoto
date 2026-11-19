@@ -69,6 +69,8 @@ async fn the_list_describes_exactly_the_calls_and_only_equipment_has_a_delete() 
             "GET /quotes",
             "GET /quotes/{id}",
             "GET /quotes/{id}/pdf",
+            "GET /repair-orders",
+            "GET /repair-orders/{id}",
             "PATCH /branches/{id}",
             "PATCH /branches/{id}/status",
             "PATCH /customers/{id}",
@@ -79,6 +81,7 @@ async fn the_list_describes_exactly_the_calls_and_only_equipment_has_a_delete() 
             "PATCH /quotes/{id}",
             "PATCH /quotes/{id}/customer",
             "PATCH /quotes/{id}/equipment",
+            "PATCH /repair-orders/{id}",
             "POST /branches",
             "POST /customers",
             "POST /equipment",
@@ -87,6 +90,10 @@ async fn the_list_describes_exactly_the_calls_and_only_equipment_has_a_delete() 
             "POST /quotes/{id}/lines",
             "POST /quotes/{id}/reject",
             "POST /quotes/{id}/reopen",
+            "POST /quotes/{id}/repair-order",
+            "POST /repair-orders/{id}/cancel",
+            "POST /repair-orders/{id}/complete",
+            "POST /repair-orders/{id}/start",
             "PUT /branches/{id}",
             "PUT /customers/{id}",
             "PUT /equipment/{id}",
@@ -166,7 +173,10 @@ async fn the_quote_calls_document_the_if_match_header_its_400_and_the_etag() {
             // a call that answers one quote says its version in the ETag header
             for (code, answer) in call["responses"].as_object().unwrap() {
                 let schema = &answer["content"]["application/json"]["schema"]["$ref"];
-                if schema.as_str().is_some_and(|s| s.ends_with("/QuoteView")) {
+                if schema
+                    .as_str()
+                    .is_some_and(|s| s.ends_with("/QuoteView") || s.ends_with("/RepairOrderView"))
+                {
                     assert!(
                         answer["headers"]["ETag"].is_object(),
                         "{method} {path} {code} must document the ETag header"
@@ -207,6 +217,19 @@ async fn each_call_shows_the_body_it_really_takes_and_no_two_bodies_share_a_name
     assert_eq!(
         body_properties(&spec, "/quotes/{id}/equipment", "patch"),
         ["equipment_id"]
+    );
+
+    assert_eq!(
+        body_properties(&spec, "/quotes/{id}/repair-order", "post"),
+        ["meter_reading"]
+    );
+    assert_eq!(
+        body_properties(&spec, "/repair-orders/{id}", "patch"),
+        ["due_date"]
+    );
+    assert_eq!(
+        body_properties(&spec, "/repair-orders/{id}/cancel", "post"),
+        ["reason"]
     );
 
     // Every call with a body points at a schema of its own: two calls may share one only when

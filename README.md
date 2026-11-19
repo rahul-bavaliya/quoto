@@ -101,6 +101,20 @@ curl "http://127.0.0.1:3000/branches?status=active" -H "Authorization: Bearer $K
 | `POST /quotes/{id}/reject` | `{"reason": "..."}` (not blank, at most 500 characters; the customer's own words, never logged) |
 | `POST /quotes/{id}/reopen` | a rejected quote goes back to `pending`; the old reason is dropped |
 
+**Repair orders (Day 60)** are the work a customer said yes to. A repair order is made **only from an accepted quote**, and a quote has **at most one**. It does not copy the quote: the lines, prices, taxes, customer and machine are *read from the quote*, so the two can never disagree. It adds only what the quote does not know: its own number (`RO-2026-00000001`, counted per year like quotes), a status, a due date, when it started and ended, and the meter reading when the machine came in. A repair order is never erased and has no PUT, no DELETE and no status call: it moves only through `start`, `complete` and `cancel`.
+
+| Call | What it does |
+|---|---|
+| `POST /quotes/{id}/repair-order` | open one from an accepted quote. Body `{"meter_reading": 1250.5}` (or `{}`). The reading is today's meter (zero or more); leave it out to use the reading on the quote's machine, and with neither the answer is `400 METER_READING_REQUIRED`. The due date starts as the quote's promise date. `409 QUOTE_NOT_ACCEPTED` for a pending or rejected quote, `409 REPAIR_ORDER_EXISTS` if it already has one |
+| `GET /repair-orders?customer_id=&branch_id=&equipment_id=&status=&limit=&offset=` | newest first, each with the quote's lines and totals. `status` is `open`, `in_progress`, `completed` or `cancelled` |
+| `GET /repair-orders/{id}` | one repair order (its `version` is also the `ETag`) |
+| `PATCH /repair-orders/{id}` | `{"due_date": "2026-12-01"}`, or `null` to clear it. Not before the day it was opened; not once it is completed or cancelled |
+| `POST /repair-orders/{id}/start` | `open` to `in_progress` (`409 REPAIR_ORDER_NOT_OPEN` otherwise) |
+| `POST /repair-orders/{id}/complete` | `in_progress` to `completed` (`409 REPAIR_ORDER_NOT_IN_PROGRESS` otherwise) |
+| `POST /repair-orders/{id}/cancel` | `{"reason": "..."}` (not blank, at most 500 characters, never logged). From `open` or `in_progress`; a completed or cancelled order is final (`409 REPAIR_ORDER_CLOSED`) |
+
+Like a quote, a repair order has a `version`, an `ETag` and an optional `If-Match` (`409 REPAIR_ORDER_CHANGED_MEANWHILE`), and opening one locks the quote's row, so eight people pressing "open" together make exactly one repair order. Not built yet (later days): the jobs inside an order (complaint, cause, correction), the technician time clock, a printable repair order, and who is allowed to do what (login and roles, Phase 9).
+
 **The PDF (Day 54)** is written by `Quote::to_pdf(today)` in `src/quote/pdf.rs`, with no PDF library: a quote is only text and a few lines, so the file is built directly from the two standard fonts every reader has (Helvetica and Helvetica Bold; nothing is embedded, a one-page quote is about 4 KB). The same quote on the same day gives the same bytes. The standard fonts hold **Latin-1** only (English and French letters); any other character is shown as `?`. Look at one with `cargo run --example quote_pdf` (writes `quote.pdf`, made-up people). **Day 59:** a quote that can still be accepted (pending, not past its expiry date) ends with a **Customer acceptance** block: a sentence saying that signing accepts the quote at the prices above (with the date they are good until), a signature line, a date line and a printed-name line. The block is never split over two pages and never runs into the footer. An accepted, rejected or expired quote has nothing left to sign, so it has no block.
 
 Limits (Day 53): a line has a quantity above 0 and at most 1,000,000, a unit price of at most 1,000,000.00 (so a total can never overflow), a description of 1 to 200 characters (spaces around it are dropped), and a quote holds at most 200 lines. **Two people at once (Day 55):** every quote has a `version` (0 when made, +1 with every saved change), shown in the body and as the `ETag` header. A call that changes a quote may send what it read as `If-Match: "3"` (or `3`; `*` or no header means "any"). If the quote has changed since, nothing is done and the answer is `409 QUOTE_CHANGED_MEANWHILE`: read it again and retry. Without the header the change is still checked at the moment it is saved, so two people pressing Accept and Reject together can never both win. A header that is not a version answers `400 INVALID_IF_MATCH`.
@@ -209,7 +223,7 @@ GitHub Actions runs the same checks automatically on every push and pull request
 src/
 ├── main.rs              starts the web API (and is the one place where errors stop the program)
 ├── lib.rs               the library's front door
-├── api.rs               the web API + api/ (settings, auth, error, log, request, branches, customers, equipment, quotes, docs)
+├── api.rs               the web API + api/ (settings, auth, error, log, request, branches, customers, equipment, quotes, repair_orders, docs)
 ├── branch.rs            Branch + branch/ (location, table: the branches table and its create/read/update) (a dealership location; its province decides the taxes)
 ├── country.rs           Country (follows from the province)
 ├── errors.rs  logging.rs  money.rs  samples.rs  secret.rs
@@ -220,15 +234,16 @@ src/
 ├── equipment.rs         Equipment + equipment/ (meter, meter_type, equipment_type, identification,
 │                        equipment_draft, equipment_source, table: the equipment table and its calls)
 ├── equipment_lookup.rs  EquipmentLookup + equipment_lookup/ (in_memory, chain, nhtsa)
-└── quote.rs             Quote + quote/ (line_item, line_kind, quote_number, quote_status, number_machine,
-                         totals: the math, print: the text, table: the quote tables and their calls)
+├── quote.rs             Quote + quote/ (line_item, line_kind, quote_number, quote_status, number_machine,
+│                        totals: the math, print: the text, table: the quote tables and their calls)
+└── repair_order.rs      RepairOrder + repair_order/ (number, status, table: the repair order tables and their calls)
 examples/
 ├── nhtsa_lookup.rs      try the lookups by hand (needs the internet)
 ├── db_check.rs          check the database connection (needs docker compose up)
 └── db_setup.rs          run the migrations and add the provinces (needs docker compose up)
 tests/                   one file per feature, plus quote_scenarios.rs; the two big ones are folders:
-├── api/                 the API without a database (access, branches, customers, equipment, patch, settings, docs, support)
-└── database_api/        the API with a database, run by hand (branches, customers, equipment, quotes, patch, logging, support)
+├── api/                 the API without a database (access, branches, customers, equipment, quotes, repair_orders, patch, settings, docs, support)
+└── database_api/        the API with a database, run by hand (branches, customers, equipment, quotes, repair_orders, patch, logging, support)
 docker-compose.yml       PostgreSQL for development
 .env.example             the settings Quoto needs (copy to .env)
 ```

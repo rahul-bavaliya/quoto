@@ -14,7 +14,7 @@ use sea_orm::{ConnectionTrait, DatabaseConnection, Statement};
 
 /// The tables made before the quote tables, and all of them.
 const OLD_TABLES: [&str; 4] = ["provinces", "branches", "customers", "equipment"];
-const ALL_TABLES: [&str; 7] = [
+const ALL_TABLES: [&str; 9] = [
     "provinces",
     "branches",
     "customers",
@@ -22,6 +22,8 @@ const ALL_TABLES: [&str; 7] = [
     "quote_numbers",
     "quotes",
     "quote_lines",
+    "repair_order_numbers",
+    "repair_orders",
 ];
 
 fn settings_for(database: &str) -> DatabaseSettings {
@@ -159,7 +161,7 @@ async fn running_the_migrations_again_changes_nothing() {
     place.finish().await;
 
     assert_eq!(first, second);
-    assert_eq!(remembered, 3); // the three steps so far, each remembered once
+    assert_eq!(remembered, 4); // the four steps so far, each remembered once
 }
 
 #[tokio::test]
@@ -168,10 +170,12 @@ async fn a_database_built_before_migrations_existed_adopts_them_and_keeps_its_ro
     let place = Throwaway::new("adopt").await;
     // The old way: tables built from the structs, with a row in one of them.
     database::sync(&place.db).await.expect("sync");
-    // (sync also builds the quote tables now; an old database doesn't have them yet.)
+    // (sync also builds the quote and repair order tables now; an old database doesn't have them yet.)
     place
         .db
-        .execute_unprepared("DROP TABLE quote_lines, quotes, quote_numbers")
+        .execute_unprepared(
+            "DROP TABLE repair_orders, repair_order_numbers, quote_lines, quotes, quote_numbers",
+        )
         .await
         .expect("drop the quote tables");
     place

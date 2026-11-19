@@ -10,6 +10,7 @@
 //   customers  the customer calls
 //   equipment  the machine calls
 //   quotes     the quote calls
+//   repair_orders  the repair order calls
 //   docs       the Swagger page at /docs
 // Every call needs the API key (`Authorization: Bearer <key>`); only the documentation
 // addresses don't.
@@ -22,6 +23,7 @@ mod equipment;
 mod error;
 mod log;
 mod quotes;
+mod repair_orders;
 mod request;
 mod settings;
 
@@ -89,6 +91,18 @@ pub fn router(db: DatabaseConnection, key: Secret) -> Router {
         .route("/quotes/{id}/accept", post(quotes::accept))
         .route("/quotes/{id}/reject", post(quotes::reject))
         .route("/quotes/{id}/reopen", post(quotes::reopen))
+        .route("/quotes/{id}/repair-order", post(repair_orders::open))
+        .route("/repair-orders", get(repair_orders::list))
+        .route(
+            "/repair-orders/{id}",
+            get(repair_orders::read).patch(repair_orders::change),
+        )
+        .route("/repair-orders/{id}/start", post(repair_orders::start))
+        .route(
+            "/repair-orders/{id}/complete",
+            post(repair_orders::complete),
+        )
+        .route("/repair-orders/{id}/cancel", post(repair_orders::cancel))
         .merge(docs::routes())
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         // Added last, so it runs first: nothing is read or answered without the key.
