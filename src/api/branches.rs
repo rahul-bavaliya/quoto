@@ -15,9 +15,9 @@ use super::AppState;
 use super::error::{ApiError, ErrorBody};
 use super::request::{StatusInput, body, changes, merge};
 use crate::branch::{
-    Branch, Location, create_branch, get_branch, list_branches, set_branch_status, update_branch,
+    Branch, create_branch, get_branch, list_branches, set_branch_status, update_branch,
 };
-use crate::customer::{Address, PhoneNumber, PostalCode};
+use crate::common::{Address, Location, PhoneNumber, PostalCode};
 use crate::errors::{AppError, AppResult};
 use crate::province::Province;
 use crate::status::Status;

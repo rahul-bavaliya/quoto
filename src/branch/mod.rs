@@ -1,19 +1,19 @@
-// src/branch.rs: a dealership location. It operates quotes, and its province decides the taxes.
+// src/branch/mod.rs: a dealership location. It operates quotes, and its province decides the taxes.
 //
-// The pieces live in `src/branch/`: `location` (the map point) and `table` (the `branches` table:
-// create, read, update and set the status; never delete).
+// The pieces live in `src/branch/`: `mod.rs` holds the branch model and `table`
+// (create, read, update and set the status; never delete). Shared value types
+// such as `Address` and `Location` live in `src/common/`.
 
 use crate::country::Country;
-use crate::customer::{Address, PhoneNumber};
+use crate::common::{Address, Location};
+use crate::common::PhoneNumber;
 use crate::errors::{AppError, AppResult};
 use crate::province::Province;
 use crate::status::Status;
 use uuid::Uuid;
 
-mod location;
 mod table;
 
-pub use location::Location;
 pub(crate) use table::BranchTable;
 pub use table::{
     branch_by_number, create_branch, get_branch, list_branches, set_branch_status, update_branch,

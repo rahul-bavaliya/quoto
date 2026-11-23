@@ -1,9 +1,9 @@
-// src/branch/location.rs: where a branch is on the map
+// src/common/location.rs: a point on the map
 
 use crate::errors::{AppError, AppResult};
 
 /// A point on the map. A latitude without a longitude means nothing, so they live
-/// together: a branch has a whole `Location` or none.
+/// together: an entity has a whole `Location` or none.
 #[derive(Debug, PartialEq)]
 pub struct Location {
     latitude: f64,

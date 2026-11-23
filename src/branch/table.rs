@@ -7,8 +7,8 @@
 // or neither, the status is a known word) are checked in Rust when a `Branch` is built and
 // again when a row is read.
 
-use super::{Branch, Location};
-use crate::customer::{Address, PhoneNumber, PostalCode};
+use super::Branch;
+use crate::common::{Address, Location, PhoneNumber, PostalCode};
 use crate::errors::{AppError, AppResult};
 use crate::province::Province;
 use crate::status::Status;

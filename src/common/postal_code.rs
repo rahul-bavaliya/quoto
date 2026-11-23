@@ -1,4 +1,4 @@
-// src/customer/postal_code.rs
+// src/common/postal_code.rs
 
 use crate::errors::AppError;
 use std::fmt;
@@ -11,14 +11,12 @@ pub struct PostalCode {
 
 impl PostalCode {
     pub fn parse(input: &str) -> Result<Self, AppError> {
-        // 1. Clean: drop spaces and dashes, make letters UPPERCASE
         let cleaned: String = input
             .chars()
             .filter(|c| !c.is_whitespace() && *c != '-')
             .collect::<String>()
             .to_uppercase();
 
-        // 2. Check the shape: letter, digit, letter, digit, letter, digit
         let chars: Vec<char> = cleaned.chars().collect();
         let shape_ok = chars.len() == 6
             && chars.iter().enumerate().all(|(i, c)| {

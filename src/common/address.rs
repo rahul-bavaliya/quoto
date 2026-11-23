@@ -1,6 +1,6 @@
-// src/customer/address.rs: where a customer is (and which province's taxes apply)
+// src/common/address.rs: where a party is (and which province's taxes apply)
 
-use super::PostalCode;
+use crate::common::PostalCode;
 use crate::errors::AppError;
 use crate::province::Province;
 use std::fmt;

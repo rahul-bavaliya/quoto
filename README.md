@@ -226,12 +226,13 @@ src/
 ├── main.rs              starts the web API (and is the one place where errors stop the program)
 ├── lib.rs               the library's front door
 ├── api.rs               the web API + api/ (settings, auth, error, log, request, branches, customers, equipment, quotes, repair_orders, docs)
-├── branch.rs            Branch + branch/ (location, table: the branches table and its create/read/update) (a dealership location; its province decides the taxes)
+├── branch/              mod.rs (Branch), table (the branches table and its create/read/update) (a dealership location; its province decides the taxes)
+├── common/              address, location, phone_number, postal_code (shared value types)
 ├── country.rs           Country (follows from the province)
 ├── errors.rs  logging.rs  money.rs  samples.rs  secret.rs
 ├── status.rs            Status (active / inactive) for every record that is never deleted
 ├── province.rs          Province + province/ (tax: the sum and the rate rules; table: the provinces table)
-├── customer.rs          Customer + customer/ (address, postal_code, contact, phone_number, email, table: the customers table and its create/read/list/update/status)
+├── customer/            mod.rs + future customer types and persistence
 ├── database.rs          connect + migrate + sync (the test reference) + database/ (settings: DatabaseSettings; migrations: the numbered steps)
 ├── equipment.rs         Equipment + equipment/ (meter, meter_type, equipment_type, identification,
 │                        equipment_draft, equipment_source, table: the equipment table and its calls)
