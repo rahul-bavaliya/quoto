@@ -6,9 +6,7 @@ use axum::http::StatusCode;
 #[tokio::test]
 async fn a_patch_with_nothing_to_change_is_refused_before_the_database() {
     let nil = "00000000-0000-0000-0000-000000000000";
-    for uri in [
-        format!("/branches/{nil}"),
-    ] {
+    for uri in [format!("/branches/{nil}")] {
         // An empty object, no body, not JSON, and JSON that is not an object: nothing to change.
         for body in ["{}", "", "not json", "[]", "\"phone\"", "null"] {
             let (status, answer) = call("PATCH", &uri, Some(KEY), Some(body)).await;

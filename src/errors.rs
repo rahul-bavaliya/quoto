@@ -33,9 +33,7 @@ pub enum QuoteError {
     #[error("A line is a labour, part, fee or credit.")]
     InvalidLineKind,
 
-    #[error(
-        "The credit is larger than the subtotal."
-    )]
+    #[error("The credit is larger than the subtotal.")]
     CreditTooLarge {
         credit_cents: i64,
         subtotal_cents: i64,

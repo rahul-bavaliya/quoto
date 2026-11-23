@@ -22,13 +22,9 @@ pub use branch::{
     set_branch_status, update_branch,
 };
 pub use country::Country;
-pub use customer::{
-    Address, PhoneNumber, PostalCode,
-};
+pub use customer::{Address, PhoneNumber, PostalCode};
 pub use database::DatabaseSettings;
 pub use errors::{ErrorKind, QuoteError, QuoteResult};
-pub use province::{
-    Province,
-};
+pub use province::Province;
 pub use secret::Secret;
 pub use status::Status;

@@ -6,7 +6,6 @@
 use crate::country::Country;
 use crate::errors::{QuoteError, QuoteResult};
 
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Province {
     Saskatchewan,

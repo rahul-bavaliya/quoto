@@ -1,9 +1,9 @@
 // src/main.rs: starts the web API (see `src/api.rs`). It is the one place where errors stop the
 // program: it logs the code, prints the message, and exits with the error's exit code.
 
+use quoto::QuoteResult;
 use quoto::api::{ApiSettings, serve};
 use quoto::database::{self, DatabaseSettings};
-use quoto::QuoteResult;
 use std::process::ExitCode;
 
 async fn run() -> QuoteResult<()> {

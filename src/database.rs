@@ -1,7 +1,7 @@
 // src/database.rs: the connection to PostgreSQL, and changing its tables (migrations)
 
-use crate::errors::{QuoteError, QuoteResult};
 use crate::branch;
+use crate::errors::{QuoteError, QuoteResult};
 use sea_orm::sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sea_orm::{DatabaseConnection, SqlxPostgresConnector};
 use sea_orm_migration::MigratorTrait;
