@@ -1,7 +1,7 @@
 // src/database.rs: the connection to PostgreSQL, and changing its tables (migrations)
 
 use crate::errors::{QuoteError, QuoteResult};
-use crate::{branch, customer, equipment, province, quote, repair_order};
+use crate::branch;
 use sea_orm::sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sea_orm::{DatabaseConnection, SqlxPostgresConnector};
 use sea_orm_migration::MigratorTrait;
@@ -61,15 +61,7 @@ pub async fn migrate(db: &DatabaseConnection) -> QuoteResult<()> {
 /// can't drift apart unnoticed.
 pub async fn sync(db: &DatabaseConnection) -> QuoteResult<()> {
     db.get_schema_builder()
-        .register(province::ProvinceTable)
         .register(branch::BranchTable)
-        .register(customer::CustomerTable)
-        .register(equipment::EquipmentTable)
-        .register(quote::QuoteNumberTable)
-        .register(quote::QuoteTable)
-        .register(quote::QuoteLineTable)
-        .register(repair_order::RepairOrderNumberTable)
-        .register(repair_order::RepairOrderTable)
         .sync(db)
         .await
         .map_err(|cause| {

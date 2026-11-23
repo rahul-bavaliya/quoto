@@ -237,30 +237,3 @@ fn an_updated_branch_is_the_new_version_with_the_old_id() {
     assert_eq!(renamed.id(), old.id());
     assert_ne!(renamed, old);
 }
-
-// ===== samples and the quote =====
-
-#[test]
-fn the_sample_branches_are_in_their_provinces() {
-    let sk = samples::branch_in(Province::Saskatchewan).unwrap();
-    let ab = samples::branch_in(Province::Alberta).unwrap();
-    assert_eq!(sk.province(), &Province::Saskatchewan);
-    assert_eq!(ab.province(), &Province::Alberta);
-    assert_ne!(sk.number(), ab.number());
-}
-
-#[test]
-fn an_inactive_branch_cannot_start_a_new_quote() {
-    let mut branch = samples::branch_in(Province::Saskatchewan).unwrap();
-    branch.deactivate();
-    let result = Quote::new(samples::quote_number(), samples::quote_time(), branch);
-    assert!(matches!(result, Err(QuoteError::BranchInactive)));
-}
-
-#[test]
-fn a_quote_started_before_the_branch_closed_keeps_working() {
-    // The quote owns its branch, so closing the branch later never touches old quotes.
-    let quote = samples::oil_change_quote(Province::Saskatchewan).unwrap();
-    assert!(quote.branch().is_active());
-    assert!(quote.total() > 0);
-}

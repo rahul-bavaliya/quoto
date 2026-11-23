@@ -9,19 +9,7 @@
 // try from the page still need the key (use the "Authorize" button and paste it once).
 
 use super::branches::{self, BranchChanges, BranchInput, BranchView};
-use super::customers::{self, CustomerChanges, CustomerInput, CustomerView};
-use super::equipment::{
-    self, EquipmentChanges, EquipmentInput, EquipmentView, NewEquipment, OwnerInput,
-};
 use super::error::ErrorBody;
-use super::quotes::{
-    self, LineInput, LineView, NewQuoteInput, PdfFile, QuoteChanges, QuoteCustomerInput,
-    QuoteEquipmentInput, QuoteView, RejectInput, TotalsView,
-};
-use super::repair_orders::{
-    self, CancelRepairOrderInput, OpenRepairOrderInput, RepairOrderChanges, RepairOrderMeterView,
-    RepairOrderView,
-};
 use super::request::StatusInput;
 use axum::Router;
 use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
@@ -51,10 +39,7 @@ impl Modify for BearerKey {
 #[openapi(
     info(
         title = "Quoto API",
-        description = "Branches, customers, equipment, quotes and repair orders for the Quoto quoting and repair-order system. \
-            Nothing is ever erased: a branch or a customer is made inactive, and DELETE on equipment \
-            archives the machine, and a quote or a repair order is never erased. Customers and machines identify real people and vehicles: \
-            use made-up ones only until real login exists."
+        description = "Branch CRUD operations for the Quoto system."
     ),
     paths(
         branches::list,
@@ -62,68 +47,13 @@ impl Modify for BearerKey {
         branches::create,
         branches::replace,
         branches::change,
-        branches::change_status,
-        customers::list,
-        customers::read,
-        customers::create,
-        customers::replace,
-        customers::change,
-        customers::change_status,
-        equipment::list,
-        equipment::read,
-        equipment::create,
-        equipment::replace,
-        equipment::change,
-        equipment::archive,
-        equipment::change_status,
-        equipment::change_owner,
-        quotes::list,
-        quotes::read,
-        quotes::print,
-        quotes::create,
-        quotes::change,
-        quotes::add_line,
-        quotes::add_customer,
-        quotes::add_equipment,
-        quotes::accept,
-        quotes::reject,
-        quotes::reopen,
-        repair_orders::open,
-        repair_orders::list,
-        repair_orders::read,
-        repair_orders::change,
-        repair_orders::start,
-        repair_orders::complete,
-        repair_orders::cancel
+        branches::change_status
     ),
     components(schemas(
         BranchChanges,
         BranchInput,
         BranchView,
-        CustomerChanges,
-        CustomerInput,
-        CustomerView,
-        EquipmentChanges,
-        EquipmentInput,
-        EquipmentView,
-        NewEquipment,
-        OwnerInput,
         StatusInput,
-        LineInput,
-        LineView,
-        NewQuoteInput,
-        PdfFile,
-        QuoteChanges,
-        QuoteCustomerInput,
-        QuoteEquipmentInput,
-        QuoteView,
-        RejectInput,
-        TotalsView,
-        CancelRepairOrderInput,
-        OpenRepairOrderInput,
-        RepairOrderChanges,
-        RepairOrderMeterView,
-        RepairOrderView,
         ErrorBody
     )),
     modifiers(&BearerKey),

@@ -105,65 +105,7 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
-        manager
-            .create_table(
-                create("customers")
-                    .col(id())
-                    .col(text("name"))
-                    .col(maybe_text("company"))
-                    .col(maybe_text("designation"))
-                    .col(text("phone"))
-                    .col(maybe_text("alternate_phone"))
-                    .col(maybe_text("email"))
-                    .col(text("address_line1"))
-                    .col(maybe_text("address_line2"))
-                    .col(text("city"))
-                    .col(text("province_code"))
-                    .col(text("country_code"))
-                    .col(text("postal_code"))
-                    .col(text("status"))
-                    .col(stamp("created_at"))
-                    .col(stamp("updated_at"))
-                    .take(),
-            )
-            .await?;
-
-        // No foreign key on customer_id: customers are never deleted and the owner is checked in Rust.
-        manager
-            .create_table(
-                create("equipment")
-                    .col(id())
-                    .col(ColumnDef::new(Alias::new("customer_id")).uuid())
-                    .col(text("make"))
-                    .col(text("model"))
-                    .col(ColumnDef::new(Alias::new("model_year")).big_integer())
-                    // Many machines may have no serial number; two may never share one.
-                    .col(
-                        ColumnDef::new(Alias::new("serial_number"))
-                            .text()
-                            .unique_key(),
-                    )
-                    .col(maybe_text("plate"))
-                    .col(ColumnDef::new(Alias::new("meter_reading")).double())
-                    .col(text("meter_type"))
-                    .col(text("equipment_type"))
-                    .col(text("source"))
-                    .col(text("status"))
-                    .col(stamp("created_at"))
-                    .col(stamp("updated_at"))
-                    .take(),
-            )
-            .await?;
-        manager
-            .create_index(
-                Index::create()
-                    .if_not_exists()
-                    .name("idx-equipment-customer_id")
-                    .table(Alias::new("equipment"))
-                    .col(Alias::new("customer_id"))
-                    .take(),
-            )
-            .await
+        Ok(())
     }
 
     async fn down(&self, _manager: &SchemaManager) -> Result<(), DbErr> {

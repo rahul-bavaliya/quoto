@@ -1,6 +1,5 @@
 // src/errors.rs: every way Quoto can refuse something
 
-use crate::money::format_money;
 use chrono::NaiveDate;
 use thiserror::Error;
 use tracing::{error, warn};
@@ -22,7 +21,7 @@ pub enum QuoteError {
     #[error("A line's unit price can't be negative.")]
     NegativePrice { description: String },
 
-    #[error("A line is too big: at most {max_quantity} of a kind and {max_price} each.", max_quantity = crate::quote::MAX_QUANTITY, max_price = format_money(crate::quote::MAX_UNIT_PRICE_CENTS))]
+    #[error("A line is too large.")]
     LineTooLarge { description: String },
 
     #[error("A line's description can be at most {max} characters.")]
@@ -35,9 +34,7 @@ pub enum QuoteError {
     InvalidLineKind,
 
     #[error(
-        "Credit of {} is larger than the subtotal of {}.",
-        format_money(*.credit_cents),
-        format_money(*.subtotal_cents)
+        "The credit is larger than the subtotal."
     )]
     CreditTooLarge {
         credit_cents: i64,

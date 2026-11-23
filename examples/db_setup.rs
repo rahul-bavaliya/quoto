@@ -8,19 +8,17 @@
 // or from the `.env` file in this folder. It needs a running database, so the tests and CI
 // never run it.
 
-use quoto::{DatabaseSettings, database, logging, seed_provinces};
+use quoto::{DatabaseSettings, database};
 use std::process::ExitCode;
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    logging::init();
     dotenvy::dotenv().ok();
 
     let result = async {
         let settings = DatabaseSettings::from_env()?;
         let db = database::connect(&settings).await?;
         database::migrate(&db).await?;
-        seed_provinces(&db).await?;
         let _ = db.close().await;
         Ok::<_, quoto::QuoteError>(settings.describe())
     }

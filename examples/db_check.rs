@@ -7,12 +7,11 @@
 // folder (real environment variables win over `.env`). It needs a running
 // database, so the tests and CI never run it.
 
-use quoto::{DatabaseSettings, database, logging};
+use quoto::{DatabaseSettings, database};
 use std::process::ExitCode;
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    logging::init();
     // Load `.env` if there is one. No file is fine: the settings may come from the environment.
     dotenvy::dotenv().ok();
 

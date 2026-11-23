@@ -300,25 +300,6 @@ async fn the_status_of_an_unknown_branch_cannot_be_set() {
     );
 }
 
-#[tokio::test]
-#[ignore = "needs the database (docker compose up)"]
-async fn an_inactive_branch_still_loads_but_cannot_start_a_quote() {
-    let (_turn, db) = setup().await;
-    let tx = work(&db).await;
-    let saved = create_branch(&tx, &new_branch("T-15", "Shut"))
-        .await
-        .unwrap();
-    let off = set_branch_status(&tx, saved.id().unwrap(), Status::Inactive)
-        .await
-        .unwrap();
-
-    let number = samples::quote_number();
-    assert!(matches!(
-        Quote::new(number, samples::quote_time(), off),
-        Err(QuoteError::BranchInactive)
-    ));
-}
-
 // ===== damaged rows are caught when read =====
 
 #[tokio::test]

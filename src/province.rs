@@ -6,12 +6,6 @@
 use crate::country::Country;
 use crate::errors::{QuoteError, QuoteResult};
 
-mod table;
-mod tax;
-
-pub(crate) use table::ProvinceTable;
-pub use table::{all_rates, change_rates, rates_for, seed_provinces};
-pub use tax::{TaxRate, TaxRates, calculate_tax};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Province {

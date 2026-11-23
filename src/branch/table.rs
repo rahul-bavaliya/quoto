@@ -169,26 +169,6 @@ pub async fn get_branch(db: &impl ConnectionTrait, id: Uuid) -> QuoteResult<Bran
 
 /// A quote keeps a copy of what this branch looked like the day it was quoted: the saved row as
 /// JSON. This reads the branch and that copy together.
-pub(crate) async fn get_branch_with_copy(
-    db: &impl ConnectionTrait,
-    id: Uuid,
-) -> QuoteResult<(Branch, serde_json::Value)> {
-    let row = Entity::find_by_id(id)
-        .one(db)
-        .await
-        .map_err(database_error)?
-        .ok_or(QuoteError::UnknownBranch)?;
-    let copy = serde_json::to_value(&row).map_err(|_| QuoteError::StoredQuoteDamaged)?;
-    Ok((branch_from_row(row)?, copy))
-}
-
-/// Builds the branch back from a quote's copy. Every rule is checked again, as for any saved row.
-pub(crate) fn branch_from_copy(copy: &serde_json::Value) -> QuoteResult<Branch> {
-    let row: row::Model =
-        serde_json::from_value(copy.clone()).map_err(|_| QuoteError::StoredQuoteDamaged)?;
-    branch_from_row(row)
-}
-
 /// **Read** one branch by the number people use ("001").
 pub async fn branch_by_number(db: &impl ConnectionTrait, number: &str) -> QuoteResult<Branch> {
     let row = Entity::find()

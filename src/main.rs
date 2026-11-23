@@ -3,7 +3,7 @@
 
 use quoto::api::{ApiSettings, serve};
 use quoto::database::{self, DatabaseSettings};
-use quoto::{QuoteResult, logging};
+use quoto::QuoteResult;
 use std::process::ExitCode;
 
 async fn run() -> QuoteResult<()> {
@@ -16,7 +16,6 @@ async fn run() -> QuoteResult<()> {
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    logging::init();
     match run().await {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {

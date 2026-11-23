@@ -63,16 +63,12 @@ async fn routes_that_do_not_exist_also_need_the_key() {
 }
 
 #[tokio::test]
-async fn there_is_no_delete_except_archiving_a_machine() {
+async fn branches_are_never_deleted() {
     let id = "00000000-0000-0000-0000-000000000000";
     for uri in [
         "/branches",
         &format!("/branches/{id}"),
-        "/customers",
-        &format!("/customers/{id}"),
-        "/equipment",
-        &format!("/equipment/{id}/status"),
-        &format!("/equipment/{id}/owner"),
+        &format!("/branches/{id}/status"),
     ] {
         let (status, _) = call("DELETE", uri, Some(KEY), None).await;
         assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED, "{uri}");
