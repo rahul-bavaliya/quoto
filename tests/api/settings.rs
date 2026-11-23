@@ -4,7 +4,7 @@ use super::support::KEY;
 use quoto::api::ApiSettings;
 use quoto::*;
 
-fn settings(pairs: &[(&str, &str)]) -> QuoteResult<ApiSettings> {
+fn settings(pairs: &[(&str, &str)]) -> AppResult<ApiSettings> {
     ApiSettings::from_lookup(|name| {
         pairs
             .iter()
@@ -17,11 +17,11 @@ fn settings(pairs: &[(&str, &str)]) -> QuoteResult<ApiSettings> {
 fn the_api_needs_a_key_and_has_no_default_one() {
     assert_eq!(
         settings(&[]).unwrap_err(),
-        QuoteError::MissingSetting { name: "API_KEY" }
+        AppError::MissingSetting { name: "API_KEY" }
     );
     assert_eq!(
         settings(&[("API_KEY", "   ")]).unwrap_err(),
-        QuoteError::MissingSetting { name: "API_KEY" }
+        AppError::MissingSetting { name: "API_KEY" }
     );
 }
 
@@ -29,7 +29,7 @@ fn the_api_needs_a_key_and_has_no_default_one() {
 fn a_short_key_is_refused() {
     assert_eq!(
         settings(&[("API_KEY", "short-key")]).unwrap_err(),
-        QuoteError::InvalidSetting { name: "API_KEY" }
+        AppError::InvalidSetting { name: "API_KEY" }
     );
     assert!(settings(&[("API_KEY", KEY)]).is_ok());
 }
@@ -53,7 +53,7 @@ fn it_refuses_to_listen_on_the_network_or_on_nonsense() {
     ] {
         assert_eq!(
             settings(&[("API_KEY", KEY), (name, value)]).unwrap_err(),
-            QuoteError::InvalidSetting { name },
+            AppError::InvalidSetting { name },
             "{name}={value}"
         );
     }

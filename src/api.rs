@@ -21,7 +21,7 @@ mod settings;
 
 pub use settings::ApiSettings;
 
-use crate::errors::{QuoteError, QuoteResult};
+use crate::errors::{AppError, AppResult};
 use crate::secret::Secret;
 use axum::Router;
 use axum::extract::DefaultBodyLimit;
@@ -66,14 +66,14 @@ pub fn router(db: DatabaseConnection, key: Secret) -> Router {
 }
 
 /// Starts the API and keeps it running until Ctrl+C.
-pub async fn serve(settings: ApiSettings, db: DatabaseConnection) -> QuoteResult<()> {
+pub async fn serve(settings: ApiSettings, db: DatabaseConnection) -> AppResult<()> {
     let address = settings.address();
     let app = router(db, settings.key);
     let listener = tokio::net::TcpListener::bind(address)
         .await
         .map_err(|cause| {
             debug!(%cause, "could not listen");
-            QuoteError::ServerStartFailed
+            AppError::ServerStartFailed
         })?;
     info!(%address, "the API is listening");
     axum::serve(listener, app)
@@ -83,6 +83,6 @@ pub async fn serve(settings: ApiSettings, db: DatabaseConnection) -> QuoteResult
         .await
         .map_err(|cause| {
             debug!(%cause, "the server stopped with an error");
-            QuoteError::ServerStartFailed
+            AppError::ServerStartFailed
         })
 }

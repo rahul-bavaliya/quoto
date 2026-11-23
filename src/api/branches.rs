@@ -18,7 +18,7 @@ use crate::branch::{
     Branch, Location, create_branch, get_branch, list_branches, set_branch_status, update_branch,
 };
 use crate::customer::{Address, PhoneNumber, PostalCode};
-use crate::errors::{QuoteError, QuoteResult};
+use crate::errors::{AppError, AppResult};
 use crate::province::Province;
 use crate::status::Status;
 use axum::Json;
@@ -58,7 +58,7 @@ pub(super) struct BranchInput {
 
 impl BranchInput {
     /// Builds a `Branch` with the library's checked types; any rule that fails is returned.
-    fn into_branch(self) -> QuoteResult<Branch> {
+    fn into_branch(self) -> AppResult<Branch> {
         let address = Address::new(
             self.address_line1,
             self.address_line2,
@@ -77,7 +77,7 @@ impl BranchInput {
                 Ok(branch.with_location(Location::new(latitude, longitude)?))
             }
             (None, None) => Ok(branch),
-            _ => Err(QuoteError::InvalidLocation), // only half a location
+            _ => Err(AppError::InvalidLocation), // only half a location
         }
     }
 }
@@ -149,8 +149,8 @@ pub(super) struct BranchChanges {
 }
 
 /// An id that isn't a UUID can't be a branch: the same answer as an id nobody has.
-fn branch_id(text: &str) -> QuoteResult<Uuid> {
-    Uuid::parse_str(text).map_err(|_| QuoteError::UnknownBranch)
+fn branch_id(text: &str) -> AppResult<Uuid> {
+    Uuid::parse_str(text).map_err(|_| AppError::UnknownBranch)
 }
 
 /// List the branches, ordered by number.

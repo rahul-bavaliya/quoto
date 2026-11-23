@@ -20,7 +20,7 @@ async fn main() -> ExitCode {
         let db = database::connect(&settings).await?;
         database::migrate(&db).await?;
         let _ = db.close().await;
-        Ok::<_, quoto::QuoteError>(settings.describe())
+        Ok::<_, quoto::AppError>(settings.describe())
     }
     .await;
 

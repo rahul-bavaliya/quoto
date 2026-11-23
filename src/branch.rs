@@ -5,7 +5,7 @@
 
 use crate::country::Country;
 use crate::customer::{Address, PhoneNumber};
-use crate::errors::{QuoteError, QuoteResult};
+use crate::errors::{AppError, AppResult};
 use crate::province::Province;
 use crate::status::Status;
 use uuid::Uuid;
@@ -48,14 +48,14 @@ impl Branch {
         name: String,
         address: Address,
         phone: PhoneNumber,
-    ) -> QuoteResult<Self> {
+    ) -> AppResult<Self> {
         if number.trim().is_empty() {
-            return Err(QuoteError::MissingField {
+            return Err(AppError::MissingField {
                 field: "branch number",
             });
         }
         if name.trim().is_empty() {
-            return Err(QuoteError::MissingField {
+            return Err(AppError::MissingField {
                 field: "branch name",
             });
         }

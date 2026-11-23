@@ -9,7 +9,7 @@
 
 use super::{Branch, Location};
 use crate::customer::{Address, PhoneNumber, PostalCode};
-use crate::errors::{QuoteError, QuoteResult};
+use crate::errors::{AppError, AppResult};
 use crate::province::Province;
 use crate::status::Status;
 use sea_orm::sea_query::Expr;
@@ -73,13 +73,13 @@ mod row {
 }
 
 /// A failed read or write: the cause goes to the debug log, the person sees a short message.
-fn database_error(cause: sea_orm::DbErr) -> QuoteError {
+fn database_error(cause: sea_orm::DbErr) -> AppError {
     debug!(%cause, "branch query failed");
-    QuoteError::DatabaseUnavailable
+    AppError::DatabaseUnavailable
 }
 
 /// Rebuilds a `Branch` from a row, re-checking everything (a damaged row is refused).
-fn branch_from_row(row: row::Model) -> QuoteResult<Branch> {
+fn branch_from_row(row: row::Model) -> AppResult<Branch> {
     let address = Address::new(
         row.address_line1,
         row.address_line2,
@@ -100,7 +100,7 @@ fn branch_from_row(row: row::Model) -> QuoteResult<Branch> {
             branch = branch.with_location(Location::new(latitude, longitude)?);
         }
         (None, None) => {}
-        _ => return Err(QuoteError::InvalidLocation), // only half a location
+        _ => return Err(AppError::InvalidLocation), // only half a location
     }
     Ok(branch)
 }
@@ -130,7 +130,7 @@ async fn number_taken(
     db: &impl ConnectionTrait,
     number: &str,
     except: Option<Uuid>,
-) -> QuoteResult<bool> {
+) -> AppResult<bool> {
     let mut query = Entity::find().filter(Column::Number.eq(number));
     if let Some(id) = except {
         query = query.filter(Column::Id.ne(id));
@@ -141,12 +141,12 @@ async fn number_taken(
 /// **Create:** saves a new branch and returns it with the id the database gave it.
 /// A branch that already has an id is refused (use `update_branch`), and so is a number that
 /// another branch uses. A new branch is `Active` unless it was built otherwise.
-pub async fn create_branch(db: &impl ConnectionTrait, branch: &Branch) -> QuoteResult<Branch> {
+pub async fn create_branch(db: &impl ConnectionTrait, branch: &Branch) -> AppResult<Branch> {
     if branch.id().is_some() {
-        return Err(QuoteError::BranchAlreadySaved);
+        return Err(AppError::BranchAlreadySaved);
     }
     if number_taken(db, branch.number(), None).await? {
-        return Err(QuoteError::DuplicateBranchNumber {
+        return Err(AppError::DuplicateBranchNumber {
             number: branch.number().to_string(),
         });
     }
@@ -158,25 +158,25 @@ pub async fn create_branch(db: &impl ConnectionTrait, branch: &Branch) -> QuoteR
 }
 
 /// **Read** one branch by the id the database gave it.
-pub async fn get_branch(db: &impl ConnectionTrait, id: Uuid) -> QuoteResult<Branch> {
+pub async fn get_branch(db: &impl ConnectionTrait, id: Uuid) -> AppResult<Branch> {
     let row = Entity::find_by_id(id)
         .one(db)
         .await
         .map_err(database_error)?
-        .ok_or(QuoteError::UnknownBranch)?;
+        .ok_or(AppError::UnknownBranch)?;
     branch_from_row(row)
 }
 
 /// A quote keeps a copy of what this branch looked like the day it was quoted: the saved row as
 /// JSON. This reads the branch and that copy together.
 /// **Read** one branch by the number people use ("001").
-pub async fn branch_by_number(db: &impl ConnectionTrait, number: &str) -> QuoteResult<Branch> {
+pub async fn branch_by_number(db: &impl ConnectionTrait, number: &str) -> AppResult<Branch> {
     let row = Entity::find()
         .filter(Column::Number.eq(number))
         .one(db)
         .await
         .map_err(database_error)?
-        .ok_or(QuoteError::UnknownBranch)?;
+        .ok_or(AppError::UnknownBranch)?;
     branch_from_row(row)
 }
 
@@ -185,7 +185,7 @@ pub async fn branch_by_number(db: &impl ConnectionTrait, number: &str) -> QuoteR
 pub async fn list_branches(
     db: &impl ConnectionTrait,
     status: Option<Status>,
-) -> QuoteResult<Vec<Branch>> {
+) -> AppResult<Vec<Branch>> {
     let mut query = Entity::find().order_by_asc(Column::Number);
     if let Some(status) = status {
         query = query.filter(Column::Status.eq(status.label()));
@@ -203,18 +203,18 @@ pub async fn list_branches(
 /// it, give it a new phone. Build the new version with `Branch::new(...)` and the old id
 /// (`with_id`), as `Branch` explains. An unsaved branch is refused, and so is a number that
 /// another branch uses. Returns the branch as saved.
-pub async fn update_branch(db: &impl ConnectionTrait, branch: &Branch) -> QuoteResult<Branch> {
-    let id = branch.id().ok_or(QuoteError::BranchNotSaved)?;
+pub async fn update_branch(db: &impl ConnectionTrait, branch: &Branch) -> AppResult<Branch> {
+    let id = branch.id().ok_or(AppError::BranchNotSaved)?;
     if Entity::find_by_id(id)
         .count(db)
         .await
         .map_err(database_error)?
         == 0
     {
-        return Err(QuoteError::UnknownBranch);
+        return Err(AppError::UnknownBranch);
     }
     if number_taken(db, branch.number(), Some(id)).await? {
-        return Err(QuoteError::DuplicateBranchNumber {
+        return Err(AppError::DuplicateBranchNumber {
             number: branch.number().to_string(),
         });
     }
@@ -246,7 +246,7 @@ pub async fn set_branch_status(
     db: &impl ConnectionTrait,
     id: Uuid,
     status: Status,
-) -> QuoteResult<Branch> {
+) -> AppResult<Branch> {
     Entity::update_many()
         .col_expr(Column::Status, Expr::value(status.label()))
         .col_expr(Column::UpdatedAt, Expr::current_timestamp())

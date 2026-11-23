@@ -1,10 +1,10 @@
 // src/api/error.rs: what the person gets back when a call fails
 //
 // Every failure has the same shape: {"code": "...", "message": "..."}. The code is the stable
-// `QuoteError::code()`. Nothing about the database, the key or the request body is ever sent back.
+// `AppError::code()`. Nothing about the database, the key or the request body is ever sent back.
 
 use super::log::ErrorCode;
-use crate::errors::{ErrorKind, QuoteError};
+use crate::errors::{AppError, ErrorKind};
 use axum::Json;
 use axum::http::{HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Response};
@@ -13,7 +13,7 @@ use utoipa::ToSchema;
 
 pub(super) enum ApiError {
     /// Something Quoto's own rules refused (wrong input, a branch that doesn't exist...).
-    Quote(QuoteError),
+    Quote(AppError),
     /// The body is not the JSON this call expects.
     BadBody,
     /// The query string (the part after `?`) is not what this call expects.
@@ -22,8 +22,8 @@ pub(super) enum ApiError {
     Unauthorized,
 }
 
-impl From<QuoteError> for ApiError {
-    fn from(error: QuoteError) -> Self {
+impl From<AppError> for ApiError {
+    fn from(error: AppError) -> Self {
         ApiError::Quote(error)
     }
 }
@@ -39,14 +39,14 @@ pub(super) struct ErrorBody {
 }
 
 /// The HTTP status for a Quoto error: its kind decides, except two cases that have a better word.
-fn status_of(error: &QuoteError) -> StatusCode {
+fn status_of(error: &AppError) -> StatusCode {
     match error {
-        QuoteError::UnknownBranch
-        | QuoteError::UnknownCustomer
-        | QuoteError::UnknownEquipment
-        | QuoteError::UnknownQuote
-        | QuoteError::UnknownRepairOrder => StatusCode::NOT_FOUND,
-        QuoteError::DuplicateBranchNumber { .. } => StatusCode::CONFLICT,
+        AppError::UnknownBranch
+        | AppError::UnknownCustomer
+        | AppError::UnknownEquipment
+        | AppError::UnknownQuote
+        | AppError::UnknownRepairOrder => StatusCode::NOT_FOUND,
+        AppError::DuplicateBranchNumber { .. } => StatusCode::CONFLICT,
         _ => match error.kind() {
             ErrorKind::InvalidInput => StatusCode::BAD_REQUEST,
             ErrorKind::BusinessRule => StatusCode::CONFLICT,

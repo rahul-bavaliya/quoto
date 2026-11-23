@@ -4,7 +4,7 @@
 // `table` (the `provinces` table in the database: build it, seed it, read and change the rates).
 
 use crate::country::Country;
-use crate::errors::{QuoteError, QuoteResult};
+use crate::errors::{AppError, AppResult};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Province {
@@ -30,11 +30,11 @@ impl Province {
 
     /// The other way round: finds a province by its two-letter code (as kept in the database).
     /// Only the provinces Quoto knows today are found; the enum grows to all 13 later.
-    pub fn from_code(code: &str) -> QuoteResult<Province> {
+    pub fn from_code(code: &str) -> AppResult<Province> {
         match code {
             "SK" => Ok(Province::Saskatchewan),
             "AB" => Ok(Province::Alberta),
-            other => Err(QuoteError::UnknownProvince {
+            other => Err(AppError::UnknownProvince {
                 code: other.to_string(),
             }),
         }

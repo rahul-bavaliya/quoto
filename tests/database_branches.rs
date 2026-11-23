@@ -113,7 +113,7 @@ async fn a_second_branch_with_the_same_number_is_refused() {
         .unwrap();
     assert_eq!(
         create_branch(&tx, &new_branch("T-04", "Second")).await,
-        Err(QuoteError::DuplicateBranchNumber {
+        Err(AppError::DuplicateBranchNumber {
             number: "T-04".into()
         })
     );
@@ -129,7 +129,7 @@ async fn a_branch_that_already_has_an_id_cannot_be_created_again() {
         .unwrap();
     assert_eq!(
         create_branch(&tx, &saved).await,
-        Err(QuoteError::BranchAlreadySaved)
+        Err(AppError::BranchAlreadySaved)
     );
 }
 
@@ -146,11 +146,11 @@ async fn a_branch_is_found_by_its_number_and_an_unknown_one_is_refused() {
     assert_eq!(branch_by_number(&tx, "T-06").await.unwrap(), saved);
     assert_eq!(
         branch_by_number(&tx, "T-nope").await,
-        Err(QuoteError::UnknownBranch)
+        Err(AppError::UnknownBranch)
     );
     assert_eq!(
         get_branch(&tx, Uuid::nil()).await,
-        Err(QuoteError::UnknownBranch)
+        Err(AppError::UnknownBranch)
     );
 }
 
@@ -243,7 +243,7 @@ async fn an_update_cannot_take_another_branchs_number_but_may_keep_its_own() {
     let steals = new_branch("T-09", "Ten").with_id(ten.id().unwrap());
     assert_eq!(
         update_branch(&tx, &steals).await,
-        Err(QuoteError::DuplicateBranchNumber {
+        Err(AppError::DuplicateBranchNumber {
             number: "T-09".into()
         })
     );
@@ -258,12 +258,12 @@ async fn an_unsaved_or_unknown_branch_cannot_be_updated() {
     let tx = work(&db).await;
     assert_eq!(
         update_branch(&tx, &new_branch("T-13", "Never saved")).await,
-        Err(QuoteError::BranchNotSaved)
+        Err(AppError::BranchNotSaved)
     );
     let ghost = new_branch("T-13", "Ghost").with_id(Uuid::nil());
     assert_eq!(
         update_branch(&tx, &ghost).await,
-        Err(QuoteError::UnknownBranch)
+        Err(AppError::UnknownBranch)
     );
 }
 
@@ -296,7 +296,7 @@ async fn the_status_of_an_unknown_branch_cannot_be_set() {
     let tx = work(&db).await;
     assert_eq!(
         set_branch_status(&tx, Uuid::nil(), Status::Inactive).await,
-        Err(QuoteError::UnknownBranch)
+        Err(AppError::UnknownBranch)
     );
 }
 
@@ -318,7 +318,7 @@ async fn a_row_with_only_half_a_location_or_an_unknown_status_is_refused_when_re
     ))
     .await
     .unwrap();
-    assert_eq!(get_branch(&tx, id).await, Err(QuoteError::InvalidLocation));
+    assert_eq!(get_branch(&tx, id).await, Err(AppError::InvalidLocation));
 
     tx.execute_unprepared(&format!(
         "UPDATE branches SET latitude = NULL, status = 'deleted' WHERE id = '{id}'"
@@ -327,7 +327,7 @@ async fn a_row_with_only_half_a_location_or_an_unknown_status_is_refused_when_re
     .unwrap();
     assert_eq!(
         get_branch(&tx, id).await,
-        Err(QuoteError::InvalidStatus {
+        Err(AppError::InvalidStatus {
             value: "deleted".into()
         })
     );

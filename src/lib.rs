@@ -24,7 +24,7 @@ pub use branch::{
 pub use country::Country;
 pub use customer::{Address, PhoneNumber, PostalCode};
 pub use database::DatabaseSettings;
-pub use errors::{ErrorKind, QuoteError, QuoteResult};
+pub use errors::{AppError, AppResult, ErrorKind};
 pub use province::Province;
 pub use secret::Secret;
 pub use status::Status;

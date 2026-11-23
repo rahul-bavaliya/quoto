@@ -1,6 +1,6 @@
 // src/status.rs: is this record in use? (one status for every kind of record)
 
-use crate::errors::{QuoteError, QuoteResult};
+use crate::errors::{AppError, AppResult};
 use std::fmt;
 
 /// Whether a record is **in use**. Records that must never be deleted (a branch, and later a
@@ -28,11 +28,11 @@ impl Status {
     }
 
     /// The other way round: reads the word kept in the database. Anything else is refused.
-    pub fn from_label(label: &str) -> QuoteResult<Self> {
+    pub fn from_label(label: &str) -> AppResult<Self> {
         match label {
             "active" => Ok(Status::Active),
             "inactive" => Ok(Status::Inactive),
-            other => Err(QuoteError::InvalidStatus {
+            other => Err(AppError::InvalidStatus {
                 value: other.to_string(),
             }),
         }

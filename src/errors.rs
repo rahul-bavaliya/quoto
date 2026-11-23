@@ -4,8 +4,8 @@ use chrono::NaiveDate;
 use thiserror::Error;
 use tracing::{error, warn};
 
-/// The result type used across Quoto: `QuoteResult<T>` means "a T, or a QuoteError".
-pub type QuoteResult<T> = Result<T, QuoteError>;
+/// The result type used across Quoto: `AppResult<T>` means "a T, or a AppError".
+pub type AppResult<T> = Result<T, AppError>;
 
 /// Every way Quoto can refuse something. Each kind carries the details
 /// a screen (or a person) needs to explain what went wrong.
@@ -13,7 +13,7 @@ pub type QuoteResult<T> = Result<T, QuoteError>;
 /// The messages are written for the person using Quoto. `thiserror` writes
 /// the `Display` (and `std::error::Error`) code from the `#[error(...)]` lines.
 #[derive(Debug, PartialEq, Error)]
-pub enum QuoteError {
+pub enum AppError {
     // ---- Quote lines ----
     #[error("A line's quantity must be greater than zero.")]
     BadQuantity { description: String },
@@ -292,48 +292,48 @@ pub enum ErrorKind {
     Configuration,
 }
 
-impl QuoteError {
+impl AppError {
     pub fn kind(&self) -> ErrorKind {
         match self {
-            QuoteError::CreditTooLarge { .. }
-            | QuoteError::QuoteNumbersExhausted { .. }
-            | QuoteError::AlreadyDecided { .. }
-            | QuoteError::QuoteExpired { .. }
-            | QuoteError::NotRejected
-            | QuoteError::AlreadyAttached { .. }
-            | QuoteError::EquipmentNeedsCustomer
-            | QuoteError::EquipmentNotOwnedByCustomer
-            | QuoteError::QuoteIncomplete { .. }
-            | QuoteError::BranchInactive
-            | QuoteError::DuplicateBranchNumber { .. }
-            | QuoteError::BranchAlreadySaved
-            | QuoteError::BranchNotSaved
-            | QuoteError::CustomerAlreadySaved
-            | QuoteError::CustomerNotSaved
-            | QuoteError::CustomerInactive
-            | QuoteError::EquipmentAlreadySaved
-            | QuoteError::EquipmentNotSaved
-            | QuoteError::EquipmentInactive
-            | QuoteError::DuplicateSerialNumber
-            | QuoteError::QuoteAlreadySaved
-            | QuoteError::QuoteNotSaved
-            | QuoteError::TooManyLines { .. }
-            | QuoteError::QuoteChangedMeanwhile
-            | QuoteError::RepairOrderNumbersExhausted { .. }
-            | QuoteError::RepairOrderNotSaved
-            | QuoteError::QuoteNotAccepted
-            | QuoteError::RepairOrderExists
-            | QuoteError::RepairOrderNotOpen
-            | QuoteError::RepairOrderNotInProgress
-            | QuoteError::RepairOrderClosed
-            | QuoteError::RepairOrderChangedMeanwhile => ErrorKind::BusinessRule,
-            QuoteError::LookupFailed { .. }
-            | QuoteError::DatabaseUnavailable
-            | QuoteError::DatabaseSetupFailed
-            | QuoteError::StoredQuoteDamaged
-            | QuoteError::StoredRepairOrderDamaged
-            | QuoteError::ServerStartFailed => ErrorKind::ServiceUnavailable,
-            QuoteError::MissingSetting { .. } | QuoteError::InvalidSetting { .. } => {
+            AppError::CreditTooLarge { .. }
+            | AppError::QuoteNumbersExhausted { .. }
+            | AppError::AlreadyDecided { .. }
+            | AppError::QuoteExpired { .. }
+            | AppError::NotRejected
+            | AppError::AlreadyAttached { .. }
+            | AppError::EquipmentNeedsCustomer
+            | AppError::EquipmentNotOwnedByCustomer
+            | AppError::QuoteIncomplete { .. }
+            | AppError::BranchInactive
+            | AppError::DuplicateBranchNumber { .. }
+            | AppError::BranchAlreadySaved
+            | AppError::BranchNotSaved
+            | AppError::CustomerAlreadySaved
+            | AppError::CustomerNotSaved
+            | AppError::CustomerInactive
+            | AppError::EquipmentAlreadySaved
+            | AppError::EquipmentNotSaved
+            | AppError::EquipmentInactive
+            | AppError::DuplicateSerialNumber
+            | AppError::QuoteAlreadySaved
+            | AppError::QuoteNotSaved
+            | AppError::TooManyLines { .. }
+            | AppError::QuoteChangedMeanwhile
+            | AppError::RepairOrderNumbersExhausted { .. }
+            | AppError::RepairOrderNotSaved
+            | AppError::QuoteNotAccepted
+            | AppError::RepairOrderExists
+            | AppError::RepairOrderNotOpen
+            | AppError::RepairOrderNotInProgress
+            | AppError::RepairOrderClosed
+            | AppError::RepairOrderChangedMeanwhile => ErrorKind::BusinessRule,
+            AppError::LookupFailed { .. }
+            | AppError::DatabaseUnavailable
+            | AppError::DatabaseSetupFailed
+            | AppError::StoredQuoteDamaged
+            | AppError::StoredRepairOrderDamaged
+            | AppError::ServerStartFailed => ErrorKind::ServiceUnavailable,
+            AppError::MissingSetting { .. } | AppError::InvalidSetting { .. } => {
                 ErrorKind::Configuration
             }
             // Everything else is a wrong input.
@@ -345,81 +345,81 @@ impl QuoteError {
     /// rely on it even if the wording of the message changes.
     pub fn code(&self) -> &'static str {
         match self {
-            QuoteError::BadQuantity { .. } => "BAD_QUANTITY",
-            QuoteError::NegativePrice { .. } => "NEGATIVE_PRICE",
-            QuoteError::CreditTooLarge { .. } => "CREDIT_TOO_LARGE",
-            QuoteError::LineTooLarge { .. } => "LINE_TOO_LARGE",
-            QuoteError::DescriptionTooLong { .. } => "DESCRIPTION_TOO_LONG",
-            QuoteError::TooManyLines { .. } => "TOO_MANY_LINES",
-            QuoteError::InvalidLineKind => "INVALID_LINE_KIND",
-            QuoteError::MissingField { .. } => "MISSING_FIELD",
-            QuoteError::InvalidPhone { .. } => "INVALID_PHONE",
-            QuoteError::InvalidEmail { .. } => "INVALID_EMAIL",
-            QuoteError::InvalidPostalCode { .. } => "INVALID_POSTAL_CODE",
-            QuoteError::InvalidQuoteNumber { .. } => "INVALID_QUOTE_NUMBER",
-            QuoteError::QuoteNumbersExhausted { .. } => "QUOTE_NUMBERS_EXHAUSTED",
-            QuoteError::ExpiryBeforeQuoteDate { .. } => "EXPIRY_BEFORE_QUOTE_DATE",
-            QuoteError::PromiseBeforeQuoteDate { .. } => "PROMISE_BEFORE_QUOTE_DATE",
-            QuoteError::AlreadyDecided { .. } => "ALREADY_DECIDED",
-            QuoteError::QuoteExpired { .. } => "QUOTE_EXPIRED",
-            QuoteError::NotRejected => "NOT_REJECTED",
-            QuoteError::AlreadyAttached { .. } => "ALREADY_ATTACHED",
-            QuoteError::EquipmentNeedsCustomer => "EQUIPMENT_NEEDS_CUSTOMER",
-            QuoteError::EquipmentNotOwnedByCustomer => "EQUIPMENT_NOT_OWNED_BY_CUSTOMER",
-            QuoteError::QuoteIncomplete { .. } => "QUOTE_INCOMPLETE",
-            QuoteError::InvalidLocation => "INVALID_LOCATION",
-            QuoteError::BranchInactive => "BRANCH_INACTIVE",
-            QuoteError::RejectionReasonTooLong { .. } => "REJECTION_REASON_TOO_LONG",
-            QuoteError::InvalidTaxRate { .. } => "INVALID_TAX_RATE",
-            QuoteError::InvalidTaxSystem => "INVALID_TAX_SYSTEM",
-            QuoteError::UnknownProvince { .. } => "UNKNOWN_PROVINCE",
-            QuoteError::RatesDateBeforeCurrent { .. } => "RATES_DATE_BEFORE_CURRENT",
-            QuoteError::ServerStartFailed => "SERVER_START_FAILED",
-            QuoteError::UnknownCustomer => "UNKNOWN_CUSTOMER",
-            QuoteError::CustomerAlreadySaved => "CUSTOMER_ALREADY_SAVED",
-            QuoteError::CustomerNotSaved => "CUSTOMER_NOT_SAVED",
-            QuoteError::CustomerInactive => "CUSTOMER_INACTIVE",
-            QuoteError::InvalidStatus { .. } => "INVALID_STATUS",
-            QuoteError::UnknownBranch => "UNKNOWN_BRANCH",
-            QuoteError::DuplicateBranchNumber { .. } => "DUPLICATE_BRANCH_NUMBER",
-            QuoteError::BranchAlreadySaved => "BRANCH_ALREADY_SAVED",
-            QuoteError::BranchNotSaved => "BRANCH_NOT_SAVED",
-            QuoteError::MissingIdentification => "MISSING_IDENTIFICATION",
-            QuoteError::InvalidMeterReading { .. } => "INVALID_METER_READING",
-            QuoteError::InvalidMeterType { .. } => "INVALID_METER_TYPE",
-            QuoteError::InvalidEquipmentType { .. } => "INVALID_EQUIPMENT_TYPE",
-            QuoteError::InvalidEquipmentSource => "INVALID_EQUIPMENT_SOURCE",
-            QuoteError::UnknownEquipment => "UNKNOWN_EQUIPMENT",
-            QuoteError::EquipmentAlreadySaved => "EQUIPMENT_ALREADY_SAVED",
-            QuoteError::EquipmentNotSaved => "EQUIPMENT_NOT_SAVED",
-            QuoteError::UnknownQuote => "UNKNOWN_QUOTE",
-            QuoteError::QuoteAlreadySaved => "QUOTE_ALREADY_SAVED",
-            QuoteError::QuoteNotSaved => "QUOTE_NOT_SAVED",
-            QuoteError::QuoteChangedMeanwhile => "QUOTE_CHANGED_MEANWHILE",
-            QuoteError::StoredQuoteDamaged => "STORED_QUOTE_DAMAGED",
-            QuoteError::EquipmentInactive => "EQUIPMENT_INACTIVE",
-            QuoteError::InvalidRepairOrderNumber { .. } => "INVALID_REPAIR_ORDER_NUMBER",
-            QuoteError::RepairOrderNumbersExhausted { .. } => "REPAIR_ORDER_NUMBERS_EXHAUSTED",
-            QuoteError::UnknownRepairOrder => "UNKNOWN_REPAIR_ORDER",
-            QuoteError::RepairOrderNotSaved => "REPAIR_ORDER_NOT_SAVED",
-            QuoteError::QuoteNotAccepted => "QUOTE_NOT_ACCEPTED",
-            QuoteError::RepairOrderExists => "REPAIR_ORDER_EXISTS",
-            QuoteError::MeterReadingRequired => "METER_READING_REQUIRED",
-            QuoteError::RepairOrderNotOpen => "REPAIR_ORDER_NOT_OPEN",
-            QuoteError::RepairOrderNotInProgress => "REPAIR_ORDER_NOT_IN_PROGRESS",
-            QuoteError::RepairOrderClosed => "REPAIR_ORDER_CLOSED",
-            QuoteError::DueDateBeforeOpened => "DUE_DATE_BEFORE_OPENED",
-            QuoteError::CancellationReasonTooLong { .. } => "CANCELLATION_REASON_TOO_LONG",
-            QuoteError::RepairOrderTextTooLong { .. } => "REPAIR_ORDER_TEXT_TOO_LONG",
-            QuoteError::RepairOrderTextInvalid { .. } => "REPAIR_ORDER_TEXT_INVALID",
-            QuoteError::RepairOrderChangedMeanwhile => "REPAIR_ORDER_CHANGED_MEANWHILE",
-            QuoteError::StoredRepairOrderDamaged => "STORED_REPAIR_ORDER_DAMAGED",
-            QuoteError::DuplicateSerialNumber => "DUPLICATE_SERIAL_NUMBER",
-            QuoteError::LookupFailed { .. } => "LOOKUP_FAILED",
-            QuoteError::DatabaseUnavailable => "DATABASE_UNAVAILABLE",
-            QuoteError::DatabaseSetupFailed => "DATABASE_SETUP_FAILED",
-            QuoteError::MissingSetting { .. } => "MISSING_SETTING",
-            QuoteError::InvalidSetting { .. } => "INVALID_SETTING",
+            AppError::BadQuantity { .. } => "BAD_QUANTITY",
+            AppError::NegativePrice { .. } => "NEGATIVE_PRICE",
+            AppError::CreditTooLarge { .. } => "CREDIT_TOO_LARGE",
+            AppError::LineTooLarge { .. } => "LINE_TOO_LARGE",
+            AppError::DescriptionTooLong { .. } => "DESCRIPTION_TOO_LONG",
+            AppError::TooManyLines { .. } => "TOO_MANY_LINES",
+            AppError::InvalidLineKind => "INVALID_LINE_KIND",
+            AppError::MissingField { .. } => "MISSING_FIELD",
+            AppError::InvalidPhone { .. } => "INVALID_PHONE",
+            AppError::InvalidEmail { .. } => "INVALID_EMAIL",
+            AppError::InvalidPostalCode { .. } => "INVALID_POSTAL_CODE",
+            AppError::InvalidQuoteNumber { .. } => "INVALID_QUOTE_NUMBER",
+            AppError::QuoteNumbersExhausted { .. } => "QUOTE_NUMBERS_EXHAUSTED",
+            AppError::ExpiryBeforeQuoteDate { .. } => "EXPIRY_BEFORE_QUOTE_DATE",
+            AppError::PromiseBeforeQuoteDate { .. } => "PROMISE_BEFORE_QUOTE_DATE",
+            AppError::AlreadyDecided { .. } => "ALREADY_DECIDED",
+            AppError::QuoteExpired { .. } => "QUOTE_EXPIRED",
+            AppError::NotRejected => "NOT_REJECTED",
+            AppError::AlreadyAttached { .. } => "ALREADY_ATTACHED",
+            AppError::EquipmentNeedsCustomer => "EQUIPMENT_NEEDS_CUSTOMER",
+            AppError::EquipmentNotOwnedByCustomer => "EQUIPMENT_NOT_OWNED_BY_CUSTOMER",
+            AppError::QuoteIncomplete { .. } => "QUOTE_INCOMPLETE",
+            AppError::InvalidLocation => "INVALID_LOCATION",
+            AppError::BranchInactive => "BRANCH_INACTIVE",
+            AppError::RejectionReasonTooLong { .. } => "REJECTION_REASON_TOO_LONG",
+            AppError::InvalidTaxRate { .. } => "INVALID_TAX_RATE",
+            AppError::InvalidTaxSystem => "INVALID_TAX_SYSTEM",
+            AppError::UnknownProvince { .. } => "UNKNOWN_PROVINCE",
+            AppError::RatesDateBeforeCurrent { .. } => "RATES_DATE_BEFORE_CURRENT",
+            AppError::ServerStartFailed => "SERVER_START_FAILED",
+            AppError::UnknownCustomer => "UNKNOWN_CUSTOMER",
+            AppError::CustomerAlreadySaved => "CUSTOMER_ALREADY_SAVED",
+            AppError::CustomerNotSaved => "CUSTOMER_NOT_SAVED",
+            AppError::CustomerInactive => "CUSTOMER_INACTIVE",
+            AppError::InvalidStatus { .. } => "INVALID_STATUS",
+            AppError::UnknownBranch => "UNKNOWN_BRANCH",
+            AppError::DuplicateBranchNumber { .. } => "DUPLICATE_BRANCH_NUMBER",
+            AppError::BranchAlreadySaved => "BRANCH_ALREADY_SAVED",
+            AppError::BranchNotSaved => "BRANCH_NOT_SAVED",
+            AppError::MissingIdentification => "MISSING_IDENTIFICATION",
+            AppError::InvalidMeterReading { .. } => "INVALID_METER_READING",
+            AppError::InvalidMeterType { .. } => "INVALID_METER_TYPE",
+            AppError::InvalidEquipmentType { .. } => "INVALID_EQUIPMENT_TYPE",
+            AppError::InvalidEquipmentSource => "INVALID_EQUIPMENT_SOURCE",
+            AppError::UnknownEquipment => "UNKNOWN_EQUIPMENT",
+            AppError::EquipmentAlreadySaved => "EQUIPMENT_ALREADY_SAVED",
+            AppError::EquipmentNotSaved => "EQUIPMENT_NOT_SAVED",
+            AppError::UnknownQuote => "UNKNOWN_QUOTE",
+            AppError::QuoteAlreadySaved => "QUOTE_ALREADY_SAVED",
+            AppError::QuoteNotSaved => "QUOTE_NOT_SAVED",
+            AppError::QuoteChangedMeanwhile => "QUOTE_CHANGED_MEANWHILE",
+            AppError::StoredQuoteDamaged => "STORED_QUOTE_DAMAGED",
+            AppError::EquipmentInactive => "EQUIPMENT_INACTIVE",
+            AppError::InvalidRepairOrderNumber { .. } => "INVALID_REPAIR_ORDER_NUMBER",
+            AppError::RepairOrderNumbersExhausted { .. } => "REPAIR_ORDER_NUMBERS_EXHAUSTED",
+            AppError::UnknownRepairOrder => "UNKNOWN_REPAIR_ORDER",
+            AppError::RepairOrderNotSaved => "REPAIR_ORDER_NOT_SAVED",
+            AppError::QuoteNotAccepted => "QUOTE_NOT_ACCEPTED",
+            AppError::RepairOrderExists => "REPAIR_ORDER_EXISTS",
+            AppError::MeterReadingRequired => "METER_READING_REQUIRED",
+            AppError::RepairOrderNotOpen => "REPAIR_ORDER_NOT_OPEN",
+            AppError::RepairOrderNotInProgress => "REPAIR_ORDER_NOT_IN_PROGRESS",
+            AppError::RepairOrderClosed => "REPAIR_ORDER_CLOSED",
+            AppError::DueDateBeforeOpened => "DUE_DATE_BEFORE_OPENED",
+            AppError::CancellationReasonTooLong { .. } => "CANCELLATION_REASON_TOO_LONG",
+            AppError::RepairOrderTextTooLong { .. } => "REPAIR_ORDER_TEXT_TOO_LONG",
+            AppError::RepairOrderTextInvalid { .. } => "REPAIR_ORDER_TEXT_INVALID",
+            AppError::RepairOrderChangedMeanwhile => "REPAIR_ORDER_CHANGED_MEANWHILE",
+            AppError::StoredRepairOrderDamaged => "STORED_REPAIR_ORDER_DAMAGED",
+            AppError::DuplicateSerialNumber => "DUPLICATE_SERIAL_NUMBER",
+            AppError::LookupFailed { .. } => "LOOKUP_FAILED",
+            AppError::DatabaseUnavailable => "DATABASE_UNAVAILABLE",
+            AppError::DatabaseSetupFailed => "DATABASE_SETUP_FAILED",
+            AppError::MissingSetting { .. } => "MISSING_SETTING",
+            AppError::InvalidSetting { .. } => "INVALID_SETTING",
         }
     }
 

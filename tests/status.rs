@@ -26,7 +26,7 @@ fn only_the_two_known_words_are_accepted() {
     for word in ["", "Active", "ACTIVE", "in_active", "deleted", " active"] {
         assert_eq!(
             Status::from_label(word),
-            Err(QuoteError::InvalidStatus {
+            Err(AppError::InvalidStatus {
                 value: word.to_string()
             }),
             "{word:?}"

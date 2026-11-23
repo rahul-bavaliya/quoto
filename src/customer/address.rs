@@ -1,7 +1,7 @@
 // src/customer/address.rs: where a customer is (and which province's taxes apply)
 
 use super::PostalCode;
-use crate::errors::QuoteError;
+use crate::errors::AppError;
 use crate::province::Province;
 use std::fmt;
 
@@ -22,14 +22,14 @@ impl Address {
         city: String,
         postal_code: PostalCode,
         province: Province,
-    ) -> Result<Self, QuoteError> {
+    ) -> Result<Self, AppError> {
         if line1.trim().is_empty() {
-            return Err(QuoteError::MissingField {
+            return Err(AppError::MissingField {
                 field: "address line 1",
             });
         }
         if city.trim().is_empty() {
-            return Err(QuoteError::MissingField { field: "city" });
+            return Err(AppError::MissingField { field: "city" });
         }
         Ok(Address {
             line1,

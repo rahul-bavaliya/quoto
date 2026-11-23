@@ -18,7 +18,7 @@ fn phone() -> PhoneNumber {
     PhoneNumber::parse("306-555-0100").unwrap()
 }
 
-fn branch(number: &str, name: &str) -> QuoteResult<Branch> {
+fn branch(number: &str, name: &str) -> AppResult<Branch> {
     Branch::new(
         String::from(number),
         String::from(name),
@@ -51,7 +51,7 @@ fn the_branch_number_keeps_its_leading_zeros() {
 fn a_blank_number_is_refused() {
     assert!(matches!(
         branch("   ", "Regina Branch"),
-        Err(QuoteError::MissingField {
+        Err(AppError::MissingField {
             field: "branch number"
         })
     ));
@@ -61,7 +61,7 @@ fn a_blank_number_is_refused() {
 fn a_blank_name_is_refused() {
     assert!(matches!(
         branch("001", ""),
-        Err(QuoteError::MissingField {
+        Err(AppError::MissingField {
             field: "branch name"
         })
     ));
@@ -156,7 +156,7 @@ fn a_location_off_the_map_is_refused() {
     ] {
         assert!(matches!(
             Location::new(latitude, longitude),
-            Err(QuoteError::InvalidLocation)
+            Err(AppError::InvalidLocation)
         ));
     }
 }
