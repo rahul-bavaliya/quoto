@@ -1,7 +1,7 @@
 // src/database.rs: the connection to PostgreSQL, and changing its tables (migrations)
 
-use crate::errors::{QuoteError, QuoteResult};
-use crate::{branch, customer, equipment, province, quote, repair_order};
+use crate::branch;
+use crate::errors::{AppError, AppResult};
 use sea_orm::sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sea_orm::{DatabaseConnection, SqlxPostgresConnector};
 use sea_orm_migration::MigratorTrait;
@@ -22,7 +22,7 @@ const WAIT_FOR_CONNECTION: Duration = Duration::from_secs(5);
 /// password or a stopped database is found now, not at the first quote.
 ///
 /// The password is only opened here, with `expose()`. It is never logged.
-pub async fn connect(settings: &DatabaseSettings) -> QuoteResult<DatabaseConnection> {
+pub async fn connect(settings: &DatabaseSettings) -> AppResult<DatabaseConnection> {
     let options = PgConnectOptions::new()
         .host(&settings.host)
         .port(settings.port)
@@ -40,7 +40,7 @@ pub async fn connect(settings: &DatabaseSettings) -> QuoteResult<DatabaseConnect
             // The cause helps whoever runs the server; the person sees only the
             // short message. Debug level, so it isn't printed by default.
             debug!(%cause, "database connection failed");
-            QuoteError::DatabaseUnavailable
+            AppError::DatabaseUnavailable
         })?;
     Ok(SqlxPostgresConnector::from_sqlx_postgres_pool(pool))
 }
@@ -48,10 +48,10 @@ pub async fn connect(settings: &DatabaseSettings) -> QuoteResult<DatabaseConnect
 /// Brings the database up to date: runs every migration it has not run yet, in order (see
 /// `migrations.rs`). Running it again does nothing. It is the one way the tables change. It needs
 /// a database user that is allowed to create and change tables.
-pub async fn migrate(db: &DatabaseConnection) -> QuoteResult<()> {
+pub async fn migrate(db: &DatabaseConnection) -> AppResult<()> {
     migrations::Migrator::up(db, None).await.map_err(|cause| {
         debug!(%cause, "database migration failed");
-        QuoteError::DatabaseSetupFailed
+        AppError::DatabaseSetupFailed
     })
 }
 
@@ -59,21 +59,13 @@ pub async fn migrate(db: &DatabaseConnection) -> QuoteResult<()> {
 /// drops anything. This is NOT how the server's database is built (that is `migrate`): it is
 /// kept as the reference the tests compare the migrations against, so a struct and its table
 /// can't drift apart unnoticed.
-pub async fn sync(db: &DatabaseConnection) -> QuoteResult<()> {
+pub async fn sync(db: &DatabaseConnection) -> AppResult<()> {
     db.get_schema_builder()
-        .register(province::ProvinceTable)
         .register(branch::BranchTable)
-        .register(customer::CustomerTable)
-        .register(equipment::EquipmentTable)
-        .register(quote::QuoteNumberTable)
-        .register(quote::QuoteTable)
-        .register(quote::QuoteLineTable)
-        .register(repair_order::RepairOrderNumberTable)
-        .register(repair_order::RepairOrderTable)
         .sync(db)
         .await
         .map_err(|cause| {
             debug!(%cause, "database sync failed");
-            QuoteError::DatabaseSetupFailed
+            AppError::DatabaseSetupFailed
         })
 }

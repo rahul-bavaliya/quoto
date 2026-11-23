@@ -2,7 +2,7 @@
 //
 // `body` (a body that isn't the expected JSON is one plain answer), `changes` and `merge` (a PATCH:
 // only the sent fields change, checked by the same rules as a POST) and `StatusInput` (the body
-// of every `.../status` call). Nothing here knows about a branch or a customer.
+// of the branch status call).
 
 use super::error::ApiError;
 use axum::Json;
@@ -29,16 +29,7 @@ pub(super) fn body<T>(input: Result<Json<T>, JsonRejection>) -> Result<T, ApiErr
 
 /// The parts of a view that are not part of an input: a PATCH can't change them.
 /// (The owner of a machine and where its details came from are changed by their own calls.)
-const NOT_INPUT: [&str; 5] = ["id", "country", "status", "customer_id", "source"];
-
-/// A page is this long unless the caller asks for fewer or more (at most `MAX_PAGE`).
-const DEFAULT_PAGE: u64 = 50;
-const MAX_PAGE: u64 = 200;
-
-/// How many records one page of a list holds: what was asked for, between 1 and `MAX_PAGE`.
-pub(super) fn page_size(asked: Option<u64>) -> u64 {
-    asked.unwrap_or(DEFAULT_PAGE).clamp(1, MAX_PAGE)
-}
+const NOT_INPUT: [&str; 3] = ["id", "country", "status"];
 
 /// The body of a PATCH: a JSON object with at least one field. (An empty one changes nothing, so
 /// it is refused as a mistake, and so is a field that is not an input.) Checked before the database is touched.

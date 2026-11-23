@@ -1,6 +1,6 @@
 // src/api/settings.rs: where the web API listens and the key that opens it
 
-use crate::errors::{QuoteError, QuoteResult};
+use crate::errors::{AppError, AppResult};
 use crate::secret::Secret;
 use std::net::{IpAddr, SocketAddr};
 
@@ -20,36 +20,36 @@ pub struct ApiSettings {
 
 impl ApiSettings {
     /// Reads the settings from the real environment variables.
-    pub fn from_env() -> QuoteResult<Self> {
+    pub fn from_env() -> AppResult<Self> {
         Self::from_lookup(|name| std::env::var(name).ok())
     }
 
     /// Reads the settings from any "name → value" source (tests don't touch the real environment).
-    pub fn from_lookup(get: impl Fn(&str) -> Option<String>) -> QuoteResult<Self> {
+    pub fn from_lookup(get: impl Fn(&str) -> Option<String>) -> AppResult<Self> {
         let value = |name: &str| {
             get(name)
                 .map(|v| v.trim().to_string())
                 .filter(|v| !v.is_empty())
         };
 
-        let key = value("API_KEY").ok_or(QuoteError::MissingSetting { name: "API_KEY" })?;
+        let key = value("API_KEY").ok_or(AppError::MissingSetting { name: "API_KEY" })?;
         if key.chars().count() < MIN_KEY_LENGTH {
-            return Err(QuoteError::InvalidSetting { name: "API_KEY" });
+            return Err(AppError::InvalidSetting { name: "API_KEY" });
         }
 
         let host: IpAddr = match value("API_HOST") {
             Some(text) => text
                 .parse()
-                .map_err(|_| QuoteError::InvalidSetting { name: "API_HOST" })?,
+                .map_err(|_| AppError::InvalidSetting { name: "API_HOST" })?,
             None => IpAddr::from([127, 0, 0, 1]),
         };
         if !host.is_loopback() {
-            return Err(QuoteError::InvalidSetting { name: "API_HOST" });
+            return Err(AppError::InvalidSetting { name: "API_HOST" });
         }
         let port: u16 = match value("API_PORT") {
             Some(text) => text
                 .parse()
-                .map_err(|_| QuoteError::InvalidSetting { name: "API_PORT" })?,
+                .map_err(|_| AppError::InvalidSetting { name: "API_PORT" })?,
             None => 3000,
         };
 

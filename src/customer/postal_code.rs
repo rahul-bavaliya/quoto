@@ -1,6 +1,6 @@
 // src/customer/postal_code.rs
 
-use crate::errors::QuoteError;
+use crate::errors::AppError;
 use std::fmt;
 
 /// A Canadian postal code, always stored as "A1A1A1" and shown as "A1A 1A1".
@@ -10,7 +10,7 @@ pub struct PostalCode {
 }
 
 impl PostalCode {
-    pub fn parse(input: &str) -> Result<Self, QuoteError> {
+    pub fn parse(input: &str) -> Result<Self, AppError> {
         // 1. Clean: drop spaces and dashes, make letters UPPERCASE
         let cleaned: String = input
             .chars()
@@ -30,7 +30,7 @@ impl PostalCode {
             });
 
         if !shape_ok {
-            return Err(QuoteError::InvalidPostalCode {
+            return Err(AppError::InvalidPostalCode {
                 input: input.to_string(),
             });
         }

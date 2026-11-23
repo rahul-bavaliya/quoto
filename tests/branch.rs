@@ -18,7 +18,7 @@ fn phone() -> PhoneNumber {
     PhoneNumber::parse("306-555-0100").unwrap()
 }
 
-fn branch(number: &str, name: &str) -> QuoteResult<Branch> {
+fn branch(number: &str, name: &str) -> AppResult<Branch> {
     Branch::new(
         String::from(number),
         String::from(name),
@@ -51,7 +51,7 @@ fn the_branch_number_keeps_its_leading_zeros() {
 fn a_blank_number_is_refused() {
     assert!(matches!(
         branch("   ", "Regina Branch"),
-        Err(QuoteError::MissingField {
+        Err(AppError::MissingField {
             field: "branch number"
         })
     ));
@@ -61,7 +61,7 @@ fn a_blank_number_is_refused() {
 fn a_blank_name_is_refused() {
     assert!(matches!(
         branch("001", ""),
-        Err(QuoteError::MissingField {
+        Err(AppError::MissingField {
             field: "branch name"
         })
     ));
@@ -156,7 +156,7 @@ fn a_location_off_the_map_is_refused() {
     ] {
         assert!(matches!(
             Location::new(latitude, longitude),
-            Err(QuoteError::InvalidLocation)
+            Err(AppError::InvalidLocation)
         ));
     }
 }
@@ -236,31 +236,4 @@ fn an_updated_branch_is_the_new_version_with_the_old_id() {
     let renamed = branch("001", "Regina South Branch").unwrap().with_id(id);
     assert_eq!(renamed.id(), old.id());
     assert_ne!(renamed, old);
-}
-
-// ===== samples and the quote =====
-
-#[test]
-fn the_sample_branches_are_in_their_provinces() {
-    let sk = samples::branch_in(Province::Saskatchewan).unwrap();
-    let ab = samples::branch_in(Province::Alberta).unwrap();
-    assert_eq!(sk.province(), &Province::Saskatchewan);
-    assert_eq!(ab.province(), &Province::Alberta);
-    assert_ne!(sk.number(), ab.number());
-}
-
-#[test]
-fn an_inactive_branch_cannot_start_a_new_quote() {
-    let mut branch = samples::branch_in(Province::Saskatchewan).unwrap();
-    branch.deactivate();
-    let result = Quote::new(samples::quote_number(), samples::quote_time(), branch);
-    assert!(matches!(result, Err(QuoteError::BranchInactive)));
-}
-
-#[test]
-fn a_quote_started_before_the_branch_closed_keeps_working() {
-    // The quote owns its branch, so closing the branch later never touches old quotes.
-    let quote = samples::oil_change_quote(Province::Saskatchewan).unwrap();
-    assert!(quote.branch().is_active());
-    assert!(quote.total() > 0);
 }

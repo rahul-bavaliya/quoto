@@ -1,6 +1,6 @@
 // src/customer/phone_number.rs
 
-use crate::errors::QuoteError;
+use crate::errors::AppError;
 use std::fmt;
 
 /// A North American phone number. Always stored as exactly 10 digits
@@ -12,7 +12,7 @@ pub struct PhoneNumber {
 
 impl PhoneNumber {
     /// Accepts messy input like "(306) 555 0142" or "+1 306 555 0142".
-    pub fn parse(input: &str) -> Result<Self, QuoteError> {
+    pub fn parse(input: &str) -> Result<Self, AppError> {
         // 1. Clean: keep only the digits
         let mut digits: String = input.chars().filter(|c| c.is_ascii_digit()).collect();
 
@@ -24,7 +24,7 @@ impl PhoneNumber {
         // 3. Check: exactly 10 digits, and no letters hiding in the input
         let has_letters = input.chars().any(|c| c.is_alphabetic());
         if digits.len() != 10 || has_letters {
-            return Err(QuoteError::InvalidPhone {
+            return Err(AppError::InvalidPhone {
                 input: input.to_string(),
             });
         }

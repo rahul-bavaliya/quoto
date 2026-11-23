@@ -1,6 +1,6 @@
 // src/database/settings.rs: where the database is and how to log in
 
-use crate::errors::{QuoteError, QuoteResult};
+use crate::errors::{AppError, AppResult};
 use crate::secret::Secret;
 use sea_orm::sqlx::postgres::PgSslMode;
 
@@ -21,7 +21,7 @@ pub struct DatabaseSettings {
 
 impl DatabaseSettings {
     /// Reads the settings from the real environment variables.
-    pub fn from_env() -> QuoteResult<Self> {
+    pub fn from_env() -> AppResult<Self> {
         Self::from_lookup(|name| std::env::var(name).ok())
     }
 
@@ -30,18 +30,18 @@ impl DatabaseSettings {
     ///
     /// No default for the user, the password or the database name: a forgotten
     /// setting must stop the program, not fall back to a password anyone can guess.
-    pub fn from_lookup(get: impl Fn(&str) -> Option<String>) -> QuoteResult<Self> {
+    pub fn from_lookup(get: impl Fn(&str) -> Option<String>) -> AppResult<Self> {
         // A blank value counts as "not set".
         let value = |name: &str| {
             get(name)
                 .map(|v| v.trim().to_string())
                 .filter(|v| !v.is_empty())
         };
-        let required = |name: &'static str| value(name).ok_or(QuoteError::MissingSetting { name });
+        let required = |name: &'static str| value(name).ok_or(AppError::MissingSetting { name });
 
         let port = match value("POSTGRES_PORT") {
             None => 5432,
-            Some(text) => text.parse().map_err(|_| QuoteError::InvalidSetting {
+            Some(text) => text.parse().map_err(|_| AppError::InvalidSetting {
                 name: "POSTGRES_PORT",
             })?,
         };
@@ -49,7 +49,7 @@ impl DatabaseSettings {
         // set POSTGRES_SSLMODE=require (or verify-full).
         let ssl_mode = match value("POSTGRES_SSLMODE") {
             None => PgSslMode::Prefer,
-            Some(text) => text.parse().map_err(|_| QuoteError::InvalidSetting {
+            Some(text) => text.parse().map_err(|_| AppError::InvalidSetting {
                 name: "POSTGRES_SSLMODE",
             })?,
         };

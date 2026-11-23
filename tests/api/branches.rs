@@ -66,7 +66,7 @@ async fn the_librarys_rules_answer_with_their_own_codes() {
         (
             "name",
             json!("   "),
-            QuoteError::MissingField {
+            AppError::MissingField {
                 field: "branch name",
             }
             .code(),
@@ -74,7 +74,7 @@ async fn the_librarys_rules_answer_with_their_own_codes() {
         (
             "number",
             json!(""),
-            QuoteError::MissingField {
+            AppError::MissingField {
                 field: "branch number",
             }
             .code(),
@@ -95,7 +95,7 @@ async fn half_a_map_location_is_refused() {
     body["latitude"] = json!(50.4);
     let (status, answer) = post(body).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
-    assert_eq!(answer["code"], QuoteError::InvalidLocation.code());
+    assert_eq!(answer["code"], AppError::InvalidLocation.code());
 }
 
 #[tokio::test]

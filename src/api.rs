@@ -7,34 +7,26 @@
 //   log        the one log line per call
 //   request    what calls with a body share (body, PATCH merge, status body)
 //   branches   the branch calls
-//   customers  the customer calls
-//   equipment  the machine calls
-//   quotes     the quote calls
-//   repair_orders  the repair order calls
 //   docs       the Swagger page at /docs
 // Every call needs the API key (`Authorization: Bearer <key>`); only the documentation
 // addresses don't.
 
 mod auth;
 mod branches;
-mod customers;
 mod docs;
-mod equipment;
 mod error;
 mod log;
-mod quotes;
-mod repair_orders;
 mod request;
 mod settings;
 
 pub use settings::ApiSettings;
 
-use crate::errors::{QuoteError, QuoteResult};
+use crate::errors::{AppError, AppResult};
 use crate::secret::Secret;
 use axum::Router;
 use axum::extract::DefaultBodyLimit;
 use axum::middleware::{from_fn, from_fn_with_state};
-use axum::routing::{get, patch, post};
+use axum::routing::{get, patch};
 use sea_orm::DatabaseConnection;
 use std::sync::Arc;
 use tracing::{debug, info};
@@ -64,45 +56,6 @@ pub fn router(db: DatabaseConnection, key: Secret) -> Router {
                 .patch(branches::change),
         )
         .route("/branches/{id}/status", patch(branches::change_status))
-        .route("/customers", get(customers::list).post(customers::create))
-        .route(
-            "/customers/{id}",
-            get(customers::read)
-                .put(customers::replace)
-                .patch(customers::change),
-        )
-        .route("/customers/{id}/status", patch(customers::change_status))
-        .route("/equipment", get(equipment::list).post(equipment::create))
-        .route(
-            "/equipment/{id}",
-            get(equipment::read)
-                .put(equipment::replace)
-                .patch(equipment::change)
-                .delete(equipment::archive),
-        )
-        .route("/equipment/{id}/status", patch(equipment::change_status))
-        .route("/equipment/{id}/owner", patch(equipment::change_owner))
-        .route("/quotes", get(quotes::list).post(quotes::create))
-        .route("/quotes/{id}", get(quotes::read).patch(quotes::change))
-        .route("/quotes/{id}/pdf", get(quotes::print))
-        .route("/quotes/{id}/lines", post(quotes::add_line))
-        .route("/quotes/{id}/customer", patch(quotes::add_customer))
-        .route("/quotes/{id}/equipment", patch(quotes::add_equipment))
-        .route("/quotes/{id}/accept", post(quotes::accept))
-        .route("/quotes/{id}/reject", post(quotes::reject))
-        .route("/quotes/{id}/reopen", post(quotes::reopen))
-        .route("/quotes/{id}/repair-order", post(repair_orders::open))
-        .route("/repair-orders", get(repair_orders::list))
-        .route(
-            "/repair-orders/{id}",
-            get(repair_orders::read).patch(repair_orders::change),
-        )
-        .route("/repair-orders/{id}/start", post(repair_orders::start))
-        .route(
-            "/repair-orders/{id}/complete",
-            post(repair_orders::complete),
-        )
-        .route("/repair-orders/{id}/cancel", post(repair_orders::cancel))
         .merge(docs::routes())
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         // Added last, so it runs first: nothing is read or answered without the key.
@@ -113,14 +66,14 @@ pub fn router(db: DatabaseConnection, key: Secret) -> Router {
 }
 
 /// Starts the API and keeps it running until Ctrl+C.
-pub async fn serve(settings: ApiSettings, db: DatabaseConnection) -> QuoteResult<()> {
+pub async fn serve(settings: ApiSettings, db: DatabaseConnection) -> AppResult<()> {
     let address = settings.address();
     let app = router(db, settings.key);
     let listener = tokio::net::TcpListener::bind(address)
         .await
         .map_err(|cause| {
             debug!(%cause, "could not listen");
-            QuoteError::ServerStartFailed
+            AppError::ServerStartFailed
         })?;
     info!(%address, "the API is listening");
     axum::serve(listener, app)
@@ -130,6 +83,6 @@ pub async fn serve(settings: ApiSettings, db: DatabaseConnection) -> QuoteResult
         .await
         .map_err(|cause| {
             debug!(%cause, "the server stopped with an error");
-            QuoteError::ServerStartFailed
+            AppError::ServerStartFailed
         })
 }

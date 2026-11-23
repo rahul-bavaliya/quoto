@@ -41,7 +41,7 @@ async fn everything_else_still_needs_the_key_next_to_the_docs() {
 }
 
 #[tokio::test]
-async fn the_list_describes_exactly_the_calls_and_only_equipment_has_a_delete() {
+async fn the_list_describes_only_branch_calls() {
     let spec = spec().await;
     let mut calls: Vec<String> = spec["paths"]
         .as_object()
@@ -59,44 +59,12 @@ async fn the_list_describes_exactly_the_calls_and_only_equipment_has_a_delete() 
     assert_eq!(
         calls,
         [
-            "DELETE /equipment/{id}",
             "GET /branches",
             "GET /branches/{id}",
-            "GET /customers",
-            "GET /customers/{id}",
-            "GET /equipment",
-            "GET /equipment/{id}",
-            "GET /quotes",
-            "GET /quotes/{id}",
-            "GET /quotes/{id}/pdf",
-            "GET /repair-orders",
-            "GET /repair-orders/{id}",
             "PATCH /branches/{id}",
             "PATCH /branches/{id}/status",
-            "PATCH /customers/{id}",
-            "PATCH /customers/{id}/status",
-            "PATCH /equipment/{id}",
-            "PATCH /equipment/{id}/owner",
-            "PATCH /equipment/{id}/status",
-            "PATCH /quotes/{id}",
-            "PATCH /quotes/{id}/customer",
-            "PATCH /quotes/{id}/equipment",
-            "PATCH /repair-orders/{id}",
             "POST /branches",
-            "POST /customers",
-            "POST /equipment",
-            "POST /quotes",
-            "POST /quotes/{id}/accept",
-            "POST /quotes/{id}/lines",
-            "POST /quotes/{id}/reject",
-            "POST /quotes/{id}/reopen",
-            "POST /quotes/{id}/repair-order",
-            "POST /repair-orders/{id}/cancel",
-            "POST /repair-orders/{id}/complete",
-            "POST /repair-orders/{id}/start",
             "PUT /branches/{id}",
-            "PUT /customers/{id}",
-            "PUT /equipment/{id}",
         ]
     );
 }
@@ -206,31 +174,10 @@ fn body_properties<'a>(spec: &'a Value, path: &str, method: &str) -> Vec<&'a str
 #[tokio::test]
 async fn each_call_shows_the_body_it_really_takes_and_no_two_bodies_share_a_name() {
     let spec = spec().await;
-    let create_customer = body_properties(&spec, "/customers", "post");
-    assert!(create_customer.contains(&"name") && !create_customer.contains(&"customer_id"));
-    let create_machine = body_properties(&spec, "/equipment", "post");
-    assert!(create_machine.contains(&"make") && !create_machine.contains(&"equipment_id"));
-    assert_eq!(
-        body_properties(&spec, "/quotes/{id}/customer", "patch"),
-        ["customer_id"]
-    );
-    assert_eq!(
-        body_properties(&spec, "/quotes/{id}/equipment", "patch"),
-        ["equipment_id"]
-    );
-
-    assert_eq!(
-        body_properties(&spec, "/quotes/{id}/repair-order", "post"),
-        ["meter_reading"]
-    );
-    assert_eq!(
-        body_properties(&spec, "/repair-orders/{id}", "patch"),
-        ["cause", "complaint", "correction", "due_date"]
-    );
-    assert_eq!(
-        body_properties(&spec, "/repair-orders/{id}/cancel", "post"),
-        ["reason"]
-    );
+    let create_branch = body_properties(&spec, "/branches", "post");
+    assert!(create_branch.contains(&"name"));
+    assert!(!create_branch.contains(&"status"));
+    assert!(!create_branch.contains(&"id"));
 
     // Every call with a body points at a schema of its own: two calls may share one only when
     // they really take the same body (e.g. the status call of every record).
