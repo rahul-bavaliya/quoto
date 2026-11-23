@@ -14,7 +14,6 @@
 
 use sea_orm_migration::prelude::*;
 
-mod columns;
 mod m20261118_000001_baseline;
 
 pub struct Migrator;

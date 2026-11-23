@@ -18,8 +18,6 @@ pub(super) enum ApiError {
     BadBody,
     /// The query string (the part after `?`) is not what this call expects.
     BadQuery,
-    /// The `If-Match` header is not a version (a number, in quotes or not, or `*`).
-    BadIfMatch,
     /// No key, or the wrong one.
     Unauthorized,
 }
@@ -71,11 +69,6 @@ impl IntoResponse for ApiError {
                 StatusCode::BAD_REQUEST,
                 "INVALID_QUERY",
                 String::from("The query string is not valid for this call."),
-            ),
-            ApiError::BadIfMatch => (
-                StatusCode::BAD_REQUEST,
-                "INVALID_IF_MATCH",
-                String::from("If-Match must be the version of the record, like \"3\", or *."),
             ),
             ApiError::Unauthorized => (
                 StatusCode::UNAUTHORIZED,

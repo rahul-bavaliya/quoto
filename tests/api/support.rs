@@ -18,35 +18,6 @@ pub fn app() -> Router {
     router(DatabaseConnection::default(), Secret::new(KEY.to_string()))
 }
 
-/// Makes one call and returns the status and the JSON that came back.
-/// Like `call`, with one extra header.
-pub async fn call_with_header(
-    method: &str,
-    uri: &str,
-    body: Option<&str>,
-    name: &str,
-    value: &str,
-) -> (StatusCode, Value) {
-    let mut request = Request::builder()
-        .method(method)
-        .uri(uri)
-        .header(header::AUTHORIZATION, format!("Bearer {KEY}"))
-        .header(name, value);
-    if body.is_some() {
-        request = request.header(header::CONTENT_TYPE, "application/json");
-    }
-    let request = request
-        .body(Body::from(body.unwrap_or("").to_string()))
-        .unwrap();
-    let response = app().oneshot(request).await.unwrap();
-    let status = response.status();
-    let bytes = to_bytes(response.into_body(), 1 << 20).await.unwrap();
-    (
-        status,
-        serde_json::from_slice(&bytes).unwrap_or(Value::Null),
-    )
-}
-
 pub async fn call(
     method: &str,
     uri: &str,
