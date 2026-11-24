@@ -226,7 +226,7 @@ src/
 ├── main.rs              starts the web API (and is the one place where errors stop the program)
 ├── lib.rs               the library's front door
 ├── api.rs               the web API + api/ (settings, auth, error, log, request, branches, customers, equipment, quotes, repair_orders, docs)
-├── branch/              mod.rs (Branch), table (the branches table and its create/read/update) (a dealership location; its province decides the taxes)
+├── branch/              branch.rs (Branch), table (the branches table and its create/read/update) (a dealership location; its province decides the taxes)
 ├── common/              address, location, phone_number, postal_code (shared value types)
 ├── country.rs           Country (follows from the province)
 ├── errors.rs  logging.rs  money.rs  samples.rs  secret.rs

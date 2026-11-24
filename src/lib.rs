@@ -6,6 +6,7 @@
 // used by `main.rs`, by those tests, and later by the web API.
 
 pub mod api;
+#[path = "branch/branch.rs"]
 pub mod branch;
 pub mod common;
 pub mod country;
