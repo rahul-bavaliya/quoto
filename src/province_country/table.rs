@@ -1,40 +1,42 @@
-// src/province/table.rs: the `provinces` table in the database, its idempotent CRA seeding,
-// rate lookups, and rate updates.
+// src/province_country/table.rs: the `provinces` table in the database: rate lookups and rate updates.
 //
-// There is no delete function: a province is never deleted. Rates are stored as integer
-// thousandths of a percent (5% = 5000, 9.975% = 9975), and tax-combination rules
-// (GST + optional PST, or HST alone; never both, never neither) are validated in Rust.
+// The 13 starting rows are put there by the migration `m20261126_000003_create_provinces`, so
+// there is one list of them, not two. There is no delete function: a province is never deleted.
+// Rates are stored as integer thousandths of a percent (5% = 5000, 9.975% = 9975), and the
+// tax-combination rules (GST + optional PST, or HST alone; never both, never neither) are
+// validated in Rust.
 
 use crate::errors::{AppError, AppResult};
 use crate::province_country::{Country, Province, TaxRateInfo};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use sea_orm::entity::prelude::DateTimeUtc;
-use sea_orm::{ActiveModelTrait, ConnectionTrait, EntityTrait, QueryOrder, Set};
+use sea_orm::sea_query::Expr;
+use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, QueryOrder};
 use tracing::debug;
 
-use row::{ActiveModel, Column, Entity};
+use row::{Column, Entity};
 
 mod row {
     use sea_orm::entity::prelude::*;
 
-    #[derive(Clone, Debug, PartialEq, DeriveEntityModel, serde::Serialize, serde::Deserialize)]
+    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
     #[sea_orm(table_name = "provinces")]
     pub struct Model {
-        #[sea_orm(primary_key, auto_increment = false, column_type = "Text")]
+        #[sea_orm(primary_key, auto_increment = false)]
+        pub id: Uuid,
+        #[sea_orm(column_type = "Text", unique)]
         pub code: String,
-        #[sea_orm(column_type = "Text")]
+        #[sea_orm(column_type = "Text", unique)]
         pub name: String,
         #[sea_orm(column_type = "Text")]
         pub country_code: String,
-        pub gst_rate_milli_pct: Option<i32>,
-        pub pst_rate_milli_pct: Option<i32>,
-        pub hst_rate_milli_pct: Option<i32>,
+        pub gst_rate_thousandths: Option<i32>,
+        pub pst_rate_thousandths: Option<i32>,
+        pub hst_rate_thousandths: Option<i32>,
+        pub effective_from: Date,
         #[sea_orm(column_type = "Text")]
-        pub note: Option<String>,
-        pub effective_date: Option<DateTimeUtc>,
-        #[sea_orm(default_expr = "Expr::current_timestamp()")]
+        pub note: String,
         pub created_at: DateTimeUtc,
-        #[sea_orm(default_expr = "Expr::current_timestamp()")]
         pub updated_at: DateTimeUtc,
     }
 
@@ -61,12 +63,11 @@ fn database_error(cause: sea_orm::DbErr) -> AppError {
     AppError::DatabaseUnavailable
 }
 
-fn rates_to_columns(rates: &TaxRateInfo) -> (Option<i32>, Option<i32>, Option<i32>) {
-    (
-        rates.gst_milli_pct,
-        rates.pst_milli_pct,
-        rates.hst_milli_pct,
-    )
+/// The table keeps a date; the record shows it as midnight UTC.
+fn start_of_day(date: NaiveDate) -> DateTime<Utc> {
+    date.and_hms_opt(0, 0, 0)
+        .expect("midnight is a valid time")
+        .and_utc()
 }
 
 fn record_from_row(row: row::Model) -> AppResult<ProvinceTaxRecord> {
@@ -85,9 +86,9 @@ fn record_from_row(row: row::Model) -> AppResult<ProvinceTaxRecord> {
     };
 
     let rates = TaxRateInfo::new(
-        row.gst_rate_milli_pct,
-        row.pst_rate_milli_pct,
-        row.hst_rate_milli_pct,
+        row.gst_rate_thousandths,
+        row.pst_rate_thousandths,
+        row.hst_rate_thousandths,
     )?;
 
     Ok(ProvinceTaxRecord {
@@ -95,152 +96,10 @@ fn record_from_row(row: row::Model) -> AppResult<ProvinceTaxRecord> {
         name: row.name,
         country,
         rates,
-        note: row.note,
-        effective_date: row.effective_date,
+        note: Some(row.note),
+        effective_date: Some(start_of_day(row.effective_from)),
         updated_at: row.updated_at,
     })
-}
-
-struct SeedProvince {
-    code: &'static str,
-    name: &'static str,
-    gst: Option<i32>,
-    pst: Option<i32>,
-    hst: Option<i32>,
-}
-
-/// All 13 Canadian provinces and territories (CRA rates in thousandths of a percent).
-const CRA_PROVINCES: &[SeedProvince] = &[
-    SeedProvince {
-        code: "AB",
-        name: "Alberta",
-        gst: Some(5000),
-        pst: None,
-        hst: None,
-    },
-    SeedProvince {
-        code: "BC",
-        name: "British Columbia",
-        gst: Some(5000),
-        pst: Some(7000),
-        hst: None,
-    },
-    SeedProvince {
-        code: "MB",
-        name: "Manitoba",
-        gst: Some(5000),
-        pst: Some(7000),
-        hst: None,
-    },
-    SeedProvince {
-        code: "NB",
-        name: "New Brunswick",
-        gst: None,
-        pst: None,
-        hst: Some(15000),
-    },
-    SeedProvince {
-        code: "NL",
-        name: "Newfoundland and Labrador",
-        gst: None,
-        pst: None,
-        hst: Some(15000),
-    },
-    SeedProvince {
-        code: "NS",
-        name: "Nova Scotia",
-        gst: None,
-        pst: None,
-        hst: Some(15000),
-    },
-    SeedProvince {
-        code: "NT",
-        name: "Northwest Territories",
-        gst: Some(5000),
-        pst: None,
-        hst: None,
-    },
-    SeedProvince {
-        code: "NU",
-        name: "Nunavut",
-        gst: Some(5000),
-        pst: None,
-        hst: None,
-    },
-    SeedProvince {
-        code: "ON",
-        name: "Ontario",
-        gst: None,
-        pst: None,
-        hst: Some(13000),
-    },
-    SeedProvince {
-        code: "PE",
-        name: "Prince Edward Island",
-        gst: None,
-        pst: None,
-        hst: Some(15000),
-    },
-    SeedProvince {
-        code: "QC",
-        name: "Quebec",
-        gst: Some(5000),
-        pst: Some(9975),
-        hst: None,
-    },
-    SeedProvince {
-        code: "SK",
-        name: "Saskatchewan",
-        gst: Some(5000),
-        pst: Some(6000),
-        hst: None,
-    },
-    SeedProvince {
-        code: "YT",
-        name: "Yukon",
-        gst: Some(5000),
-        pst: None,
-        hst: None,
-    },
-];
-
-/// Seeds the 13 provinces/territories idempotently.
-/// Inserts any missing row and never overwrites rates that were intentionally updated.
-pub async fn seed_provinces(db: &impl ConnectionTrait) -> AppResult<()> {
-    let default_effective = DateTime::parse_from_rfc3339("2026-11-17T00:00:00Z")
-        .expect("valid constant timestamp")
-        .with_timezone(&Utc);
-
-    for seed in CRA_PROVINCES {
-        let existing = Entity::find_by_id(seed.code)
-            .one(db)
-            .await
-            .map_err(database_error)?;
-
-        if existing.is_some() {
-            continue;
-        }
-
-        // Validate through domain rules before inserting.
-        let rates = TaxRateInfo::new(seed.gst, seed.pst, seed.hst)?;
-        let (gst, pst, hst) = rates_to_columns(&rates);
-
-        let model = ActiveModel {
-            code: Set(seed.code.to_string()),
-            name: Set(seed.name.to_string()),
-            country_code: Set(Country::Canada.code().to_string()),
-            gst_rate_milli_pct: Set(gst),
-            pst_rate_milli_pct: Set(pst),
-            hst_rate_milli_pct: Set(hst),
-            note: Set(Some("Initial CRA seed".to_string())),
-            effective_date: Set(Some(default_effective)),
-            ..Default::default()
-        };
-
-        model.insert(db).await.map_err(database_error)?;
-    }
-
-    Ok(())
 }
 
 /// Fetches a single province's tax record by its two-letter code (e.g., `"SK"`).
@@ -249,7 +108,8 @@ pub async fn get_province_tax_rates(
     code: &str,
 ) -> AppResult<ProvinceTaxRecord> {
     let normalized = code.trim().to_ascii_uppercase();
-    let row = Entity::find_by_id(&normalized)
+    let row = Entity::find()
+        .filter(Column::Code.eq(normalized.as_str()))
         .one(db)
         .await
         .map_err(database_error)?
@@ -286,7 +146,8 @@ pub async fn change_rates(
     }
 
     let code = province.code();
-    let existing = Entity::find_by_id(code)
+    let existing = Entity::find()
+        .filter(Column::Code.eq(code))
         .one(db)
         .await
         .map_err(database_error)?
@@ -294,21 +155,31 @@ pub async fn change_rates(
             code: code.to_string(),
         })?;
 
-    if let Some(current_effective) = existing.effective_date {
-        if effective_date < current_effective {
-            return Err(AppError::InvalidEffectiveDate);
-        }
+    let new_date = effective_date.date_naive();
+    if new_date < existing.effective_from {
+        return Err(AppError::InvalidEffectiveDate);
     }
 
-    let (gst, pst, hst) = rates_to_columns(&new_rates);
-    let mut active: ActiveModel = existing.into();
-    active.gst_rate_milli_pct = Set(gst);
-    active.pst_rate_milli_pct = Set(pst);
-    active.hst_rate_milli_pct = Set(hst);
-    active.note = Set(Some(trimmed_note.to_string()));
-    active.effective_date = Set(Some(effective_date));
-    active.updated_at = Set(Utc::now());
+    Entity::update_many()
+        .col_expr(
+            Column::GstRateThousandths,
+            Expr::value(new_rates.gst_milli_pct),
+        )
+        .col_expr(
+            Column::PstRateThousandths,
+            Expr::value(new_rates.pst_milli_pct),
+        )
+        .col_expr(
+            Column::HstRateThousandths,
+            Expr::value(new_rates.hst_milli_pct),
+        )
+        .col_expr(Column::Note, Expr::value(trimmed_note))
+        .col_expr(Column::EffectiveFrom, Expr::value(new_date))
+        .col_expr(Column::UpdatedAt, Expr::current_timestamp())
+        .filter(Column::Id.eq(existing.id))
+        .exec(db)
+        .await
+        .map_err(database_error)?;
 
-    let updated = active.update(db).await.map_err(database_error)?;
-    record_from_row(updated)
+    get_province_tax_rates(db, code).await
 }

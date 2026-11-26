@@ -28,8 +28,8 @@ pub(super) fn body<T>(input: Result<Json<T>, JsonRejection>) -> Result<T, ApiErr
 }
 
 /// The parts of a view that are not part of an input: a PATCH can't change them.
-/// (The owner of a machine and where its details came from are changed by their own calls.)
-const NOT_INPUT: [&str; 3] = ["id", "country", "status"];
+/// (The status is changed by its own call.)
+const NOT_INPUT: [&str; 5] = ["id", "country", "status", "created_at", "updated_at"];
 
 /// The body of a PATCH: a JSON object with at least one field. (An empty one changes nothing, so
 /// it is refused as a mistake, and so is a field that is not an input.) Checked before the database is touched.

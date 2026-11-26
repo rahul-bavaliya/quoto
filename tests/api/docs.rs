@@ -41,7 +41,7 @@ async fn everything_else_still_needs_the_key_next_to_the_docs() {
 }
 
 #[tokio::test]
-async fn the_list_describes_only_branch_calls() {
+async fn the_list_describes_exactly_the_calls() {
     let spec = spec().await;
     let mut calls: Vec<String> = spec["paths"]
         .as_object()
@@ -61,10 +61,19 @@ async fn the_list_describes_only_branch_calls() {
         [
             "GET /branches",
             "GET /branches/{id}",
+            "GET /customers",
+            "GET /customers/{id}",
+            "GET /provinces",
+            "GET /provinces/{code}",
             "PATCH /branches/{id}",
             "PATCH /branches/{id}/status",
+            "PATCH /customers/{id}",
+            "PATCH /customers/{id}/status",
+            "PATCH /provinces/{code}/rates",
             "POST /branches",
+            "POST /customers",
             "PUT /branches/{id}",
+            "PUT /customers/{id}",
         ]
     );
 }

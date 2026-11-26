@@ -9,7 +9,7 @@ fn address(province: Province) -> Address {
         Some(String::from("Unit 4")),
         String::from("Regina"),
         PostalCode::parse("S4P 3Y2").unwrap(),
-        province,
+        ProvinceCountry::new(province),
     )
     .unwrap()
 }
@@ -78,14 +78,19 @@ fn the_branch_province_comes_from_its_address() {
         phone(),
     )
     .unwrap();
-    assert_eq!(alberta.province(), &Province::Alberta);
+    assert_eq!(
+        alberta.address().province_country().province(),
+        Province::Alberta
+    );
 }
 
 #[test]
 fn the_country_follows_the_province() {
-    assert_eq!(regina().country(), Country::Canada);
-    assert_eq!(regina().country().label(), "Canada");
-    assert_eq!(regina().country().code(), "CA");
+    let branch = regina();
+    let country = branch.address().province_country().country();
+    assert_eq!(country, Country::Canada);
+    assert_eq!(country.name(), "Canada");
+    assert_eq!(country.code(), "CA");
 }
 
 #[test]
@@ -104,7 +109,7 @@ fn a_missing_second_address_line_reads_as_none() {
         None,
         String::from("Regina"),
         PostalCode::parse("S4P 3Y2").unwrap(),
-        Province::Saskatchewan,
+        ProvinceCountry::new(Province::Saskatchewan),
     )
     .unwrap();
     assert_eq!(address.line2(), None);

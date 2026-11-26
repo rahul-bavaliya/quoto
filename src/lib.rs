@@ -15,6 +15,7 @@ pub mod customer;
 pub mod customer_address;
 pub mod database;
 pub mod errors;
+pub mod logging;
 pub mod secret;
 pub mod status;
 
@@ -34,5 +35,5 @@ pub use status::Status;
 pub mod province_country;
 pub use province_country::{
     Country, Province, ProvinceCountry, ProvinceTaxRecord, TaxRateInfo, change_rates,
-    get_province_tax_rates, list_province_tax_rates, seed_provinces,
+    get_province_tax_rates, list_province_tax_rates,
 };

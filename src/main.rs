@@ -1,9 +1,9 @@
 // src/main.rs: starts the web API (see `src/api.rs`). It is the one place where errors stop the
 // program: it logs the code, prints the message, and exits with the error's exit code.
 
-use quoto::AppResult;
 use quoto::api::{ApiSettings, serve};
 use quoto::database::{self, DatabaseSettings};
+use quoto::{AppResult, logging};
 use std::process::ExitCode;
 
 async fn run() -> AppResult<()> {
@@ -16,6 +16,7 @@ async fn run() -> AppResult<()> {
 
 #[tokio::main]
 async fn main() -> ExitCode {
+    logging::init();
     match run().await {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {

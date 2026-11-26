@@ -5,6 +5,7 @@
 // PATCH /provinces/{code}/rates -> update a province's tax rates (never deleted)
 
 use axum::Json;
+use axum::extract::rejection::JsonRejection;
 use axum::extract::{Path, State};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -12,6 +13,7 @@ use utoipa::ToSchema;
 
 use super::AppState;
 use super::error::{ApiError, ErrorBody};
+use super::request::body as read_body;
 use crate::province_country::{
     Province, ProvinceTaxRecord, TaxRateInfo, change_rates as update_rates, get_province_tax_rates,
     list_province_tax_rates,
@@ -135,8 +137,9 @@ pub(super) async fn read(
 pub(super) async fn change_rates(
     State(state): State<AppState>,
     Path(code): Path<String>,
-    Json(body): Json<ChangeRatesBody>,
+    input: Result<Json<ChangeRatesBody>, JsonRejection>,
 ) -> Result<Json<ProvinceResponse>, ApiError> {
+    let body = read_body(input)?;
     let province = Province::from_code(&code)?;
     let rates = TaxRateInfo::new(body.gst_milli_pct, body.pst_milli_pct, body.hst_milli_pct)?;
     let updated = update_rates(&state.db, province, rates, &body.note, body.effective_date).await?;

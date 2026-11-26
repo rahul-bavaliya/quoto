@@ -9,6 +9,7 @@
 // try from the page still need the key (use the "Authorize" button and paste it once).
 
 use super::branches::{self, BranchChanges, BranchInput, BranchView};
+use super::customers::{self, AddressBody, CustomerChanges, CustomerInput, CustomerView};
 use super::error::ErrorBody;
 use super::provinces::{self, ChangeRatesBody, ProvinceResponse, TaxRatesResponse};
 use super::request::StatusInput;
@@ -40,7 +41,7 @@ impl Modify for BearerKey {
 #[openapi(
     info(
         title = "Quoto API",
-        description = "Branch and province tax-rate operations for the Quoto system."
+        description = "Branch, customer and province tax-rate operations for the Quoto system."
     ),
     paths(
         branches::list,
@@ -49,6 +50,12 @@ impl Modify for BearerKey {
         branches::replace,
         branches::change,
         branches::change_status,
+        customers::list,
+        customers::read,
+        customers::create,
+        customers::replace,
+        customers::change,
+        customers::change_status,
         provinces::list,
         provinces::read,
         provinces::change_rates
@@ -57,6 +64,10 @@ impl Modify for BearerKey {
         BranchChanges,
         BranchInput,
         BranchView,
+        AddressBody,
+        CustomerChanges,
+        CustomerInput,
+        CustomerView,
         ProvinceResponse,
         TaxRatesResponse,
         ChangeRatesBody,

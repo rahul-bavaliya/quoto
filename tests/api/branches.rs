@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 fn branch_json() -> Value {
     json!({
         "number": "T-01", "name": "Test Branch",
-        "address_line1": "1 Industrial Rd", "city": "Regina", "province": "SK",
+        "address_line1": "1 Industrial Rd", "city": "Regina", "province_code": "SK",
         "postal_code": "S4P 3Y2", "phone": "306-555-0100"
     })
 }
@@ -59,9 +59,9 @@ async fn the_librarys_rules_answer_with_their_own_codes() {
             PostalCode::parse("nope").unwrap_err().code(),
         ),
         (
-            "province",
-            json!("ON"),
-            Province::from_code("ON").unwrap_err().code(),
+            "province_code",
+            json!("ZZ"),
+            Province::from_code("ZZ").unwrap_err().code(),
         ),
         (
             "name",

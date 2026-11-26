@@ -7,6 +7,7 @@
 //   log        the one log line per call
 //   request    what calls with a body share (body, PATCH merge, status body)
 //   branches   the branch calls
+//   customers  the customer calls
 //   provinces  the province and tax rate calls
 //   docs       the Swagger page at /docs
 // Every call needs the API key (`Authorization: Bearer <key>`); only the documentation
@@ -14,6 +15,7 @@
 
 mod auth;
 mod branches;
+mod customers;
 mod docs;
 mod error;
 mod log;
@@ -58,6 +60,14 @@ pub fn router(db: DatabaseConnection, key: Secret) -> Router {
                 .patch(branches::change),
         )
         .route("/branches/{id}/status", patch(branches::change_status))
+        .route("/customers", get(customers::list).post(customers::create))
+        .route(
+            "/customers/{id}",
+            get(customers::read)
+                .put(customers::replace)
+                .patch(customers::change),
+        )
+        .route("/customers/{id}/status", patch(customers::change_status))
         .route("/provinces", get(provinces::list))
         .route("/provinces/{code}", get(provinces::read))
         .route("/provinces/{code}/rates", patch(provinces::change_rates))

@@ -37,7 +37,7 @@ use uuid::Uuid;
 #[schema(example = json!({
     "number": "001", "name": "Regina Branch",
     "address_line1": "1 Industrial Rd", "address_line2": "Unit 4", "city": "Regina",
-    "province": "SK", "postal_code": "S4P 3Y2", "phone": "306-555-0100",
+    "province_code": "SK", "postal_code": "S4P 3Y2", "phone": "306-555-0100",
     "latitude": 50.4452, "longitude": -104.6189
 }))]
 pub(super) struct BranchInput {
@@ -92,7 +92,7 @@ pub(super) struct BranchView {
     address_line1: String,
     address_line2: Option<String>,
     city: String,
-    province: String,
+    province_code: String,
     country: String,
     postal_code: String,
     phone: String,
@@ -112,8 +112,8 @@ impl From<&Branch> for BranchView {
             address_line1: address.line1().to_string(),
             address_line2: address.line2().map(str::to_string),
             city: address.city().to_string(),
-            province: branch.address().province_country().province().to_string(),
-            country: branch.address().province_country().country().to_string(),
+            province_code: address.province_country().province_code().to_string(),
+            country: address.province_country().country_code().to_string(),
             postal_code: address.postal_code().to_string(),
             phone: branch.phone().to_string(),
             latitude: branch.location().map(Location::latitude),
@@ -141,7 +141,7 @@ pub(super) struct BranchChanges {
     address_line1: Option<String>,
     address_line2: Option<String>,
     city: Option<String>,
-    province: Option<String>,
+    province_code: Option<String>,
     postal_code: Option<String>,
     phone: Option<String>,
     latitude: Option<f64>,

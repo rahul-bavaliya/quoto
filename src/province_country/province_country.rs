@@ -3,10 +3,7 @@
 
 mod table;
 
-pub use table::{
-    ProvinceTaxRecord, change_rates, get_province_tax_rates, list_province_tax_rates,
-    seed_provinces,
-};
+pub use table::{ProvinceTaxRecord, change_rates, get_province_tax_rates, list_province_tax_rates};
 
 use crate::errors::AppError;
 use std::fmt;

@@ -426,7 +426,7 @@ impl AppError {
             AppError::DatabaseSetupFailed => "DATABASE_SETUP_FAILED",
             AppError::MissingSetting { .. } => "MISSING_SETTING",
             AppError::InvalidSetting { .. } => "INVALID_SETTING",
-            AppError::InvalidEffectiveDate { .. } => "INVALID_EFFECTIVE_DATE",
+            AppError::InvalidEffectiveDate => "INVALID_EFFECTIVE_DATE",
             AppError::InvalidField { .. } => "INVALID_FIELD",
         }
     }

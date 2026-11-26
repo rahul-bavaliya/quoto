@@ -4,8 +4,9 @@ use crate::errors::{AppError, AppResult};
 use std::fmt;
 use std::str::FromStr;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Language {
+    #[default]
     English,
     French,
 }
@@ -34,12 +35,6 @@ impl Language {
             "fr" | "fra" | "fre" | "french" | "francais" | "français" => Ok(Self::French),
             _ => Err(AppError::InvalidField { field: "language" }),
         }
-    }
-}
-
-impl Default for Language {
-    fn default() -> Self {
-        Self::English
     }
 }
 

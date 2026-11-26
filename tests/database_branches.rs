@@ -36,7 +36,7 @@ fn address(province: Province, line2: Option<&str>) -> Address {
         line2.map(String::from),
         String::from("Regina"),
         PostalCode::parse("S4P 3Y2").unwrap(),
-        province,
+        ProvinceCountry::new(province),
     )
     .unwrap()
 }
@@ -82,7 +82,10 @@ async fn every_field_comes_back_exactly_as_it_was_saved() {
     assert_eq!(loaded.address(), original.address()); // line 2, city, postal code, province
     assert_eq!(loaded.phone(), original.phone());
     assert_eq!(loaded.location(), original.location());
-    assert_eq!(loaded.country(), Country::Canada);
+    assert_eq!(
+        loaded.address().province_country().country(),
+        Country::Canada
+    );
 }
 
 #[tokio::test]
@@ -100,7 +103,10 @@ async fn a_branch_without_a_second_address_line_or_a_location_comes_back_without
     let saved = create_branch(&tx, &plain).await.unwrap();
     assert_eq!(saved.address().line2(), None);
     assert_eq!(saved.location(), None);
-    assert_eq!(saved.province(), &Province::Alberta);
+    assert_eq!(
+        saved.address().province_country().province(),
+        Province::Alberta
+    );
 }
 
 #[tokio::test]
@@ -211,7 +217,10 @@ async fn a_branch_can_be_renamed_moved_and_given_a_new_phone_and_keeps_its_id() 
 
     assert_eq!(updated.id(), Some(id));
     assert_eq!(updated.name(), "New name");
-    assert_eq!(updated.province(), &Province::Alberta);
+    assert_eq!(
+        updated.address().province_country().province(),
+        Province::Alberta
+    );
     assert_eq!(updated.phone().to_string(), "+1-403-555-0199");
     assert!(updated.location().is_some());
     assert_eq!(get_branch(&tx, id).await.unwrap(), updated);
