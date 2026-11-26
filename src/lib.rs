@@ -9,11 +9,12 @@ pub mod api;
 #[path = "branch/branch.rs"]
 pub mod branch;
 pub mod common;
-pub mod country;
+#[path = "customer/customer.rs"]
 pub mod customer;
+#[path = "customer/customer_address.rs"]
+pub mod customer_address;
 pub mod database;
 pub mod errors;
-pub mod province;
 pub mod secret;
 pub mod status;
 
@@ -22,10 +23,16 @@ pub use branch::{
     Branch, branch_by_number, create_branch, get_branch, list_branches, set_branch_status,
     update_branch,
 };
-pub use common::{Address, Location, PhoneNumber, PostalCode};
-pub use country::Country;
+pub use common::{Address, Contact, Email, Language, Location, PhoneNumber, PostalCode};
 pub use database::DatabaseSettings;
 pub use errors::{AppError, AppResult, ErrorKind};
-pub use province::Province;
+
 pub use secret::Secret;
 pub use status::Status;
+
+#[path = "province_country/province_country.rs"]
+pub mod province_country;
+pub use province_country::{
+    Country, Province, ProvinceCountry, ProvinceTaxRecord, TaxRateInfo, change_rates,
+    get_province_tax_rates, list_province_tax_rates, seed_provinces,
+};

@@ -4,11 +4,9 @@
 // (create, read, update and set the status; never delete). Shared value types
 // such as `Address` and `Location` live in `src/common/`.
 
-use crate::country::Country;
-use crate::common::{Address, Location};
 use crate::common::PhoneNumber;
+use crate::common::{Address, Location};
 use crate::errors::{AppError, AppResult};
-use crate::province::Province;
 use crate::status::Status;
 use uuid::Uuid;
 
@@ -129,15 +127,5 @@ impl Branch {
 
     pub fn location(&self) -> Option<&Location> {
         self.location.as_ref()
-    }
-
-    /// The branch's province decides the taxes on its quotes (one source of truth).
-    pub fn province(&self) -> &Province {
-        self.address.province()
-    }
-
-    /// The country follows from the province, so the two can never disagree.
-    pub fn country(&self) -> Country {
-        self.province().country()
     }
 }

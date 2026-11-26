@@ -2,8 +2,7 @@
 
 use crate::common::PostalCode;
 use crate::errors::AppError;
-use crate::province::Province;
-use std::fmt;
+use crate::province_country::ProvinceCountry;
 
 /// A mailing address. The province decides which taxes a quote charges.
 #[derive(Debug, PartialEq)]
@@ -12,7 +11,7 @@ pub struct Address {
     line2: Option<String>,
     city: String,
     postal_code: PostalCode,
-    province: Province,
+    province_country: ProvinceCountry,
 }
 
 impl Address {
@@ -21,7 +20,7 @@ impl Address {
         line2: Option<String>,
         city: String,
         postal_code: PostalCode,
-        province: Province,
+        province_country: ProvinceCountry,
     ) -> Result<Self, AppError> {
         if line1.trim().is_empty() {
             return Err(AppError::MissingField {
@@ -36,7 +35,7 @@ impl Address {
             line2,
             city,
             postal_code,
-            province,
+            province_country,
         })
     }
 
@@ -56,23 +55,7 @@ impl Address {
         &self.postal_code
     }
 
-    pub fn province(&self) -> &Province {
-        &self.province
-    }
-}
-
-impl fmt::Display for Address {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.line1)?;
-        if let Some(line2) = &self.line2 {
-            write!(f, ", {}", line2)?;
-        }
-        write!(
-            f,
-            ", {}, {} {}",
-            self.city,
-            self.province.code(),
-            self.postal_code
-        )
+    pub fn province_country(&self) -> &ProvinceCountry {
+        &self.province_country
     }
 }

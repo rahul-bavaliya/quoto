@@ -10,6 +10,7 @@
 
 use super::branches::{self, BranchChanges, BranchInput, BranchView};
 use super::error::ErrorBody;
+use super::provinces::{self, ChangeRatesBody, ProvinceResponse, TaxRatesResponse};
 use super::request::StatusInput;
 use axum::Router;
 use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
@@ -39,7 +40,7 @@ impl Modify for BearerKey {
 #[openapi(
     info(
         title = "Quoto API",
-        description = "Branch CRUD operations for the Quoto system."
+        description = "Branch and province tax-rate operations for the Quoto system."
     ),
     paths(
         branches::list,
@@ -47,12 +48,18 @@ impl Modify for BearerKey {
         branches::create,
         branches::replace,
         branches::change,
-        branches::change_status
+        branches::change_status,
+        provinces::list,
+        provinces::read,
+        provinces::change_rates
     ),
     components(schemas(
         BranchChanges,
         BranchInput,
         BranchView,
+        ProvinceResponse,
+        TaxRatesResponse,
+        ChangeRatesBody,
         StatusInput,
         ErrorBody
     )),

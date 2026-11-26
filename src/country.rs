@@ -5,19 +5,22 @@
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Country {
     Canada,
+    USA,
 }
 
 impl Country {
     pub fn label(&self) -> &str {
         match self {
             Country::Canada => "Canada",
+            Country::USA => "United States",
         }
     }
 
     /// The two-letter code (ISO 3166), e.g. "CA".
-    pub fn code(&self) -> &str {
+    pub fn from_code(&self) -> &str {
         match self {
             Country::Canada => "CA",
+            Country::USA => "US",
         }
     }
 }

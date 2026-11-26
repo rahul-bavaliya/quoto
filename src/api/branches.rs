@@ -19,7 +19,7 @@ use crate::branch::{
 };
 use crate::common::{Address, Location, PhoneNumber, PostalCode};
 use crate::errors::{AppError, AppResult};
-use crate::province::Province;
+use crate::province_country::ProvinceCountry;
 use crate::status::Status;
 use axum::Json;
 use axum::extract::rejection::{JsonRejection, QueryRejection};
@@ -47,7 +47,7 @@ pub(super) struct BranchInput {
     address_line2: Option<String>,
     city: String,
     /// The two-letter code. Only "SK" and "AB" are known so far.
-    province: String,
+    province_code: String,
     postal_code: String,
     /// Any usual way of writing a 10-digit phone number.
     phone: String,
@@ -64,7 +64,7 @@ impl BranchInput {
             self.address_line2,
             self.city,
             PostalCode::parse(&self.postal_code)?,
-            Province::from_code(&self.province)?,
+            ProvinceCountry::from_province_code(&self.province_code)?,
         )?;
         let branch = Branch::new(
             self.number,
@@ -112,8 +112,8 @@ impl From<&Branch> for BranchView {
             address_line1: address.line1().to_string(),
             address_line2: address.line2().map(str::to_string),
             city: address.city().to_string(),
-            province: branch.province().code().to_string(),
-            country: branch.country().code().to_string(),
+            province: branch.address().province_country().province().to_string(),
+            country: branch.address().province_country().country().to_string(),
             postal_code: address.postal_code().to_string(),
             phone: branch.phone().to_string(),
             latitude: branch.location().map(Location::latitude),

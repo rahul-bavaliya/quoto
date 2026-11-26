@@ -113,7 +113,7 @@ pub enum AppError {
     InvalidTaxSystem,
 
     #[error("There is no province with that code.")]
-    UnknownProvince { code: String },
+    InvalidProvince { code: String },
 
     #[error("The new rates start on {date}, which is before the current rates ({current}).")]
     RatesDateBeforeCurrent { date: NaiveDate, current: NaiveDate },
@@ -277,6 +277,12 @@ pub enum AppError {
     // The message never repeats the value: a setting may be (next to) a secret.
     #[error("The setting {name} is not valid.")]
     InvalidSetting { name: &'static str },
+
+    #[error("Effective date is not valid.")]
+    InvalidEffectiveDate,
+
+    #[error("Invalid field: {field} .")]
+    InvalidField { field: &'static str },
 }
 
 /// Who can fix the problem? Screens and APIs use this to pick the right reaction.
@@ -372,7 +378,7 @@ impl AppError {
             AppError::RejectionReasonTooLong { .. } => "REJECTION_REASON_TOO_LONG",
             AppError::InvalidTaxRate { .. } => "INVALID_TAX_RATE",
             AppError::InvalidTaxSystem => "INVALID_TAX_SYSTEM",
-            AppError::UnknownProvince { .. } => "UNKNOWN_PROVINCE",
+            AppError::InvalidProvince { .. } => "INVALID_PROVINCE",
             AppError::RatesDateBeforeCurrent { .. } => "RATES_DATE_BEFORE_CURRENT",
             AppError::ServerStartFailed => "SERVER_START_FAILED",
             AppError::UnknownCustomer => "UNKNOWN_CUSTOMER",
@@ -420,6 +426,8 @@ impl AppError {
             AppError::DatabaseSetupFailed => "DATABASE_SETUP_FAILED",
             AppError::MissingSetting { .. } => "MISSING_SETTING",
             AppError::InvalidSetting { .. } => "INVALID_SETTING",
+            AppError::InvalidEffectiveDate { .. } => "INVALID_EFFECTIVE_DATE",
+            AppError::InvalidField { .. } => "INVALID_FIELD",
         }
     }
 

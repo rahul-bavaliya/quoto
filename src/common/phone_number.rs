@@ -27,6 +27,13 @@ impl PhoneNumber {
         }
         Ok(PhoneNumber { digits })
     }
+    pub fn as_str(&self) -> &str {
+        &self.digits
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.digits.trim().is_empty()
+    }
 }
 
 impl fmt::Display for PhoneNumber {

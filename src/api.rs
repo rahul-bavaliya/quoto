@@ -7,6 +7,7 @@
 //   log        the one log line per call
 //   request    what calls with a body share (body, PATCH merge, status body)
 //   branches   the branch calls
+//   provinces  the province and tax rate calls
 //   docs       the Swagger page at /docs
 // Every call needs the API key (`Authorization: Bearer <key>`); only the documentation
 // addresses don't.
@@ -16,6 +17,7 @@ mod branches;
 mod docs;
 mod error;
 mod log;
+mod provinces;
 mod request;
 mod settings;
 
@@ -31,7 +33,7 @@ use sea_orm::DatabaseConnection;
 use std::sync::Arc;
 use tracing::{debug, info};
 
-/// A branch is a few lines of text. Anything bigger than this is refused before it is read.
+/// A request body is a few lines of text. Anything bigger than this is refused before it is read.
 const MAX_BODY_BYTES: usize = 16 * 1024;
 
 /// What every call can use: the database and the key.
@@ -56,6 +58,9 @@ pub fn router(db: DatabaseConnection, key: Secret) -> Router {
                 .patch(branches::change),
         )
         .route("/branches/{id}/status", patch(branches::change_status))
+        .route("/provinces", get(provinces::list))
+        .route("/provinces/{code}", get(provinces::read))
+        .route("/provinces/{code}/rates", patch(provinces::change_rates))
         .merge(docs::routes())
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         // Added last, so it runs first: nothing is read or answered without the key.

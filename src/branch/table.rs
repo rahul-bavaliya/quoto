@@ -10,7 +10,7 @@
 use super::Branch;
 use crate::common::{Address, Location, PhoneNumber, PostalCode};
 use crate::errors::{AppError, AppResult};
-use crate::province::Province;
+use crate::province_country::ProvinceCountry;
 use crate::status::Status;
 use sea_orm::sea_query::Expr;
 use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait};
@@ -50,11 +50,11 @@ mod row {
         /// "SK", "AB"... (the province's code; its taxes live in the `provinces` table)
         #[sea_orm(column_type = "Text")]
         pub province_code: String,
+        pub postal_code: String,
+        #[sea_orm(column_type = "Text")]
         /// Written from the province ("CA"), never read back: the country follows from the province.
         #[sea_orm(column_type = "Text")]
         pub country_code: String,
-        #[sea_orm(column_type = "Text")]
-        pub postal_code: String,
         #[sea_orm(column_type = "Text")]
         pub phone: String,
         /// Both or neither (`Location` checks it).
@@ -85,7 +85,7 @@ fn branch_from_row(row: row::Model) -> AppResult<Branch> {
         row.address_line2,
         row.city,
         PostalCode::parse(&row.postal_code)?,
-        Province::from_code(&row.province_code)?,
+        ProvinceCountry::from_province_code(&row.province_code)?,
     )?;
     let mut branch = Branch::new(
         row.number,
@@ -114,8 +114,12 @@ fn row_values(branch: &Branch) -> ActiveModel {
         address_line1: Set(address.line1().to_string()),
         address_line2: Set(address.line2().map(str::to_string)),
         city: Set(address.city().to_string()),
-        province_code: Set(branch.province().code().to_string()),
-        country_code: Set(branch.country().code().to_string()),
+        province_code: Set(branch
+            .address()
+            .province_country()
+            .province_code()
+            .to_string()),
+        country_code: Set(branch.address().province_country().country().to_string()),
         postal_code: Set(address.postal_code().to_string()),
         phone: Set(branch.phone().to_string()),
         latitude: Set(branch.location().map(Location::latitude)),
